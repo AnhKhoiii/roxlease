@@ -1,8 +1,10 @@
 package com.roxlease.service;
 
+import com.roxlease.dto.RegisterRequest;
 import com.roxlease.model.ActiveSession;
 import com.roxlease.model.LoginHistory;
 import com.roxlease.model.User;
+import com.roxlease.model.Enum.UserStatus;
 import com.roxlease.repository.ActiveSessionRepository;
 import com.roxlease.repository.LoginHistoryRepository;
 import com.roxlease.repository.UserRepository;
@@ -34,7 +36,29 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    // --- USE CASE 1.1: LOGIN ---
+    // --- REGISTER ---
+    public void register(RegisterRequest request) {
+        // Kiểm tra username đã tồn tại chưa
+        if (userRepository.findByUsername(request.getUsername()).isPresent()) {
+            throw new RuntimeException("Username đã tồn tại trong hệ thống");
+        }
+
+        // Tạo User mới
+        User newUser = new User();
+        newUser.setUsername(request.getUsername());
+        
+        // Mã hóa mật khẩu trước khi lưu
+        newUser.setUserPwd(passwordEncoder.encode(request.getPassword()));
+        
+        newUser.setEmail(request.getEmail());
+        
+        newUser.setStatus(UserStatus.ACTIVE);
+
+        // Lưu vào MongoDB
+        userRepository.save(newUser);
+    }
+
+    // --- LOGIN ---
     public ActiveSession login(String username, String password, String ipAddress, String device, boolean rememberMe) {
         
         // 1. Kiểm tra Username tồn tại
@@ -77,12 +101,12 @@ public class AuthService {
         return savedSession;
     }
 
-    // --- USE CASE 1.2: LOGOUT ---
+    // --- LOGOUT ---
     public void logout(String token) {
         sessionRepository.deleteByToken(token);
     }
 
-    // --- USE CASE 1.3: CHANGE PASSWORD ---
+    // --- CHANGE PASSWORD ---
     public void changePassword(String username, String oldPassword, String newPassword) {
         // 1. Tìm user
         User user = userRepository.findByUsername(username)

@@ -26,7 +26,7 @@ public class SecurityConfig {
             .cors(cors -> cors.configure(http)) // Cấu hình CORS cho ReactJS gọi sang
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // Không dùng Session của Servlet
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/login").permitAll() // Cho phép gọi API đăng nhập không cần token
+                .requestMatchers("/api/auth/login", "/api/auth/register").permitAll() // Cho phép gọi API đăng nhập không cần token
                 .anyRequest().authenticated() // Tất cả các API khác đều bắt buộc phải có token hợp lệ
             )
             // Thêm Filter của chúng ta vào TRƯỚC bước xác thực mặc định của Spring Security

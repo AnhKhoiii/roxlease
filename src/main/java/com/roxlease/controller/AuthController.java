@@ -3,6 +3,7 @@ package com.roxlease.controller;
 import com.roxlease.dto.AuthResponse;
 import com.roxlease.dto.ChangePasswordRequest;
 import com.roxlease.dto.LoginRequest;
+import com.roxlease.dto.RegisterRequest;
 import com.roxlease.model.ActiveSession;
 import com.roxlease.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,7 +24,19 @@ public class AuthController {
         this.authService = authService;
     }
 
-    // --- ĐĂNG NHẬP ---
+    // --- REGISTER ---
+    // @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody RegisterRequest registerRequest) {
+        try {
+            authService.register(registerRequest);
+            return ResponseEntity.ok(Collections.singletonMap("message", "Đăng ký tài khoản thành công! Bây giờ bạn có thể đăng nhập."));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    // --- LOGIN ---
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest, HttpServletRequest request) {
         try {
@@ -47,7 +60,7 @@ public class AuthController {
         }
     }
 
-    // --- ĐĂNG XUẤT ---
+    // --- LOGOUT ---
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletRequest request) {
         String header = request.getHeader("Authorization");
@@ -58,7 +71,7 @@ public class AuthController {
         return ResponseEntity.ok(Collections.singletonMap("message", "Đăng xuất thành công"));
     }
 
-    // --- ĐỔI MẬT KHẨU ---
+    // --- CHANGE PASSWORD ---
     @PostMapping("/change-password")
     public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest changeRequest, Authentication authentication) {
         try {
