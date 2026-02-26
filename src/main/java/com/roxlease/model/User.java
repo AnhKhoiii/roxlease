@@ -65,7 +65,7 @@ public class User {
         resetFailedAttempts();
     }
 
-    public boolean isAccountLocked() {
+    public boolean isLocked() {
         return this.status == UserStatus.LOCKED;
     }
 
