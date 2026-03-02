@@ -97,18 +97,18 @@ public class AuthController {
 
     // --- CHANGE PASSWORD ---
     @PostMapping("/change-password")
-    public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest changeRequest, Authentication authentication) {
-        try {
-            // Lấy username của người dùng đang đăng nhập từ SecurityContext
-            String username = authentication.getName();
-            
-            authService.changePassword(username, changeRequest.getCurrentPassword(), changeRequest.getNewPassword());
-            
-            return ResponseEntity.ok(Collections.singletonMap("message", "Đổi mật khẩu thành công. Các phiên đăng nhập khác đã bị hủy."));
-            
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Collections.singletonMap("error", e.getMessage()));
-        }
+public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest changeRequest, Authentication authentication) {
+    try {
+        String username = authentication.getName();
+        authService.changePassword(username, changeRequest.getCurrentPassword(), changeRequest.getNewPassword());
+        return ResponseEntity.ok(Collections.singletonMap("message", "Success"));
+    } catch (IllegalArgumentException e) {
+        // Trả về 400 Bad Request thay vì 403 để dễ xử lý ở Frontend
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Collections.singletonMap("error", e.getMessage()));
+    } catch (Exception e) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Collections.singletonMap("error", "SERVER_ERROR"));
     }
+}
 }

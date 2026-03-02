@@ -1,62 +1,109 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../api/axiosInstance';
 
 const Profile = () => {
-  // Trạng thái ẩn/hiện mật khẩu cho 3 ô nhập
+  const navigate = useNavigate();
+  
+  // Trạng thái ẩn/hiện mật khẩu cho từng ô riêng biệt
   const [showPwd, setShowPwd] = useState({ current: false, new: false, confirm: false });
   const [formData, setFormData] = useState({ current: '', new: '', confirm: '' });
   
-  // Trạng thái thông báo (Success/Error) theo ảnh mockup
+  // Trạng thái thông báo (Success/Error)
   const [notification, setNotification] = useState({ show: false, type: '', message: '' });
 
+  // Hàm toggle ẩn hiện mật khẩu theo từng field id
   const toggleVisibility = (field) => {
     setShowPwd(prev => ({ ...prev, [field]: !prev[field] }));
+  };
+
+  // Hàm kiểm tra định dạng mật khẩu mạnh (Frontend Validation)
+  const validatePassword = (password) => {
+    const regex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/;
+    return regex.test(password);
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
     setNotification({ show: false, type: '', message: '' });
 
-    // Validate cơ bản tại Frontend
+    // 1. Kiểm tra mật khẩu mới và xác nhận mật khẩu có khớp không
     if (formData.new !== formData.confirm) {
       setNotification({ 
         show: true, 
         type: 'error', 
-        message: 'Your confirm password does not match!' 
+        message: 'Mật khẩu xác nhận không khớp với mật khẩu mới!' 
+      });
+      return;
+    }
+
+    // 2. Kiểm tra định dạng mật khẩu mới
+    if (!validatePassword(formData.new)) {
+      setNotification({ 
+        show: true, 
+        type: 'error', 
+        message: 'Mật khẩu mới không đúng định dạng yêu cầu!' 
       });
       return;
     }
 
     try {
-      // Gọi API đổi mật khẩu (Bạn cần chuẩn bị endpoint này ở Spring Boot)
+      // 3. Gọi API đổi mật khẩu
+      // Payload gửi lên khớp với ChangePasswordRequest.java của bạn
       await axiosInstance.post('/auth/change-password', {
         currentPassword: formData.current,
         newPassword: formData.new
       });
 
+      // 4. THÀNH CÔNG: Hiển thị thông báo và yêu cầu đăng nhập lại
       setNotification({ 
         show: true, 
         type: 'success', 
-        message: 'Your password has been changed successfully!' 
+        message: 'Đổi mật khẩu thành công! Hệ thống sẽ tự động đăng xuất để bảo mật.' 
       });
-      setFormData({ current: '', new: '', confirm: '' }); // Reset form
+
+      // Xóa dữ liệu form
+      setFormData({ current: '', new: '', confirm: '' });
+
+      // Đợi 2 giây để người dùng đọc thông báo rồi đá về trang Login
+      setTimeout(() => {
+        localStorage.removeItem('jwt_token'); // Xóa token hiện tại
+        navigate('/login');
+      }, 2500);
+
     } catch (error) {
-      setNotification({ 
-        show: true, 
-        type: 'error', 
-        message: error.response?.data?.message || 'Failed to change password.' 
-      });
+      // 5. THẤT BẠI: Xử lý các lỗi từ Backend trả về (400 Bad Request)
+      // Lưu ý: AuthController của bạn trả về key "error"
+      const backendError = error.response?.data?.error || '';
+      
+      if (backendError === "WRONG_CURRENT_PASSWORD") {
+        setNotification({ 
+          show: true, 
+          type: 'error', 
+          message: 'Mật khẩu hiện tại không chính xác. Vui lòng kiểm tra lại!' 
+        });
+      } else if (error.response?.status === 403) {
+        setNotification({ 
+          show: true, 
+          type: 'error', 
+          message: 'Phiên đăng nhập hết hạn hoặc bạn không có quyền thực hiện thao tác này.' 
+        });
+      } else {
+        setNotification({ 
+          show: true, 
+          type: 'error', 
+          message: backendError || 'Đã có lỗi xảy ra. Không thể đổi mật khẩu.' 
+        });
+      }
     }
   };
 
   return (
     <div className="p-[48px] font-['Inter'] bg-white min-h-full">
-      {/* Tiêu đề trang */}
       <h1 className="text-[48px] font-bold text-[#E32128] mb-[48px]">My profile</h1>
       
       <div className="flex gap-[40px] items-start">
-        
-        {/* SIDEBAR PHỤ (Bên trái) */}
+        {/* SIDEBAR PHỤ */}
         <div className="w-[280px] flex flex-col bg-[#F8F9FA] rounded-[8px] overflow-hidden">
           <div className="p-4 text-[#565E6C] flex items-center gap-3 cursor-pointer hover:bg-gray-100 transition-colors">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -68,27 +115,22 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* NỘI DUNG CHÍNH (Giữa) */}
+        {/* NỘI DUNG CHÍNH */}
         <div className="flex-1 max-w-[850px]">
-          
-          {/* Case Notification: Hiển thị thông báo theo mockup */}
+          {/* Thông báo lỗi/Thành công */}
           {notification.show && (
             <div className={`mb-8 p-4 rounded-[8px] border flex items-center justify-between ${
-                notification.type === 'success' 
-                ? 'bg-[#F1F9F4] border-[#1DD75B] text-[#1DD75B]' 
-                : 'bg-[#FFF0F0] border-[#DE3B40] text-[#DE3B40]'
+                notification.type === 'success' ? 'bg-[#F1F9F4] border-[#1DD75B] text-[#1DD75B]' : 'bg-[#FFF0F0] border-[#DE3B40] text-[#DE3B40]'
             }`}>
                 <div className="flex items-center gap-3">
-                {/* Icon dấu X cho lỗi và dấu Check cho thành công */}
-                <span className="text-xl font-bold">{notification.type === 'success' ? '✓' : '✕'}</span>
-                <span className="text-[16px] font-medium">{notification.message}</span>
+                    <span className="text-xl font-bold">{notification.type === 'success' ? '✓' : '✕'}</span>
+                    <span className="text-[16px] font-medium">{notification.message}</span>
                 </div>
-                <button onClick={() => setNotification({ ...notification, show: false })}>✕</button>
+                <button onClick={() => setNotification({ ...notification, show: false })} className="text-current opacity-60">✕</button>
             </div>
-            )}
+          )}
 
-          {/* Form đổi mật khẩu */}
-          <div className="space-y-4">
+          <form onSubmit={handleSave} className="space-y-4">
             {[
               { id: 'current', label: 'Current password *', placeholder: 'Current Password' },
               { id: 'new', label: 'New Password *', placeholder: 'New Password' },
@@ -101,15 +143,19 @@ const Profile = () => {
                     type={showPwd[field.id] ? 'text' : 'password'}
                     placeholder={field.placeholder}
                     value={formData[field.id]}
-                    onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })}
+                    onChange={(e) => {
+                        setFormData({ ...formData, [field.id]: e.target.value });
+                        if(notification.show) setNotification({...notification, show: false});
+                    }}
+                    required
                     className="w-full h-[48px] px-4 pr-12 border border-[#BCC1CA] rounded-[6px] outline-none focus:border-[#E32128] transition-colors"
                   />
-                  {/* Nút ẩn/hiện password */}
                   <button 
                     type="button"
                     onClick={() => toggleVisibility(field.id)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#DE3B40]"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#DE3B40] hover:text-[#C11C22]"
                   >
+                    {/* SVG Icon con mắt (ẩn/hiện) */}
                     <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
                       {showPwd[field.id] 
                         ? <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
@@ -120,18 +166,17 @@ const Profile = () => {
                 </div>
               </div>
             ))}
-          </div>
-
-          {/* Nút Save */}
-          <button 
-            onClick={handleSave}
-            className="mt-[40px] px-[40px] py-[12px] bg-[#E32128] text-white text-[18px] font-bold rounded-[8px] hover:bg-[#C11C22] active:bg-[#A3181D] transition-colors shadow-md"
-          >
-            Save
-          </button>
+            
+            <button 
+              type="submit"
+              className="mt-[40px] px-[40px] py-[12px] bg-[#E32128] text-white text-[18px] font-bold rounded-[8px] hover:bg-[#C11C22] active:bg-[#A3181D] transition-all shadow-md"
+            >
+              Save
+            </button>
+          </form>
         </div>
 
-        {/* GỢI Ý BẢO MẬT (Bên phải) */}
+        {/* CỘT ĐIỀU KIỆN MẬT KHẨU */}
         <div className="w-[320px] bg-[#F1F4F9] p-6 rounded-[12px] border border-[#DDE1E6]">
           <h3 className="text-[16px] font-bold text-[#323842] mb-3">Please ensure that:</h3>
           <ul className="space-y-2 text-[14px] text-[#565E6C]">
@@ -141,7 +186,6 @@ const Profile = () => {
             <li className="flex gap-2"><span>•</span> It includes at least 1 special character (e.g., ! @ # $ % ^ & *)</li>
           </ul>
         </div>
-
       </div>
     </div>
   );

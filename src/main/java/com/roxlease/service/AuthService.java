@@ -107,21 +107,24 @@ public class AuthService {
     }
 
     // --- CHANGE PASSWORD ---
-    public void changePassword(String username, String oldPassword, String newPassword) {
-        // 1. Tìm user
+    public void changePassword(String username, String currentPassword, String newPassword) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // 2. Kiểm tra mật khẩu cũ
-        if (!passwordEncoder.matches(oldPassword, user.getUserPwd())) {
+        // 1. Kiểm tra mật khẩu cũ
+        if (!passwordEncoder.matches(currentPassword, user.getUserPwd())) {
             throw new RuntimeException("WRONG_CURRENT_PASSWORD");
         }
 
-        // 3. Mã hóa và cập nhật mật khẩu mới
+        // 2. Kiểm tra định dạng mật khẩu mới (Complexity Check)
+        String passwordPattern = "^(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*])[A-Za-z\\d!@#$%^&*]{8,}$";
+        if (!newPassword.matches(passwordPattern)) {
+            throw new RuntimeException("INVALID_PASSWORD_FORMAT");
+        }
+
+        // 3. Cập nhật
         user.setUserPwd(passwordEncoder.encode(newPassword));
         userRepository.save(user);
-        
-        // 4. Xóa toàn bộ phiên đăng nhập trên thiết bị khác (Use Case 1.3)
         sessionRepository.deleteAllByUsername(username);
     }
 }

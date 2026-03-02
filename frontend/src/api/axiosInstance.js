@@ -62,64 +62,28 @@ axiosInstance.interceptors.response.use(
 );
 
   const handleSave = async (e) => {
-    e.preventDefault();
-    setNotification({ show: false, type: '', message: '' });
+  e.preventDefault();
+  try {
+    await axiosInstance.post('/auth/change-password', {
+      currentPassword: formData.current,
+      newPassword: formData.new
+    });
+    
+    setNotification({ show: true, type: 'success', message: 'Đổi mật khẩu thành công. Vui lòng đăng nhập lại!' });
+    // Logout ngay lập tức để áp dụng mật khẩu mới
+    setTimeout(() => {
+       localStorage.removeItem('token');
+       window.location.href = '/login';
+    }, 2000);
 
-    // --- TRƯỜNG HỢP 1: Nhập lại không khớp (Frontend check) ---
-    if (formData.new !== formData.confirm) {
-      setNotification({ 
-        show: true, 
-        type: 'error', 
-        message: 'Xác nhận mật khẩu mới không khớp!' 
-      });
-      return;
+  } catch (error) {
+    const errorMsg = error.response?.data?.error;
+    if (errorMsg === "WRONG_CURRENT_PASSWORD") {
+       setNotification({ show: true, type: 'error', message: 'Mật khẩu hiện tại không đúng!' });
+    } else {
+       setNotification({ show: true, type: 'error', message: 'Định dạng mật khẩu không hợp lệ hoặc lỗi server.' });
     }
-
-    // --- TRƯỜNG HỢP 2: Mật khẩu không hợp lệ (Frontend check) ---
-    // Kiểm tra định dạng: ít nhất 8 ký tự, 1 chữ hoa, 1 số, 1 ký tự đặc biệt
-    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*^&#*])[A-Za-z\d@$!%*^&#*]{8,}$/;
-    if (!passwordRegex.test(formData.new)) {
-      setNotification({ 
-        show: true, 
-        type: 'error', 
-        message: 'Mật khẩu mới không đúng định dạng yêu cầu!' 
-      });
-      return;
-    }
-
-    try {
-      const payload = {
-        currentPassword: formData.current,
-        newPassword: formData.new
-      };
-
-      await axiosInstance.post('/auth/change-password', payload);
-
-      setNotification({ 
-        show: true, 
-        type: 'success', 
-        message: 'Cập nhật mật khẩu thành công!' 
-      });
-      setFormData({ current: '', new: '', confirm: '' }); // Reset form
-      
-    } catch (error) {
-      // --- TRƯỜNG HỢP 3: Sai mật khẩu cũ (Backend check) ---
-      const backendMessage = error.response?.data?.message;
-      
-      if (backendMessage === "WRONG_CURRENT_PASSWORD") {
-        setNotification({ 
-          show: true, 
-          type: 'error', 
-          message: 'Mật khẩu hiện tại không chính xác!' 
-        });
-      } else {
-        setNotification({ 
-          show: true, 
-          type: 'error', 
-          message: backendMessage || 'Có lỗi xảy ra, vui lòng thử lại.' 
-        });
-      }
-    }
-  };
+  }
+};
 
 export default axiosInstance;
