@@ -61,27 +61,40 @@ axiosInstance.interceptors.response.use(
   }
 );
 
-  const handleSave = async (e) => {
+const handleSave = async (e) => {
   e.preventDefault();
+  setNotification({ show: false, type: '', message: '' });
+
+  // Validate mật khẩu khớp (Frontend)
+  if (formData.new !== formData.confirm) {
+    setNotification({ show: true, type: 'error', message: 'Mật khẩu xác nhận không khớp!' });
+    return;
+  }
+
   try {
     await axiosInstance.post('/auth/change-password', {
       currentPassword: formData.current,
       newPassword: formData.new
     });
+
+    setNotification({ show: true, type: 'success', message: 'Đổi mật khẩu thành công! Đang đăng xuất...' });
     
-    setNotification({ show: true, type: 'success', message: 'Đổi mật khẩu thành công. Vui lòng đăng nhập lại!' });
-    // Logout ngay lập tức để áp dụng mật khẩu mới
+    // Hủy token và đẩy về Login sau 2 giây
     setTimeout(() => {
-       localStorage.removeItem('token');
-       window.location.href = '/login';
+      localStorage.removeItem('jwt_token');
+      window.location.href = '/login';
     }, 2000);
 
   } catch (error) {
-    const errorMsg = error.response?.data?.error;
-    if (errorMsg === "WRONG_CURRENT_PASSWORD") {
-       setNotification({ show: true, type: 'error', message: 'Mật khẩu hiện tại không đúng!' });
+    // Đọc đúng key "error" từ backend trả về
+    const backendError = error.response?.data?.error;
+
+    if (backendError === "WRONG_CURRENT_PASSWORD") {
+      setNotification({ show: true, type: 'error', message: 'Mật khẩu hiện tại không chính xác!' });
+    } else if (backendError === "INVALID_PASSWORD_FORMAT") {
+      setNotification({ show: true, type: 'error', message: 'Mật khẩu không đúng định dạng yêu cầu!' });
     } else {
-       setNotification({ show: true, type: 'error', message: 'Định dạng mật khẩu không hợp lệ hoặc lỗi server.' });
+      setNotification({ show: true, type: 'error', message: backendError || 'Máy chủ gặp sự cố (500).' });
     }
   }
 };

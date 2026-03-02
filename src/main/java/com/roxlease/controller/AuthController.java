@@ -97,18 +97,26 @@ public class AuthController {
 
     // --- CHANGE PASSWORD ---
     @PostMapping("/change-password")
-public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest changeRequest, Authentication authentication) {
-    try {
-        String username = authentication.getName();
-        authService.changePassword(username, changeRequest.getCurrentPassword(), changeRequest.getNewPassword());
-        return ResponseEntity.ok(Collections.singletonMap("message", "Success"));
-    } catch (IllegalArgumentException e) {
-        // Trả về 400 Bad Request thay vì 403 để dễ xử lý ở Frontend
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Collections.singletonMap("error", e.getMessage()));
-    } catch (Exception e) {
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Collections.singletonMap("error", "SERVER_ERROR"));
+    public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest changeRequest, Authentication authentication) {
+        try {
+            if (authentication == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Collections.singletonMap("error", "Vui lòng đăng nhập lại"));
+            }
+
+            String username = authentication.getName();
+            authService.changePassword(username, changeRequest.getCurrentPassword(), changeRequest.getNewPassword());
+            
+            return ResponseEntity.ok(Collections.singletonMap("message", "Đổi mật khẩu thành công"));
+            
+        } catch (RuntimeException e) {
+            // Trả về lỗi 400 và nội dung lỗi là message từ service (ví dụ: WRONG_CURRENT_PASSWORD)
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        } catch (Exception e) {
+            // Bắt các lỗi hệ thống khác để tránh hiện 500 trắng
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", "Lỗi hệ thống: " + e.getMessage()));
+        }
     }
-}
 }
