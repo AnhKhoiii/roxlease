@@ -67,7 +67,7 @@ public class AuthService {
 
         // 2. Kiểm tra trạng thái khóa tài khoản
         if (user.isLocked()) {
-            throw new RuntimeException("Account is locked. Please contact Admin"); 
+            throw new RuntimeException("Account is locked"); 
         }
 
         // 3. Kiểm tra mật khẩu đã mã hóa (BCrypt)
@@ -114,7 +114,7 @@ public class AuthService {
 
         // 2. Kiểm tra mật khẩu cũ
         if (!passwordEncoder.matches(oldPassword, user.getUserPwd())) {
-            throw new RuntimeException("Old password is incorrect");
+            throw new RuntimeException("WRONG_CURRENT_PASSWORD");
         }
 
         // 3. Mã hóa và cập nhật mật khẩu mới

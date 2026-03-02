@@ -1,6 +1,6 @@
 package com.roxlease.model;
 
-import com.roxlease.model.Enum.UserStatus;
+import com.roxlease.model.Enum.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
@@ -9,6 +9,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.security.GeneralSecurityException;
+import java.time.LocalDate;
+import java.util.List;
 
 @Data
 @AllArgsConstructor
@@ -24,8 +27,17 @@ public class User {
     @Field("user_pwd")
     private String userPwd;
 
-    private String email;
     private String fullname;
+    
+    private LocalDate birthday;
+    private Gender gender;
+    private String company;
+    private String employeeTitle;
+    private String department;
+    private String manager;
+    private String email;
+    private String phone;
+
 
     private UserStatus status;
 
@@ -35,8 +47,16 @@ public class User {
     @Field("last_login_at")
     private LocalDateTime lastLoginAt;
 
+    private List<String> vpasite;
+
     @Field("created_at")
     private LocalDateTime createdAt;
+
+    @Field("updated_at")
+    private LocalDateTime updatedAt;
+
+    @Field("deleted_at")
+    private LocalDateTime deletedAt;
 
     public User() {
         this.createdAt = LocalDateTime.now();

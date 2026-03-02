@@ -1,5 +1,10 @@
 package com.roxlease.config;
 
+import com.roxlease.model.Permissions;
+import com.roxlease.model.Role;
+import com.roxlease.model.User;
+import com.roxlease.repository.PermissionRepository;
+import com.roxlease.repository.RoleRepository;
 import com.roxlease.repository.UserRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -7,39 +12,75 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Configuration
 public class ApplicationConfig {
 
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final PermissionRepository permissionRepository;
 
-    public ApplicationConfig(UserRepository userRepository) {
+    public ApplicationConfig(UserRepository userRepository, 
+                             RoleRepository roleRepository, 
+                             PermissionRepository permissionRepository) {
         this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
+        this.permissionRepository = permissionRepository;
     }
 
-    // 1. Chỉ cho Spring Security biết cách tìm User trong MongoDB
     @Bean
     public UserDetailsService userDetailsService() {
         return username -> {
-            // Tìm user từ Document MongoDB của chúng ta
-            com.roxlease.model.User user = userRepository.findByUsername(username)
+            User user = userRepository.findByUsername(username)
                     .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy người dùng"));
-            
-            // Map sang đối tượng UserDetails của Spring Security
+
+            List<GrantedAuthority> authorities = new ArrayList<>();
+
+            if (user.getRoleName() != null && !user.getRoleName().isEmpty()) {
+                authorities.add(new SimpleGrantedAuthority("ROLE_" + user.getRoleName().toUpperCase()));
+                if ("SYSTEM_ADMIN".equalsIgnoreCase(user.getRoleName())) {
+                    // Nếu là System Admin: Tự động gom TẤT CẢ quyền trong bảng Permissions cấp cho người này
+                    List<Permissions> allPermissions = permissionRepository.findAll();
+                    for (Permissions perm : allPermissions) {
+                        if (perm.getCode() != null) {
+                            authorities.add(new SimpleGrantedAuthority(perm.getCode()));
+                        }
+                    }
+                } 
+                else {
+                    roleRepository.findById(user.getRoleName()).ifPresent(role -> {
+                        if (role.getPermissionsIds() != null && !role.getPermissionsIds().isEmpty()) {
+                            List<Permissions> permissions = permissionRepository.findAllById(role.getPermissionsIds());
+                            for (Permissions perm : permissions) {
+                                if (perm.getCode() != null) {
+                                    authorities.add(new SimpleGrantedAuthority(perm.getCode()));
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+
+            // Trả về UserDetails cho Spring Security
             return org.springframework.security.core.userdetails.User
                     .withUsername(user.getUsername())
                     .password(user.getUserPwd())
-                    .accountLocked(user.isLocked()) // Chặn đăng nhập ngay ở tầng Filter nếu bị khóa (Exception 4b)
-                    .roles("USER") // Ở đồ án thực tế, bạn có thể get list roles từ DB vào đây
+                    // Chặn đăng nhập nếu Status không phải ACTIVE (Giả sử bạn dùng Enum UserStatus)
+                    .accountLocked(user.getStatus() != com.roxlease.model.Enum.UserStatus.ACTIVE) 
+                    .authorities(authorities)
                     .build();
         };
     }
 
-    // 2. Cấu hình Provider kết nối UserDetailsService và PasswordEncoder
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
@@ -48,13 +89,11 @@ public class ApplicationConfig {
         return authProvider;
     }
 
-    // 3. Quản lý xác thực (Dùng khi bạn muốn Spring Security tự động verify thay vì code tay ở Service)
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 
-    // 4. Bean mã hóa mật khẩu (Nếu đặt ở đây thì hãy xóa Bean này bên file SecurityConfig đi nhé)
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
