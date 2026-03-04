@@ -144,4 +144,20 @@ public class UserService {
         // 4. Lưu xuống Database
         userRepository.save(existingUser);
     }
+
+    // --- KHÓA TÀI KHOẢN ---
+    public void lockUser(String username) {
+        User user = userRepository.findById(username)
+                .orElseThrow(() -> new RuntimeException("Người dùng không tồn tại."));
+        user.lockAccount();
+        userRepository.save(user);
+    }
+
+    // --- MỞ KHÓA TÀI KHOẢN ---
+    public void unlockUser(String username) {
+        User user = userRepository.findById(username)
+                .orElseThrow(() -> new RuntimeException("Người dùng không tồn tại."));
+        user.unlockAccount(); 
+        userRepository.save(user);
+    }
 }

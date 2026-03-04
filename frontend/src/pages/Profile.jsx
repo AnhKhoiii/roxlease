@@ -32,7 +32,7 @@ const Profile = () => {
       setNotification({ 
         show: true, 
         type: 'error', 
-        message: 'Mật khẩu xác nhận không khớp với mật khẩu mới!' 
+        message: 'Comfirm password does not match the new password!' 
       });
       return;
     }
@@ -42,7 +42,7 @@ const Profile = () => {
       setNotification({ 
         show: true, 
         type: 'error', 
-        message: 'Mật khẩu mới không đúng định dạng yêu cầu!' 
+        message: 'New password does not meet the required format!' 
       });
       return;
     }
@@ -58,7 +58,7 @@ const Profile = () => {
       setNotification({ 
         show: true, 
         type: 'success', 
-        message: 'Đổi mật khẩu thành công! Hệ thống sẽ tự động đăng xuất để bảo mật.' 
+        message: 'Change password successfully! Please log in again with your new password.' 
       });
 
       setFormData({ current: '', new: '', confirm: '' });
@@ -77,19 +77,19 @@ const Profile = () => {
         setNotification({ 
           show: true, 
           type: 'error', 
-          message: 'Mật khẩu hiện tại không chính xác. Vui lòng kiểm tra lại!' 
+          message: 'Current password is incorrect. Please check again!' 
         });
       } else if (error.response?.status === 403) {
         setNotification({ 
           show: true, 
           type: 'error', 
-          message: 'Phiên đăng nhập hết hạn hoặc bạn không có quyền thực hiện thao tác này.' 
+          message: 'Session has expired or you do not have permission to perform this action.' 
         });
       } else {
         setNotification({ 
           show: true, 
           type: 'error', 
-          message: backendError || 'Đã có lỗi xảy ra. Không thể đổi mật khẩu.' 
+          message: backendError || 'An error occurred while changing password.' 
         });
       }
     }

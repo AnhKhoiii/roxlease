@@ -35,7 +35,7 @@ export default function UserModal({ isOpen, onClose, onSave, mode, initialData }
           fullName: initialData.fullName || initialData.fullname || "",
           roleName: initialData.roleName || "",
           dob: initialData.dob || "", 
-          gender: initialData.gender || "", // Đảm bảo gender được map (MALE/FEMALE/OTHER)
+          gender: initialData.gender || "",
           vpaSite: Array.isArray(initialData.vpaSite) ? initialData.vpaSite.join(', ') : (initialData.vpaSite || ""),
           failedAttempts: initialData.failedAttempts || 0,
           phone: initialData.phone || "",
@@ -58,13 +58,13 @@ export default function UserModal({ isOpen, onClose, onSave, mode, initialData }
   const handleChange = (field, value) => {
     setFormData({ ...formData, [field]: value });
     if (errors[field]) {
-      setErrors({ ...errors, [field]: false }); // Xóa viền đỏ khi người dùng bắt đầu nhập lại
+      setErrors({ ...errors, [field]: false }); 
     }
   };
 
   // --- HÀM XỬ LÝ LƯU (SAVE) ---
   const handleSave = (addAnother = false) => {
-    // 1. KIỂM TRA ĐIỀU KIỆN (Trùng khớp với ràng buộc ở Backend)
+    // 1. KIỂM TRA ĐIỀU KIỆN
     const newErrors = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -77,21 +77,21 @@ export default function UserModal({ isOpen, onClose, onSave, mode, initialData }
     // Nếu có lỗi, cập nhật state errors để tô đỏ ô và dừng lại
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      return; // Dừng lại, KHÔNG gọi API
+      return;
     }
 
-    // 2. MAP DỮ LIỆU (Ép tên biến khớp 100% với CreateUserRequest.java)
+    // 2. MAP DỮ LIỆU
     const processedFormData = {
       username: formData.username,
       email: formData.email,
       password: formData.password,
-      fullname: formData.fullName,   // Java cần chữ "fullname" viết thường
+      fullname: formData.fullName,  
       roleName: formData.roleName,
       company: formData.company,
       department: formData.department,
       phone: formData.phone,
       employeeTitle: formData.employeeTitle,
-      birthday: formData.dob ? formData.dob : null, // Java cần chữ "birthday"
+      birthday: formData.dob ? formData.dob : null,
       manager: formData.manager,
       gender: formData.gender ? formData.gender : null,
       vpasite: typeof formData.vpaSite === 'string' && formData.vpaSite.trim() !== "" // Java cần "vpasite"
@@ -149,7 +149,7 @@ export default function UserModal({ isOpen, onClose, onSave, mode, initialData }
                   errors.username ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-[#EFB034] disabled:bg-gray-100'
                 }`}
               />
-              {errors.username && <p className="text-red-500 text-xs mt-1">Bắt buộc & tối thiểu 4 ký tự</p>}
+              {errors.username && <p className="text-red-500 text-xs mt-1">Username is required and must be at least 4 characters long.</p>}
             </div>
 
             <div>
@@ -166,7 +166,7 @@ export default function UserModal({ isOpen, onClose, onSave, mode, initialData }
                   <option key={index} value={r.name || r.roleName}>{r.name || r.roleName}</option>
                 ))}
               </select>
-              {errors.roleName && <p className="text-red-500 text-xs mt-1">Vui lòng chọn Role</p>}
+              {errors.roleName && <p className="text-red-500 text-xs mt-1">Please select a Role</p>}
             </div>
 
             <div>
@@ -180,7 +180,7 @@ export default function UserModal({ isOpen, onClose, onSave, mode, initialData }
                   errors.password ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-[#EFB034]'
                 }`}
               />
-              {errors.password && <p className="text-red-500 text-xs mt-1">Bắt buộc & tối thiểu 8 ký tự</p>}
+              {errors.password && <p className="text-red-500 text-xs mt-1">Password is required and must be at least 8 characters long.</p>}
             </div>
 
             <div className="flex items-end gap-3">
@@ -206,7 +206,7 @@ export default function UserModal({ isOpen, onClose, onSave, mode, initialData }
                   errors.fullName ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-[#EFB034]'
                 }`}
               />
-              {errors.fullName && <p className="text-red-500 text-xs mt-1">Vui lòng nhập Họ tên</p>}
+              {errors.fullName && <p className="text-red-500 text-xs mt-1">Please enter Full name</p>}
             </div>
 
             <div>
@@ -220,7 +220,7 @@ export default function UserModal({ isOpen, onClose, onSave, mode, initialData }
                   errors.email ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-[#EFB034]'
                 }`}
               />
-              {errors.email && <p className="text-red-500 text-xs mt-1">Vui lòng nhập đúng định dạng Email</p>}
+              {errors.email && <p className="text-red-500 text-xs mt-1">Please enter a valid email address</p>}
             </div>
 
             <div>
@@ -308,7 +308,7 @@ export default function UserModal({ isOpen, onClose, onSave, mode, initialData }
                 placeholder="VD: 90L, 80H"
                 className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none focus:border-[#EFB034]"
               />
-              <p className="text-[12px] text-gray-500 mt-1 italic">Có thể nhập nhiều site, ngăn cách bởi dấu phẩy (,)</p>
+              <p className="text-[12px] text-gray-500 mt-1 italic">Can enter multiple sites, separated by commas (,)</p>
             </div>
           </div>
 

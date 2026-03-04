@@ -16,11 +16,11 @@ function App() {
           {/* Tự động chuyển hướng về dashboard khi vào trang chủ */}
           <Route index element={<Navigate to="dashboard" replace />} />
           
-          <Route path="dashboard" element={<div className="p-8">Màn hình Home Dashboard</div>} />
-          <Route path="space" element={<div className="p-8">Màn hình Space</div>} />
-          <Route path="lease" element={<div className="p-8">Màn hình Lease</div>} />
-          <Route path="cost" element={<div className="p-8">Màn hình Cost</div>} />
-          <Route path="servicedesk" element={<div className="p-8">Màn hình Service desk</div>} />
+          <Route path="dashboard" element={<div className="p-8">Home Dashboard Screen</div>} />
+          <Route path="space" element={<div className="p-8">Space Screen</div>} />
+          <Route path="lease" element={<div className="p-8">Lease Screen</div>} />
+          <Route path="cost" element={<div className="p-8">Cost Screen</div>} />
+          <Route path="servicedesk" element={<div className="p-8">Service Desk Screen</div>} />
           
           {/* Epic System Admin */}
           <Route path="system" element={<UserManagement />} />

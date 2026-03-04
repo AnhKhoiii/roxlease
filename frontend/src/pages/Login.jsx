@@ -18,7 +18,7 @@ const Login = () => {
     setError(''); 
     
     if (!username || !password) {
-      setError('Vui lòng nhập đầy đủ Username và Password.');
+      setError('Please enter username and password.');
       return;
     }
 
@@ -35,7 +35,7 @@ const Login = () => {
       navigate('/dashboard');
       
     } catch (err) {
-      console.error('Lỗi đăng nhập:', err);
+      console.error('Login error:', err);
       if (err.response) {
         const status = err.response.status;
         const errorMessage = err.response.data?.message || err.response.data?.error || '';
@@ -47,13 +47,13 @@ const Login = () => {
           if (errorString.includes('lock')) {
             setIsLocked(true);
           } else {
-            setError('Sai Username hoặc Password.');
+            setError('Invalid Username or Password.');
           }
         } else {
-          setError('Máy chủ không phản hồi, vui lòng thử lại sau.');
+          setError('Server is not responding, please try again later.');
         }
       } else {
-        setError('Không thể kết nối đến máy chủ.');
+        setError('Cannot connect to server, please check your network and try again.');
       }
     } finally {
       setIsLoading(false);
@@ -165,7 +165,7 @@ const Login = () => {
                {/* Icon Lock */}
                <svg className="w-20 h-20 fill-current" viewBox="0 0 24 24"><path d="M12 2C9.243 2 7 4.243 7 7v3H6c-1.103 0-2 .897-2 2v8c0 1.103.897 2 2 2h12c1.103 0 2-.897 2-2v-8c0-1.103-.897-2-2-2h-1V7c0-2.757-2.243-5-5-5zm-3 5c0-1.654 1.346-3 3-3s3 1.346 3 3v3H9V7zm9 13H6v-8h12v8z"/></svg>
             </div>
-            <div className="text-center text-[#323842] text-[24px] font-bold">Tài khoản của bạn đã bị khóa</div>
+            <div className="text-center text-[#323842] text-[24px] font-bold">Account is locked</div>
           </div>
         </div>
       )}

@@ -41,14 +41,13 @@ public class ApplicationConfig {
     public UserDetailsService userDetailsService() {
         return username -> {
             User user = userRepository.findByUsername(username)
-                    .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy người dùng"));
+                    .orElseThrow(() -> new UsernameNotFoundException("Can not find user: " + username));
 
             List<GrantedAuthority> authorities = new ArrayList<>();
 
             if (user.getRoleName() != null && !user.getRoleName().isEmpty()) {
                 authorities.add(new SimpleGrantedAuthority("ROLE_" + user.getRoleName().toUpperCase()));
                 if ("SYSTEM_ADMIN".equalsIgnoreCase(user.getRoleName())) {
-                    // Nếu là System Admin: Tự động gom TẤT CẢ quyền trong bảng Permissions cấp cho người này
                     List<Permissions> allPermissions = permissionRepository.findAll();
                     for (Permissions perm : allPermissions) {
                         if (perm.getCode() != null) {

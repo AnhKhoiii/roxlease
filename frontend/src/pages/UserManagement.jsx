@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axiosInstance from "../api/axiosInstance";
-import UserModal from "../components/UserModal"; // <-- Import Component vừa tạo
+import UserModal from "../components/UserModal";
 
 export default function UserManagement() {
   const [users, setUsers] = useState([]);
@@ -16,7 +16,7 @@ export default function UserManagement() {
 
   // --- STATE QUẢN LÝ MODAL ADD/EDIT ---
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState("ADD"); // "ADD" hoặc "EDIT"
+  const [modalMode, setModalMode] = useState("ADD");
   const [selectedUserForEdit, setSelectedUserForEdit] = useState(null);
 
   const fetchUsers = async () => {
@@ -38,7 +38,7 @@ export default function UserManagement() {
            (user.fullName || user.fullname || "").toLowerCase().includes(filters.fullname.toLowerCase()) &&
            (user.company || "").toLowerCase().includes(filters.company.toLowerCase()) &&
            (user.department || "").toLowerCase().includes(filters.department.toLowerCase()) &&
-           (user.role || "").toLowerCase().includes(filters.role.toLowerCase()) &&
+           (user.roleName || "").toLowerCase().includes(filters.role.toLowerCase()) &&
            (user.email || "").toLowerCase().includes(filters.email.toLowerCase()) &&
            (user.status || "").toLowerCase().includes(filters.status.toLowerCase());
   });
@@ -62,13 +62,13 @@ export default function UserManagement() {
           await axiosInstance.post(`/users/${username}/${action}`);
         }
       }
-      setShowNotification({ show: true, type: 'success', message: `Đã cập nhật trạng thái thành công!` });
+      setShowNotification({ show: true, type: 'success', message: `Status updated successfully!` });
       setSelectedUsers([]); 
       setShowConfirmModal(false);
       fetchUsers(); 
       setTimeout(() => setShowNotification({ show: false, message: '', type: '' }), 3000);
     } catch (error) {
-      setShowNotification({ show: true, type: 'error', message: 'Lỗi cập nhật Database!' });
+      setShowNotification({ show: true, type: 'error', message: 'Error updating Database!' });
       setShowConfirmModal(false);
     }
   };
@@ -89,7 +89,7 @@ export default function UserManagement() {
 
       setModalMode("EDIT");
       
-      // Đổ dữ liệu chi tiết vào state, lưu ý map đúng tên biến
+      // Đổ dữ liệu chi tiết vào state
       setSelectedUserForEdit({ 
         ...userDetail, 
         fullName: userDetail.fullname || userDetail.fullName,
@@ -100,29 +100,29 @@ export default function UserManagement() {
       setIsModalOpen(true);
     } catch (error) {
       console.error("Lỗi khi lấy chi tiết user:", error);
-      setShowNotification({ show: true, type: 'error', message: 'Không thể lấy thông tin chi tiết!' });
+      setShowNotification({ show: true, type: 'error', message: 'Cannot retrieve user details!' });
       setTimeout(() => setShowNotification({ show: false, message: '', type: '' }), 4000);
     }
   };
 
-  // --- HÀM XỬ LÝ LƯU (NHẬN TỪ USERMODAL) ---
+  // --- HÀM XỬ LÝ LƯU ---
   const handleSaveModal = async (formData) => {
     try {
       if (modalMode === "ADD") {
         await axiosInstance.post('/users', formData);
-        setShowNotification({ show: true, type: 'success', message: 'Thêm người dùng mới thành công!' });
+        setShowNotification({ show: true, type: 'success', message: 'Successfully added new user!' });
       } else {
         // Edit User (Ví dụ PUT /users/{username})
         await axiosInstance.put(`/users/${formData.username}`, formData);
-        setShowNotification({ show: true, type: 'success', message: 'Cập nhật thông tin thành công!' });
+        setShowNotification({ show: true, type: 'success', message: 'Successfully updated user information!' });
       }
       
       setIsModalOpen(false);
       fetchUsers();
       setTimeout(() => setShowNotification({ show: false, message: '', type: '' }), 3000);
     } catch (error) {
-      console.error("Lỗi khi lưu user:", error);
-      const errorMsg = error.response?.data?.error || 'Có lỗi xảy ra khi lưu vào Database!';
+      console.error("Error saving user:", error);
+      const errorMsg = error.response?.data?.error || 'Error saving user!';
       setShowNotification({ show: true, type: 'error', message: errorMsg });
       setTimeout(() => setShowNotification({ show: false, message: '', type: '' }), 4000);
     }
@@ -157,9 +157,6 @@ export default function UserManagement() {
               className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded font-bold transition"
             >
               Lock/Unlock
-            </button>
-            <button className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded font-bold transition">
-              Filter data
             </button>
           </div>
           <div className="flex gap-3">
@@ -199,8 +196,8 @@ export default function UserManagement() {
               </tr>
             </thead>
             <tbody>
-              {loading ? <tr><td colSpan="8" className="p-6 text-center text-gray-500">Đang tải...</td></tr> : 
-               filteredUsers.length === 0 ? <tr><td colSpan="8" className="p-6 text-center text-gray-500">Không có dữ liệu.</td></tr> :
+              {loading ? <tr><td colSpan="8" className="p-6 text-center text-gray-500">Loading...</td></tr> : 
+               filteredUsers.length === 0 ? <tr><td colSpan="8" className="p-6 text-center text-gray-500">No data available.</td></tr> :
                filteredUsers.map((user, index) => (
                 <tr 
                   key={index} 
@@ -214,7 +211,7 @@ export default function UserManagement() {
                   <td className="p-3">{user.fullname || user.fullName}</td>
                   <td className="p-3">{user.company}</td>
                   <td className="p-3">{user.department}</td>
-                  <td className="p-3 text-red-500 font-medium">{user.role}</td>
+                  <td className="p-3 text-red-500 font-medium">{user.roleName}</td>
                   <td className="p-3">{user.email}</td>
                   <td className="p-3">
                     <span className={`px-3 py-1 rounded text-white text-sm font-semibold ${user.status === "Active" || user.status === "ACTIVE" ? "bg-green-500" : "bg-gray-400"}`}>
@@ -237,16 +234,16 @@ export default function UserManagement() {
         initialData={selectedUserForEdit} 
       />
 
-      {/* Modal Lock/Unlock giữ nguyên */}
+      {/* Modal Lock/Unlock */}
       {showConfirmModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="w-[450px] bg-white rounded-lg shadow-xl p-8 flex flex-col items-center">
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4"><span className="text-red-500 text-3xl font-bold">!</span></div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Xác nhận thao tác</h2>
-            <p className="text-gray-600 text-center mb-8">Bạn có chắc chắn muốn thay đổi trạng thái cho <strong>{selectedUsers.length}</strong> người dùng đã chọn không?</p>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Confirm Action</h2>
+            <p className="text-gray-600 text-center mb-8">Are you sure you want to change the status of <strong>{selectedUsers.length}</strong> selected users?</p>
             <div className="flex gap-4 w-full">
-              <button onClick={() => setShowConfirmModal(false)} className="flex-1 py-2 rounded border border-gray-300 font-bold text-gray-600 hover:bg-gray-50 transition">Hủy</button>
-              <button onClick={handleConfirmLockUnlock} className="flex-1 py-2 rounded bg-red-500 font-bold text-white hover:bg-red-600 transition">Đồng ý</button>
+              <button onClick={() => setShowConfirmModal(false)} className="flex-1 py-2 rounded border border-gray-300 font-bold text-gray-600 hover:bg-gray-50 transition">Cancel</button>
+              <button onClick={handleConfirmLockUnlock} className="flex-1 py-2 rounded bg-red-500 font-bold text-white hover:bg-red-600 transition">Confirm</button>
             </div>
           </div>
         </div>

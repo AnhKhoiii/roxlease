@@ -90,4 +90,26 @@ public class UserController {
                     .body(Collections.singletonMap("error", e.getMessage()));
         }
     }
+
+    @PostMapping("/{username}/lock")
+    public ResponseEntity<?> lockUser(@PathVariable String username) {
+        try {
+            userService.lockUser(username);
+            return ResponseEntity.ok(Collections.singletonMap("message", "Khóa tài khoản thành công."));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{username}/unlock")
+    public ResponseEntity<?> unlockUser(@PathVariable String username) {
+        try {
+            userService.unlockUser(username);
+            return ResponseEntity.ok(Collections.singletonMap("message", "Mở khóa tài khoản thành công."));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
 }

@@ -82,7 +82,6 @@ public class User {
 
     public void unlockAccount() {
         this.status = UserStatus.ACTIVE;
-        resetFailedAttempts();
     }
 
     public boolean isLocked() {
