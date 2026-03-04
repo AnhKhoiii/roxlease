@@ -10,9 +10,9 @@ const DashboardLayout = () => {
 
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
-  const location = useLocation(); // Dùng để đóng menu mobile nếu có
+  const location = useLocation();
 
-  // 1. GỌI API LẤY THÔNG TIN USER (Bao gồm danh sách Permissions)
+  // GỌI API LẤY THÔNG TIN USER (Bao gồm danh sách Permissions)
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
@@ -49,13 +49,12 @@ const DashboardLayout = () => {
     navigate('/profile'); 
   };
 
-  // 2. CẤU HÌNH MENU & PERMISSION
-  // Quy định: User phải có ít nhất 1 permission trong mảng này thì mới thấy menu
+  // CẤU HÌNH MENU & PERMISSION
   const menuItems = [
     { 
       name: 'Home', 
       path: '/dashboard', 
-      permissions: ['VIEW_DASHBOARD'], // Quyền xem Dashboard
+      permissions: ['VIEW_DASHBOARD'],
       icon: <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path> 
     },
     { 
@@ -85,12 +84,12 @@ const DashboardLayout = () => {
     { 
       name: 'System', 
       path: '/system', 
-      permissions: ['MANAGE_SYSTEM', 'MANAGE_ROLE', 'MANAGE_USER'], // Menu quan trọng nhất của Epic hiện tại
+      permissions: ['MANAGE_SYSTEM', 'MANAGE_ROLE', 'MANAGE_USER'],
       icon: <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path> 
     },
   ];
 
-  // 3. LỌC MENU DỰA TRÊN PERMISSIONS
+  // LỌC MENU DỰA TRÊN PERMISSIONS
   const visibleMenuItems = menuItems.filter(item => {
     // Nếu chưa load xong hoặc user không có mảng permissions -> Ẩn
     if (!currentUser || !currentUser.permissions) return false;

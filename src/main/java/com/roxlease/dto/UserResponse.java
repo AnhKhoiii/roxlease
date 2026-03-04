@@ -1,7 +1,5 @@
 package com.roxlease.dto;
 
-import java.util.List;
-
 import com.roxlease.model.Enum.UserStatus;
 import lombok.Data;
 

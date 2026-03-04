@@ -74,7 +74,7 @@ public class ApplicationConfig {
             return org.springframework.security.core.userdetails.User
                     .withUsername(user.getUsername())
                     .password(user.getUserPwd())
-                    // Chặn đăng nhập nếu Status không phải ACTIVE (Giả sử bạn dùng Enum UserStatus)
+                    // Chặn đăng nhập nếu Status không phải ACTIVE
                     .accountLocked(user.getStatus() != com.roxlease.model.Enum.UserStatus.ACTIVE) 
                     .authorities(authorities)
                     .build();

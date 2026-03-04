@@ -10,14 +10,11 @@ import java.util.List;
 @Data
 public class UpdateUserRequest {
     
-    @NotBlank(message = "Email không được để trống")
     @Email(message = "Email không đúng định dạng")
     private String email;
     
-    @NotBlank(message = "Họ tên không được để trống")
     private String fullname;
     
-    @NotBlank(message = "Role không được để trống")
     private String roleName;
 
     private String password; 

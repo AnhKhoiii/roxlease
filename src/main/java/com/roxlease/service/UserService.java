@@ -72,9 +72,11 @@ public class UserService {
         UserResponse response = new UserResponse();
         response.setUsername(user.getUsername());
         response.setFullname(user.getFullname());
+        response.setCompany(user.getCompany());
         response.setDepartment(user.getDepartment());
         response.setRoleName(user.getRoleName());
         response.setStatus(user.getStatus());
+        response.setEmail(user.getEmail());
         return response;
     }
 

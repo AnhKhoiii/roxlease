@@ -27,7 +27,7 @@ const Profile = () => {
     e.preventDefault();
     setNotification({ show: false, type: '', message: '' });
 
-    // 1. Kiểm tra mật khẩu mới và xác nhận mật khẩu có khớp không
+    // Kiểm tra mật khẩu mới và xác nhận mật khẩu có khớp không
     if (formData.new !== formData.confirm) {
       setNotification({ 
         show: true, 
@@ -37,7 +37,7 @@ const Profile = () => {
       return;
     }
 
-    // 2. Kiểm tra định dạng mật khẩu mới
+    // Kiểm tra định dạng mật khẩu mới
     if (!validatePassword(formData.new)) {
       setNotification({ 
         show: true, 
@@ -48,21 +48,19 @@ const Profile = () => {
     }
 
     try {
-      // 3. Gọi API đổi mật khẩu
-      // Payload gửi lên khớp với ChangePasswordRequest.java của bạn
+      // Gọi API đổi mật khẩu
       await axiosInstance.post('/auth/change-password', {
         currentPassword: formData.current,
         newPassword: formData.new
       });
 
-      // 4. THÀNH CÔNG: Hiển thị thông báo và yêu cầu đăng nhập lại
+      // THÀNH CÔNG: Hiển thị thông báo và yêu cầu đăng nhập lại
       setNotification({ 
         show: true, 
         type: 'success', 
         message: 'Đổi mật khẩu thành công! Hệ thống sẽ tự động đăng xuất để bảo mật.' 
       });
 
-      // Xóa dữ liệu form
       setFormData({ current: '', new: '', confirm: '' });
 
       // Đợi 2 giây để người dùng đọc thông báo rồi đá về trang Login
@@ -72,8 +70,7 @@ const Profile = () => {
       }, 2500);
 
     } catch (error) {
-      // 5. THẤT BẠI: Xử lý các lỗi từ Backend trả về (400 Bad Request)
-      // Lưu ý: AuthController của bạn trả về key "error"
+      // THẤT BẠI: Xử lý các lỗi từ Backend trả về
       const backendError = error.response?.data?.error || '';
       
       if (backendError === "WRONG_CURRENT_PASSWORD") {

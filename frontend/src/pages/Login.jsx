@@ -2,9 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-// Bạn nhớ đưa file ảnh nền vào thư mục src/assets nhé
 import backgroundImage from '../assets/login_bg.png'; 
-// Đưa file logo ROX Lease (dạng SVG hoặc PNG nền trong suốt) vào assets
 import logoImage from '../assets/login_logo.png'; 
 
 const Login = () => {
@@ -27,7 +25,6 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      // Gọi API đến Spring Boot Backend
       const response = await axios.post('http://localhost:8080/api/auth/login', {
         username,
         password
@@ -66,22 +63,22 @@ const Login = () => {
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center font-['Inter'] overflow-hidden">
       
-      {/* 1. Ảnh nền Full màn hình */}
+      {/*Ảnh nền*/}
       <img 
         src={backgroundImage} 
         alt="ROX Lease Background" 
         className="absolute inset-0 w-full h-full object-cover z-0"
       />
 
-      {/* 2. Dòng Copyright góc dưới trái */}
+      {/*Dòng Copyright*/}
       <div className="absolute bottom-4 left-6 z-10 text-white/70 text-[12px]">
         © 2026 All Rights Reserved - ROX
       </div>
 
-      {/* 3. KHUNG LOGIN (Hiệu ứng Glassmorphism) */}
+      {/* KHUNG LOGIN */}
       <div className="relative z-10 w-[550px] p-[50px] bg-white/70 backdrop-blur-md rounded-[12px] shadow-2xl flex flex-col items-center border border-white/40">
         
-        {/* Logo ROX Lease */}
+        {/* Logo */}
         <div className="w-[280px] h-[70px] mb-[40px] flex items-center justify-center">
           <img 
             src={logoImage} 
@@ -135,7 +132,6 @@ const Login = () => {
           {/* Remember me & Forgot Password */}
           <div className="flex justify-between items-center w-full mb-[30px]">
             <div className="flex items-center gap-2">
-               {/* Custom Checkbox màu đỏ */}
                <input 
                  type="checkbox" 
                  id="remember" 
@@ -150,7 +146,6 @@ const Login = () => {
             </a>
           </div>
 
-          {/* Nút Continue */}
           <button 
             type="submit"
             disabled={isLoading}
@@ -161,7 +156,7 @@ const Login = () => {
         </form>
       </div>
 
-      {/* Popup báo khóa tài khoản (giữ nguyên logic cũ) */}
+      {/* Popup báo khóa tài khoản */}
       {isLocked && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#171a1f]/60 backdrop-blur-sm">
           <div className="w-[500px] p-8 bg-white rounded-[16px] shadow-2xl flex flex-col items-center relative">
