@@ -73,7 +73,7 @@ export default function UserManagement() {
     }
   };
 
-  // --- HÀM MỞ MODAL THÊM MỚI ---
+  // --- MỞ MODAL ---
   const openAddModal = () => {
     setModalMode("ADD");
     setSelectedUserForEdit(null);
@@ -81,11 +81,28 @@ export default function UserManagement() {
   };
 
   // --- HÀM MỞ MODAL EDIT ---
-  // (Bạn có thể gắn hàm này vào nút Edit trên từng dòng của table nếu muốn)
-  const openEditModal = (user) => {
-    setModalMode("EDIT");
-    setSelectedUserForEdit({ ...user, fullName: user.fullName || user.fullname });
-    setIsModalOpen(true);
+  const openEditModal = async (user) => {
+    try {
+      // Gọi API lấy UserDetailResponse
+      const response = await axiosInstance.get(`/users/${user.username}`);
+      const userDetail = response.data;
+
+      setModalMode("EDIT");
+      
+      // Đổ dữ liệu chi tiết vào state, lưu ý map đúng tên biến
+      setSelectedUserForEdit({ 
+        ...userDetail, 
+        fullName: userDetail.fullname || userDetail.fullName,
+        dob: userDetail.birthday,
+        vpaSite: userDetail.vpasite 
+      });
+      
+      setIsModalOpen(true);
+    } catch (error) {
+      console.error("Lỗi khi lấy chi tiết user:", error);
+      setShowNotification({ show: true, type: 'error', message: 'Không thể lấy thông tin chi tiết!' });
+      setTimeout(() => setShowNotification({ show: false, message: '', type: '' }), 4000);
+    }
   };
 
   // --- HÀM XỬ LÝ LƯU (NHẬN TỪ USERMODAL) ---
@@ -113,15 +130,9 @@ export default function UserManagement() {
 
   return (
     <div className="flex bg-white min-h-screen font-sans">
-      {/* Sidebar giữ nguyên */}
+      {/* Sidebar */}
       <div className="w-[260px] bg-gray-100 shadow-md p-6">
-        <h1 className="text-red-500 font-bold text-xl mb-10">ROX Lease</h1>
         <div className="flex flex-col gap-6 text-gray-600 text-lg">
-          <div className="hover:text-red-500 cursor-pointer">Home</div>
-          <div className="hover:text-red-500 cursor-pointer">Space</div>
-          <div className="hover:text-red-500 cursor-pointer">Lease</div>
-          <div className="hover:text-red-500 cursor-pointer">Cost</div>
-          <div className="hover:text-red-500 cursor-pointer">Service desk</div>
           <div className="mt-10 text-red-500 font-bold">System</div>
           <div className="ml-4 text-red-500 font-semibold cursor-pointer">Add or Edit Users</div>
           <div className="ml-4 cursor-pointer hover:text-red-500">Add or Edit Roles</div>
@@ -131,11 +142,6 @@ export default function UserManagement() {
       </div>
 
       <div className="flex-1 p-10 flex flex-col">
-        {showNotification.show && (
-          <div className={`mb-4 p-4 rounded text-white font-bold ${showNotification.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}>
-            {showNotification.message}
-          </div>
-        )}
 
         {/* Top buttons */}
         <div className="flex justify-between items-center mb-6">
@@ -162,7 +168,7 @@ export default function UserManagement() {
           </div>
         </div>
 
-        {/* Search fields giữ nguyên */}
+        {/* Search fields */}
         <div className="flex flex-wrap gap-4 mb-6">
           {Object.keys(filters).map((key) => (
             <input
@@ -175,7 +181,7 @@ export default function UserManagement() {
           ))}
         </div>
 
-        {/* Table giữ nguyên */}
+        {/* Table */}
         <div className="bg-white shadow rounded overflow-auto flex-1">
           <table className="w-full min-w-[1000px]">
             <thead className="bg-yellow-500 text-white sticky top-0">
@@ -190,7 +196,6 @@ export default function UserManagement() {
                 <th className="p-3">Role</th>
                 <th className="p-3">Email</th>
                 <th className="p-3">Status</th>
-                {/* Bạn có thể thêm cột Action ở đây để gọi hàm openEditModal(user) */}
               </tr>
             </thead>
             <tbody>
@@ -247,7 +252,7 @@ export default function UserManagement() {
         </div>
       )}
 
-      {/* ================= TOAST NOTIFICATION (GÓC DƯỚI BÊN PHẢI) ================= */}
+      {/* ================= TOAST NOTIFICATION ================= */}
       {showNotification.show && (
         <div className={`fixed bottom-8 right-8 z-[100] min-w-[320px] p-4 bg-white rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.15)] flex items-center justify-between border-l-4 transition-transform duration-300 transform translate-y-0 ${
           showNotification.type === 'success' 

@@ -4,27 +4,15 @@ import axiosInstance from "../api/axiosInstance";
 export default function UserModal({ isOpen, onClose, onSave, mode, initialData }) {
   // --- QUẢN LÝ DỮ LIỆU FORM ---
   const [formData, setFormData] = useState({
-    username: "",
-    password: "",
-    fullName: "",
-    company: "",
-    department: "",
-    roleName: "", // SỬA: Đổi role thành roleName
-    email: "",
-    status: "Active",
-    phone: "",
-    employeeTitle: "",
-    dob: "",
-    manager: "",
-    gender: "",
-    vpaSite: "", 
-    failedAttempts: 0
+    username: "", password: "", fullName: "", company: "", department: "",
+    roleName: "", email: "", status: "Active", phone: "", employeeTitle: "",
+    dob: "", manager: "", gender: "", vpaSite: "", failedAttempts: 0
   });
 
-  // --- LƯU DANH SÁCH ROLE TỪ DATABASE ---
+  // --- QUẢN LÝ LỖI VALIDATION (TÔ ĐỎ) ---
+  const [errors, setErrors] = useState({});
   const [roles, setRoles] = useState([]);
 
-  // --- FETCH DANH SÁCH ROLE KHI MỞ MODAL ---
   useEffect(() => {
     const fetchRoles = async () => {
       try {
@@ -34,285 +22,296 @@ export default function UserModal({ isOpen, onClose, onSave, mode, initialData }
         console.error("Lỗi khi lấy danh sách Role:", error);
       }
     };
-
-    if (isOpen) {
-      fetchRoles();
-    }
+    if (isOpen) fetchRoles();
   }, [isOpen]);
 
-  // --- CẬP NHẬT DỮ LIỆU KHI MỞ MODAL (ADD / EDIT) ---
   useEffect(() => {
     if (isOpen) {
+      setErrors({}); 
       if (mode === "EDIT" && initialData) {
-        // Đổ dữ liệu cũ vào form nếu đang ở chế độ EDIT
         setFormData({ 
           ...initialData, 
-          password: "",
+          password: "", // Xóa trắng password cũ
           fullName: initialData.fullName || initialData.fullname || "",
-          roleName: initialData.roleName || "", // SỬA: Đảm bảo lấy đúng roleName
-          // SỬA LỖI: Nếu vpaSite từ backend trả về là mảng, chuyển nó thành chuỗi để hiển thị trên input
+          roleName: initialData.roleName || "",
+          dob: initialData.dob || "", 
+          gender: initialData.gender || "", // Đảm bảo gender được map (MALE/FEMALE/OTHER)
           vpaSite: Array.isArray(initialData.vpaSite) ? initialData.vpaSite.join(', ') : (initialData.vpaSite || ""),
-          failedAttempts: initialData.failedAttempts || 0
+          failedAttempts: initialData.failedAttempts || 0,
+          phone: initialData.phone || "",
+          employeeTitle: initialData.employeeTitle || "",
+          manager: initialData.manager || ""
         }); 
       } else {
-        // Reset form rỗng nếu ở chế độ ADD
         setFormData({
           username: "", password: "", fullName: "", company: "", department: "",
-          roleName: "", email: "", status: "Active", phone: "", employeeTitle: "", // SỬA: role -> roleName
+          roleName: "", email: "", status: "Active", phone: "", employeeTitle: "",
           dob: "", manager: "", gender: "", vpaSite: "", failedAttempts: 0
         });
       }
     }
   }, [isOpen, mode, initialData]);
 
-  // Nếu modal không được mở thì không render gì cả
   if (!isOpen) return null;
+
+  // --- HÀM CẬP NHẬT DỮ LIỆU VÀ XÓA LỖI ---
+  const handleChange = (field, value) => {
+    setFormData({ ...formData, [field]: value });
+    if (errors[field]) {
+      setErrors({ ...errors, [field]: false }); // Xóa viền đỏ khi người dùng bắt đầu nhập lại
+    }
+  };
 
   // --- HÀM XỬ LÝ LƯU (SAVE) ---
   const handleSave = (addAnother = false) => {
-    // Validate cơ bản các trường bắt buộc
-    if (!formData.username || !formData.roleName || (!formData.password && mode === "ADD")) { // SỬA: role -> roleName
-      alert("Vui lòng điền đầy đủ các trường bắt buộc (*)");
-      return;
+    // 1. KIỂM TRA ĐIỀU KIỆN (Trùng khớp với ràng buộc ở Backend)
+    const newErrors = {};
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!formData.username.trim() || formData.username.length < 4) newErrors.username = true;
+    if (!formData.fullName.trim()) newErrors.fullName = true;
+    if (!formData.roleName) newErrors.roleName = true;
+    if (!formData.email.trim() || !emailRegex.test(formData.email)) newErrors.email = true;
+    if (mode === "ADD" && (!formData.password || formData.password.length < 8)) newErrors.password = true;
+
+    // Nếu có lỗi, cập nhật state errors để tô đỏ ô và dừng lại
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return; // Dừng lại, KHÔNG gọi API
     }
 
-    // --- Tách chuỗi vpaSite ---
+    // 2. MAP DỮ LIỆU (Ép tên biến khớp 100% với CreateUserRequest.java)
     const processedFormData = {
-      ...formData,
-      // SỬA LỖI: Kiểm tra an toàn trước khi split để tránh lỗi crash React
-      vpaSite: typeof formData.vpaSite === 'string' && formData.vpaSite.trim() !== ""
+      username: formData.username,
+      email: formData.email,
+      password: formData.password,
+      fullname: formData.fullName,   // Java cần chữ "fullname" viết thường
+      roleName: formData.roleName,
+      company: formData.company,
+      department: formData.department,
+      phone: formData.phone,
+      employeeTitle: formData.employeeTitle,
+      birthday: formData.dob ? formData.dob : null, // Java cần chữ "birthday"
+      manager: formData.manager,
+      gender: formData.gender ? formData.gender : null,
+      vpasite: typeof formData.vpaSite === 'string' && formData.vpaSite.trim() !== "" // Java cần "vpasite"
         ? formData.vpaSite.split(',').map(site => site.trim()).filter(site => site !== "") 
         : (Array.isArray(formData.vpaSite) ? formData.vpaSite : [])
     };
 
     onSave(processedFormData, addAnother);
     
-    // Nếu bấm "Save and add another", tự động reset form mà không đóng Modal
     if (addAnother) {
       setFormData({
         username: "", password: "", fullName: "", company: "", department: "",
-        roleName: "", email: "", status: "Active", phone: "", employeeTitle: "", // SỬA: role -> roleName
+        roleName: "", email: "", status: "Active", phone: "", employeeTitle: "",
         dob: "", manager: "", gender: "", vpaSite: "", failedAttempts: 0
       });
+      setErrors({});
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 font-sans">
-      
-      {/* Khung Modal */}
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 font-sans px-4">
       <div className="bg-white w-[1100px] rounded-lg shadow-lg overflow-hidden">
         
         {/* HEADER */}
-        <div className="bg-yellow-500 flex items-center justify-between px-6 py-4">
+        <div className="bg-[#EFB034] flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-6">
-            <h2 className="text-xl font-bold text-black">
+            <h2 className="text-xl font-bold text-black uppercase tracking-tight">
               {mode === "ADD" ? "Add new user" : "Edit user"}
             </h2>
-            
-            {/* Nút Save */}
-            <button 
-              onClick={() => handleSave(false)}
-              className="bg-red-500 hover:bg-red-600 text-white px-4 py-1 rounded font-semibold transition-colors"
-            >
+            <button onClick={() => handleSave(false)} className="bg-[#DE3B40] hover:bg-[#C11C22] text-white px-5 py-1 rounded font-semibold text-sm transition-all shadow-sm">
               {mode === "ADD" ? "Save" : "Update"}
             </button>
-            
-            {/* Nút Save & Add Another (Chỉ hiện khi Add) */}
             {mode === "ADD" && (
-              <button 
-                onClick={() => handleSave(true)}
-                className="bg-red-500 hover:bg-red-600 text-white px-4 py-1 rounded font-semibold transition-colors"
-              >
+              <button onClick={() => handleSave(true)} className="bg-[#DE3B40] hover:bg-[#C12126] text-white px-5 py-1 rounded font-semibold text-sm transition-all shadow-sm">
                 Save and add another
               </button>
             )}
           </div>
-          <button onClick={onClose} className="text-gray-800 hover:text-black font-bold text-xl">
-            ✕
-          </button>
+          <button onClick={onClose} className="text-gray-700 hover:text-black font-bold text-xl">✕</button>
         </div>
 
         {/* NỘI DUNG FORM */}
         <div className="p-8 grid grid-cols-3 gap-x-10 gap-y-6 text-sm text-gray-700">
           
-          {/* Username */}
-          <div>
-            <label className="font-semibold">User Name <span className="text-red-500">*</span></label>
-            <input
-              value={formData.username}
-              onChange={(e) => setFormData({...formData, username: e.target.value})}
-              placeholder="UserName"
-              disabled={mode === "EDIT"}
-              className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none focus:border-yellow-500 disabled:bg-gray-100"
-            />
-          </div>
-
-          {/* Full name */}
-          <div>
-            <label className="font-semibold">Full name</label>
-            <input
-              value={formData.fullName}
-              onChange={(e) => setFormData({...formData, fullName: e.target.value})}
-              placeholder="Fullname"
-              className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none focus:border-yellow-500"
-            />
-          </div>
-
-          {/* Company */}
-          <div>
-            <label className="font-semibold">Company</label>
-            <input
-              value={formData.company}
-              onChange={(e) => setFormData({...formData, company: e.target.value})}
-              placeholder="Company"
-              className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none focus:border-yellow-500"
-            />
-          </div>
-
-          {/* Role */}
-          <div>
-            <label className="font-semibold">Role Name <span className="text-red-500">*</span></label>
-            <select 
-              value={formData.roleName} // SỬA: value đọc từ roleName
-              onChange={(e) => setFormData({...formData, roleName: e.target.value})} // SỬA: cập nhật vào roleName
-              className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none focus:border-yellow-500 bg-white"
-            >
-              <option value="">-- Select Role --</option>
-              {roles.map((r, index) => (
-                <option key={index} value={r.name || r.roleName}>
-                  {r.name || r.roleName}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Email */}
-          <div>
-            <label className="font-semibold">Email</label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({...formData, email: e.target.value})}
-              placeholder="abc@tnteco.vn"
-              className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none focus:border-yellow-500"
-            />
-          </div>
-
-          {/* Department */}
-          <div>
-            <label className="font-semibold">Department</label>
-            <input
-              value={formData.department}
-              onChange={(e) => setFormData({...formData, department: e.target.value})}
-              placeholder="Department"
-              className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none focus:border-yellow-500"
-            />
-          </div>
-
-          {/* Password */}
-          <div>
-            <label className="font-semibold">User password {mode === "ADD" && <span className="text-red-500">*</span>}</label>
-            <input
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({...formData, password: e.target.value})}
-              placeholder={mode === "EDIT" ? "(Bỏ trống nếu không đổi)" : "Userpassword"}
-              className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none focus:border-yellow-500"
-            />
-          </div>
-
-          {/* Phone */}
-          <div>
-            <label className="font-semibold">Phone</label>
-            <input
-              value={formData.phone}
-              onChange={(e) => setFormData({...formData, phone: e.target.value})}
-              placeholder="+84123456789"
-              className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none focus:border-yellow-500"
-            />
-          </div>
-
-          {/* Employee title */}
-          <div>
-            <label className="font-semibold">Employee Title</label>
-            <input
-              value={formData.employeeTitle}
-              onChange={(e) => setFormData({...formData, employeeTitle: e.target.value})}
-              placeholder="Employee title"
-              className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none focus:border-yellow-500"
-            />
-          </div>
-
-          {/* Failed attempts */}
-          <div className="flex items-end gap-3">
-            <div className="flex-1">
-              <label className="font-semibold text-gray-400">Failed attempts</label>
+          {/* CỘT 1 */}
+          <div className="flex flex-col gap-5">
+            <div>
+              <label className="font-semibold text-gray-700">User Name <span className="text-red-500">*</span></label>
               <input
-                value={formData.failedAttempts}
-                disabled
-                className="mt-1 w-full border border-red-200 rounded px-3 py-2 bg-gray-100 text-gray-500 text-center font-bold"
+                value={formData.username}
+                onChange={(e) => handleChange('username', e.target.value)}
+                placeholder="UserName"
+                disabled={mode === "EDIT"}
+                className={`mt-1 w-full border rounded px-3 py-2 outline-none transition-colors ${
+                  errors.username ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-[#EFB034] disabled:bg-gray-100'
+                }`}
+              />
+              {errors.username && <p className="text-red-500 text-xs mt-1">Bắt buộc & tối thiểu 4 ký tự</p>}
+            </div>
+
+            <div>
+              <label className="font-semibold text-gray-700">Role Name <span className="text-red-500">*</span></label>
+              <select 
+                value={formData.roleName}
+                onChange={(e) => handleChange('roleName', e.target.value)}
+                className={`mt-1 w-full border rounded px-3 py-2 outline-none transition-colors bg-white cursor-pointer ${
+                  errors.roleName ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-[#EFB034]'
+                }`}
+              >
+                <option value="">-- Select Role --</option>
+                {roles.map((r, index) => (
+                  <option key={index} value={r.name || r.roleName}>{r.name || r.roleName}</option>
+                ))}
+              </select>
+              {errors.roleName && <p className="text-red-500 text-xs mt-1">Vui lòng chọn Role</p>}
+            </div>
+
+            <div>
+              <label className="font-semibold text-gray-700">User password {mode === "ADD" && <span className="text-red-500">*</span>}</label>
+              <input
+                type="password"
+                value={formData.password}
+                onChange={(e) => handleChange('password', e.target.value)}
+                placeholder={mode === "EDIT" ? "(Bỏ trống nếu không đổi)" : "Userpassword"}
+                className={`mt-1 w-full border rounded px-3 py-2 outline-none transition-colors ${
+                  errors.password ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-[#EFB034]'
+                }`}
+              />
+              {errors.password && <p className="text-red-500 text-xs mt-1">Bắt buộc & tối thiểu 8 ký tự</p>}
+            </div>
+
+            <div className="flex items-end gap-3">
+              <div className="flex-1">
+                <label className="font-semibold text-gray-400">Failed attempts</label>
+                <input value={formData.failedAttempts} disabled className="mt-1 w-full border border-red-100 rounded px-3 py-2 bg-gray-50 text-gray-500 font-bold text-center" />
+              </div>
+              <button onClick={() => setFormData({...formData, failedAttempts: 0})} className="bg-[#379AE6] hover:bg-[#2d82c2] text-white px-4 py-2 rounded font-semibold text-xs h-[38px] transition-colors">
+                Reset
+              </button>
+            </div>
+          </div>
+
+          {/* CỘT 2 */}
+          <div className="flex flex-col gap-5">
+            <div>
+              <label className="font-semibold text-gray-700">Full name <span className="text-red-500">*</span></label>
+              <input
+                value={formData.fullName}
+                onChange={(e) => handleChange('fullName', e.target.value)}
+                placeholder="Fullname"
+                className={`mt-1 w-full border rounded px-3 py-2 outline-none transition-colors ${
+                  errors.fullName ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-[#EFB034]'
+                }`}
+              />
+              {errors.fullName && <p className="text-red-500 text-xs mt-1">Vui lòng nhập Họ tên</p>}
+            </div>
+
+            <div>
+              <label className="font-semibold text-gray-700">Email <span className="text-red-500">*</span></label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => handleChange('email', e.target.value)}
+                placeholder="abc@tnteco.vn"
+                className={`mt-1 w-full border rounded px-3 py-2 outline-none transition-colors ${
+                  errors.email ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-[#EFB034]'
+                }`}
+              />
+              {errors.email && <p className="text-red-500 text-xs mt-1">Vui lòng nhập đúng định dạng Email</p>}
+            </div>
+
+            <div>
+              <label className="font-semibold text-gray-700">Phone</label>
+              <input
+                value={formData.phone}
+                onChange={(e) => handleChange('phone', e.target.value)}
+                placeholder="+84123456789"
+                className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none focus:border-[#EFB034]"
               />
             </div>
-            <button 
-              onClick={() => setFormData({...formData, failedAttempts: 0})}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded font-semibold transition-colors"
-            >
-              Reset
-            </button>
+
+            <div>
+              <label className="font-semibold text-gray-700">Date of Birth</label>
+              <input
+                type="date"
+                value={formData.dob}
+                onChange={(e) => handleChange('dob', e.target.value)}
+                className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none focus:border-[#EFB034] uppercase"
+              />
+            </div>
+
+            <div>
+              <label className="font-semibold text-gray-700">Gender</label>
+              <select 
+                value={formData.gender}
+                onChange={(e) => handleChange('gender', e.target.value)}
+                className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none focus:border-[#EFB034] bg-white cursor-pointer"
+              >
+                <option value="">Gender</option>
+                <option value="MALE">Male</option>
+                <option value="FEMALE">Female</option>
+                <option value="OTHER">Other</option>
+              </select>
+            </div>
           </div>
 
-          {/* Date of birth */}
-          <div>
-            <label className="font-semibold">Date of Birth</label>
-            <input
-              type="date"
-              value={formData.dob}
-              onChange={(e) => setFormData({...formData, dob: e.target.value})}
-              className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none focus:border-yellow-500"
-            />
+          {/* CỘT 3 */}
+          <div className="flex flex-col gap-5">
+            <div>
+              <label className="font-semibold text-gray-700">Company</label>
+              <input
+                value={formData.company}
+                onChange={(e) => handleChange('company', e.target.value)}
+                placeholder="Company"
+                className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none focus:border-[#EFB034]"
+              />
+            </div>
+
+            <div>
+              <label className="font-semibold text-gray-700">Department</label>
+              <input
+                value={formData.department}
+                onChange={(e) => handleChange('department', e.target.value)}
+                placeholder="Department"
+                className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none focus:border-[#EFB034]"
+              />
+            </div>
+
+            <div>
+              <label className="font-semibold text-gray-700">Employee Title</label>
+              <input
+                value={formData.employeeTitle}
+                onChange={(e) => handleChange('employeeTitle', e.target.value)}
+                placeholder="Employee title"
+                className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none focus:border-[#EFB034]"
+              />
+            </div>
+
+            <div>
+              <label className="font-semibold text-gray-700">Manager</label>
+              <input
+                value={formData.manager}
+                onChange={(e) => handleChange('manager', e.target.value)}
+                placeholder="Manager"
+                className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none focus:border-[#EFB034]"
+              />
+            </div>
+
+            <div>
+              <label className="font-semibold text-gray-700">VPA site</label>
+              <input
+                value={formData.vpaSite}
+                onChange={(e) => handleChange('vpaSite', e.target.value)}
+                placeholder="VD: 90L, 80H"
+                className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none focus:border-[#EFB034]"
+              />
+              <p className="text-[12px] text-gray-500 mt-1 italic">Có thể nhập nhiều site, ngăn cách bởi dấu phẩy (,)</p>
+            </div>
           </div>
 
-          {/* Manager */}
-          <div>
-            <label className="font-semibold">Manager</label>
-            <input
-              value={formData.manager}
-              onChange={(e) => setFormData({...formData, manager: e.target.value})}
-              placeholder="Manager"
-              className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none focus:border-yellow-500"
-            />
-          </div>
-
-          {/* Gender */}
-          <div>
-            <label className="font-semibold">Gender</label>
-            <select 
-              value={formData.gender}
-              onChange={(e) => setFormData({...formData, gender: e.target.value})}
-              className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none focus:border-yellow-500 bg-white"
-            >
-              <option value="">Gender</option>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
-
-          {/* VPA site */}
-          <div>
-            <label className="font-semibold">VPA site</label>
-            <input
-              value={formData.vpaSite}
-              onChange={(e) => setFormData({...formData, vpaSite: e.target.value})}
-              placeholder="VD: 90L, 80H"
-              className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none focus:border-yellow-500"
-            />
-            {/* Thêm dòng ghi chú nhỏ cho người dùng */}
-            <p className="text-[12px] text-gray-500 mt-1 italic">
-              Có thể nhập nhiều site, ngăn cách bởi dấu phẩy (,)
-            </p>
-          </div>
         </div>
       </div>
     </div>

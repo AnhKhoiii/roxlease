@@ -49,8 +49,12 @@ public class UserService {
         user.setEmployeeTitle(request.getEmployeeTitle());
         user.setBirthday(request.getBirthday());
         user.setManager(request.getManager());
-        user.setGender(Gender.valueOf(request.getGender()));
         user.setVpasite(request.getVpasite());
+        if (request.getGender() != null && !request.getGender().isEmpty()) {
+            user.setGender(Gender.valueOf(request.getGender().toUpperCase()));
+        } else {
+            user.setGender(null);
+        }
 
         userRepository.save(user);
     }
@@ -128,8 +132,12 @@ public class UserService {
         existingUser.setEmployeeTitle(request.getEmployeeTitle());
         existingUser.setBirthday(request.getBirthday());
         existingUser.setManager(request.getManager());
-        existingUser.setGender(Gender.valueOf(request.getGender()));
         existingUser.setVpasite(request.getVpasite());
+        if (request.getGender() != null && !request.getGender().isEmpty()) {
+            existingUser.setGender(Gender.valueOf(request.getGender().toUpperCase()));
+        } else {
+            existingUser.setGender(null);
+        }
         
         existingUser.setUpdatedAt(LocalDateTime.now());
 
