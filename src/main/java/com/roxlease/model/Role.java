@@ -8,7 +8,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.time.LocalDateTime;
-import java.util.Map;
 import java.util.List;
 
 @Data
@@ -25,7 +24,7 @@ public class Role {
     private Boolean isSystem;
 
     @Field("VPA_restriction")
-    private Map<String, Object> vpaRestriction;
+    private String vpaRestriction;
 
     @Field("permissions_ids")
     private List<String> permissionsIds;

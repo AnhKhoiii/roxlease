@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import DashboardLayout from './layouts/DashboardLayout'; 
 import Profile from './pages/Profile';
 import UserManagement from './pages/UserManagement';
+import RoleManagement from './pages/RoleManagement';
 
 function App() {
   return (
@@ -23,7 +24,8 @@ function App() {
           <Route path="servicedesk" element={<div className="p-8">Service Desk Screen</div>} />
           
           {/* Epic System Admin */}
-          <Route path="system" element={<UserManagement />} />
+          <Route path="system/user" element={<UserManagement />} />
+          <Route path="system/role" element={<RoleManagement />} />
           
           {/* Màn hình Profile của user */}
           <Route path="profile" element={<Profile />} />
