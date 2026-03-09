@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axiosInstance from "../api/axiosInstance";
 import RoleModal from "../components/RoleModal";
+import { useOutletContext } from 'react-router-dom';
 
 export default function RoleManagement() {
   const [roles, setRoles] = useState([]);
@@ -14,6 +15,9 @@ export default function RoleManagement() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState("ADD");
   const [selectedRoleForEdit, setSelectedRoleForEdit] = useState(null);
+  const [errorModal, setErrorModal] = useState({ show: false, message: "" });
+  const { currentUser } = useOutletContext();
+  const canEdit = currentUser?.permissions?.includes('SYSTEM_ROLE_EDIT');
 
   const fetchRoles = async () => {
     setLoading(true);
@@ -52,15 +56,15 @@ export default function RoleManagement() {
     try {
       if (modalMode === "ADD") {
         await axiosInstance.post('/roles', formData);
-        setShowNotification({ show: true, type: 'success', message: 'Tạo Role mới thành công!' });
+        setShowNotification({ show: true, type: 'success', message: 'Created new role successfully!' });
       } else {
         await axiosInstance.put(`/roles/${formData.roleName}`, formData);
-        setShowNotification({ show: true, type: 'success', message: 'Cập nhật Role thành công!' });
+        setShowNotification({ show: true, type: 'success', message: 'Updated role successfully!' });
       }
       setIsModalOpen(false);
       fetchRoles();
     } catch (error) {
-      setShowNotification({ show: true, type: 'error', message: error.response?.data?.error || 'Có lỗi xảy ra!' });
+      setShowNotification({ show: true, type: 'error', message: error.response?.data?.error || 'Error occurred!' });
     }
     setTimeout(() => setShowNotification({ show: false, message: '', type: '' }), 4000);
   };
@@ -70,52 +74,37 @@ export default function RoleManagement() {
       for (const roleName of selectedRoles) {
         await axiosInstance.delete(`/roles/${roleName}`);
       }
-      setShowNotification({ show: true, type: 'success', message: `Đã xóa ${selectedRoles.length} Role thành công!` });
+      setShowNotification({ show: true, type: 'success', message: `Deleted ${selectedRoles.length} role(s) successfully!` });
       setSelectedRoles([]);
       setShowDeleteConfirm(false);
       fetchRoles();
+      setTimeout(() => setShowNotification({ show: false, message: '', type: '' }), 4000);
     } catch (error) {
-      setShowNotification({ show: true, type: 'error', message: 'Lỗi khi xóa Role!' });
+      // Đóng Modal Xác nhận xóa
       setShowDeleteConfirm(false);
+      
+      // Lấy câu thông báo lỗi chuẩn xác từ Spring Boot ("Không thể xóa! Role [...] đang được gán...")
+      const errorMessage = error.response?.data?.error || 'Error occurred!';
+      
+      // Bật Modal Lỗi lên giữa màn hình
+      setErrorModal({ show: true, message: errorMessage });
     }
-    setTimeout(() => setShowNotification({ show: false, message: '', type: '' }), 4000);
   };
 
   return (
-    <div className="flex bg-white min-h-screen font-sans relative">
-      {/* ---------------- SIDEBAR TRÁI ---------------- */}
-      <div className="w-[260px] bg-gray-100 shadow-md p-6">
-        <h1 className="text-red-500 font-bold text-xl mb-10">ROX Lease</h1>
-        <div className="flex flex-col gap-6 text-gray-600 text-lg">
-          <div className="hover:text-red-500 cursor-pointer">Home</div>
-          <div className="hover:text-red-500 cursor-pointer">Space</div>
-          <div className="hover:text-red-500 cursor-pointer">Lease</div>
-          <div className="hover:text-red-500 cursor-pointer">Cost</div>
-          <div className="hover:text-red-500 cursor-pointer">Service desk</div>
-          <div className="mt-10 text-red-500 font-bold">System</div>
-          <div className="ml-4 cursor-pointer hover:text-red-500">Add or Edit Users</div>
-          
-          {/* Active State cho Roles */}
-          <div className="ml-4 text-red-500 font-semibold cursor-pointer border-l-4 border-red-500 pl-2">
-            Add or Edit Roles
-          </div>
-          
-          <div className="ml-4 cursor-pointer hover:text-red-500">Edit permission</div>
-          <div className="ml-4 cursor-pointer hover:text-red-500">Assign Permission to role</div>
-        </div>
-      </div>
-
+    <div className="flex w-full h-full bg-white font-sans relative">
       {/* ---------------- NỘI DUNG CHÍNH ---------------- */}
       <div className="flex-1 p-10 flex flex-col">
         {/* Top Buttons */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex gap-4">
-            <button onClick={handleOpenAdd} className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded font-bold transition shadow-sm">
+            <button onClick={handleOpenAdd} disabled={!canEdit} className={`px-5 py-2 rounded font-bold transition shadow-sm ${!canEdit ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-red-500 hover:bg-red-600 text-white'}`}>
               Add new Role
             </button>
             <button 
-              onClick={() => { if(selectedRoles.length === 0) alert("Chọn Role cần xóa!"); else setShowDeleteConfirm(true); }} 
-              className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded font-bold transition shadow-sm"
+              onClick={() => { if(selectedRoles.length === 0) alert("Choose roles to delete!"); else setShowDeleteConfirm(true); }} 
+              disabled={!canEdit}
+              className={`px-5 py-2 rounded font-bold transition shadow-sm ${!canEdit ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-red-500 hover:bg-red-600 text-white'}`}
             >
               Delete Selected
             </button>
@@ -136,7 +125,7 @@ export default function RoleManagement() {
             <thead className="bg-yellow-500 text-white sticky top-0 shadow-sm">
               <tr className="text-left whitespace-nowrap">
                 <th className="p-4 w-[60px] text-center">
-                  <input type="checkbox" className="w-4 h-4 cursor-pointer" checked={selectedRoles.length === filteredRoles.length && filteredRoles.length > 0} onChange={handleSelectAll} />
+                  <input type="checkbox" disabled={!canEdit} className="w-4 h-4 cursor-pointer" checked={selectedRoles.length === filteredRoles.length && filteredRoles.length > 0} onChange={handleSelectAll} />
                 </th>
                 <th className="p-4 font-bold text-lg">Role Name</th>
                 <th className="p-4 font-bold text-lg">Description</th>
@@ -144,8 +133,8 @@ export default function RoleManagement() {
               </tr>
             </thead>
             <tbody>
-              {loading ? <tr><td colSpan="4" className="p-6 text-center text-gray-500">Đang tải dữ liệu...</td></tr> : 
-               filteredRoles.length === 0 ? <tr><td colSpan="4" className="p-6 text-center text-gray-500">Không có Role nào.</td></tr> :
+              {loading ? <tr><td colSpan="4" className="p-6 text-center text-gray-500">Loading data...</td></tr> : 
+               filteredRoles.length === 0 ? <tr><td colSpan="4" className="p-6 text-center text-gray-500">No roles found.</td></tr> :
                filteredRoles.map((role, index) => (
                 <tr 
                   key={index} 
@@ -153,7 +142,7 @@ export default function RoleManagement() {
                   onDoubleClick={() => handleOpenEdit(role)} 
                 >
                   <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
-                    <input type="checkbox" className="w-4 h-4 cursor-pointer accent-red-500" checked={selectedRoles.includes(role.roleName)} onChange={() => handleSelectRow(role.roleName)} />
+                    <input type="checkbox" disabled={!canEdit} className={`w-4 h-4 ${!canEdit ? 'cursor-not-allowed' : 'cursor-pointer accent-red-500'}`} checked={selectedRoles.includes(role.roleName)} onChange={() => handleSelectRow(role.roleName)} />
                   </td>
                   <td className="p-4 font-bold text-red-600 uppercase">{role.roleName}</td>
                   <td className="p-4 text-gray-700 max-w-[400px] truncate" title={role.description}>{role.description || "N/A"}</td>
@@ -170,24 +159,31 @@ export default function RoleManagement() {
       </div>
 
       {/* COMPONENT MODAL ADD/EDIT */}
-      <RoleModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveModal} mode={modalMode} initialData={selectedRoleForEdit} />
+      <RoleModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onSave={handleSaveModal} 
+        mode={modalMode} 
+        initialData={selectedRoleForEdit} 
+        canEdit={canEdit}
+      />
 
       {/* MODAL XÁC NHẬN XÓA */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="w-[450px] bg-white rounded-lg shadow-xl p-8 flex flex-col items-center">
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4"><span className="text-red-500 text-3xl font-bold">🗑️</span></div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Xác nhận xóa</h2>
-            <p className="text-gray-600 text-center mb-8">Bạn có chắc chắn muốn xóa vĩnh viễn <strong>{selectedRoles.length}</strong> Role đã chọn không?</p>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Confirm Deletion</h2>
+            <p className="text-gray-600 text-center mb-8">Are you sure you want to permanently delete the selected <strong>{selectedRoles.length}</strong> roles?</p>
             <div className="flex gap-4 w-full">
-              <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2 rounded border border-gray-300 font-bold text-gray-600 hover:bg-gray-50 transition">Hủy</button>
-              <button onClick={handleDeleteRoles} className="flex-1 py-2 rounded bg-red-500 font-bold text-white hover:bg-red-600 transition">Đồng ý Xóa</button>
+              <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2 rounded border border-gray-300 font-bold text-gray-600 hover:bg-gray-50 transition">Cancel</button>
+              <button onClick={handleDeleteRoles} className="flex-1 py-2 rounded bg-red-500 font-bold text-white hover:bg-red-600 transition">Confirm Delete</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* TOAST THÔNG BÁO GÓC DƯỚI */}
+      {/* TOAST THÔNG BÁO */}
       {showNotification.show && (
         <div className={`fixed bottom-8 right-8 z-[100] min-w-[320px] p-4 bg-white rounded-lg shadow-xl flex items-center justify-between border-l-4 transition-transform ${showNotification.type === 'success' ? 'border-green-500 text-green-600' : 'border-red-500 text-red-600'}`}>
           <div className="flex items-center gap-4">
@@ -200,6 +196,36 @@ export default function RoleManagement() {
             </div>
           </div>
           <button onClick={() => setShowNotification({ show: false, message: '', type: '' })} className="text-gray-400 hover:text-gray-800 px-2 text-xl">✕</button>
+        </div>
+      )}
+
+      {/* MODAL CẢNH BÁO LỖI (KHI XÓA ROLE ĐANG SỬ DỤNG) */}
+      {errorModal.show && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="w-[450px] bg-white rounded-lg shadow-xl p-8 flex flex-col items-center animate-slide-in-right">
+            
+            {/* Vòng tròn Icon chấm than đỏ */}
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+              <span className="text-red-500 text-4xl font-bold">!</span>
+            </div>
+            
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Cannot Delete Role</h2>
+            
+            {/* Hiển thị chi tiết lỗi từ Backend */}
+            <p className="text-gray-600 text-center mb-8 font-medium">
+              {errorModal.message}
+            </p>
+            
+            <div className="flex w-full">
+              <button 
+                onClick={() => setErrorModal({ show: false, message: "" })} 
+                className="w-full py-2.5 rounded bg-[#DE3B40] font-bold text-white hover:bg-[#C12126] transition shadow-md"
+              >
+                Understand
+              </button>
+            </div>
+
+          </div>
         </div>
       )}
 

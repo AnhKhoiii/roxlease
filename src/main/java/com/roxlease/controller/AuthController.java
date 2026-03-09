@@ -29,22 +29,17 @@ public class AuthController {
         this.authService = authService;
     }
 
-    @GetMapping("/me")
+   @GetMapping("/me")
     public ResponseEntity<?> getCurrentUser(Authentication authentication) {
-        // 1. Lấy thông tin từ SecurityContext (đã được nạp từ token)
         String username = authentication.getName();
         
-        // 2. Giả sử bạn lấy list quyền từ Authorities của Spring Security
         List<String> permissions = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toList());
 
-        // 3. Tạo Map trả về đúng cấu trúc React đang chờ
         Map<String, Object> response = new HashMap<>();
         response.put("username", username);
-        response.put("fullName", "Minh Le Thi Ngoc");
-        response.put("permissions", List.of("VIEW_DASHBOARD", "VIEW_SPACE", "VIEW_LEASE","VIEW_COST", "VIEW_SERVICE_DESK", "MANAGE_SYSTEM")); 
-
+        response.put("permissions", permissions); 
         return ResponseEntity.ok(response);
     }
 
@@ -53,7 +48,7 @@ public class AuthController {
     public ResponseEntity<?> register(@RequestBody RegisterRequest registerRequest) {
         try {
             authService.register(registerRequest);
-            return ResponseEntity.ok(Collections.singletonMap("message", "Đăng ký tài khoản thành công! Bây giờ bạn có thể đăng nhập."));
+            return ResponseEntity.ok(Collections.singletonMap("message", "Register successfully.Now you can login with your credentials."));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Collections.singletonMap("error", e.getMessage()));
@@ -92,7 +87,7 @@ public class AuthController {
             String token = header.substring(7);
             authService.logout(token);
         }
-        return ResponseEntity.ok(Collections.singletonMap("message", "Đăng xuất thành công"));
+        return ResponseEntity.ok(Collections.singletonMap("message", "Logout successfully"));
     }
 
     // --- CHANGE PASSWORD ---
@@ -101,13 +96,13 @@ public class AuthController {
         try {
             if (authentication == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Collections.singletonMap("error", "Vui lòng đăng nhập lại"));
+                        .body(Collections.singletonMap("error", "Please login again"));
             }
 
             String username = authentication.getName();
             authService.changePassword(username, changeRequest.getCurrentPassword(), changeRequest.getNewPassword());
             
-            return ResponseEntity.ok(Collections.singletonMap("message", "Đổi mật khẩu thành công"));
+            return ResponseEntity.ok(Collections.singletonMap("message", "Change password successfully"));
             
         } catch (RuntimeException e) {
             // Trả về lỗi 400 và nội dung lỗi là message từ service (ví dụ: WRONG_CURRENT_PASSWORD)

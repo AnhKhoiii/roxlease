@@ -1,8 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axiosInstance from "../api/axiosInstance";
 import UserModal from "../components/UserModal";
+import { useOutletContext } from 'react-router-dom';
 
 export default function UserManagement() {
+  const { currentUser } = useOutletContext();
+  const canEdit = currentUser?.permissions?.includes('SYSTEM_USER_EDIT');
+
+  const fileInputRef = useRef(null);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -128,18 +133,52 @@ export default function UserManagement() {
     }
   };
 
+  const handleExport = async () => {
+    try {
+      const response = await axiosInstance.get('/users/export', { responseType: 'blob' });
+      // Tạo một đường link ảo để trình duyệt tải file về
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'users_roxlease.xlsx');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setShowNotification({ show: true, type: 'success', message: 'Export file successfully!' });
+    } catch (error) {
+      setShowNotification({ show: true, type: 'error', message: 'Error exporting file!' });
+    }
+    setTimeout(() => setShowNotification({ show: false, message: '', type: '' }), 4000);
+  };
+
+  // --- XỬ LÝ IMPORT ---
+  const handleImportClick = () => { fileInputRef.current.click(); }; 
+
+  const handleImportChange = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      setLoading(true);
+      await axiosInstance.post('/users/import', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setShowNotification({ show: true, type: 'success', message: 'Import data successfully!' });
+      fetchUsers(); // Gọi lại API để làm mới bảng User
+    } catch (error) {
+      setShowNotification({ show: true, type: 'error', message: error.response?.data?.error || 'Error importing data!' });
+    } finally {
+      setLoading(false);
+      event.target.value = null;
+    }
+    setTimeout(() => setShowNotification({ show: false, message: '', type: '' }), 4000);
+  };
+
   return (
-    <div className="flex bg-white min-h-screen font-sans">
-      {/* Sidebar */}
-      <div className="w-[260px] bg-gray-100 shadow-md p-6">
-        <div className="flex flex-col gap-6 text-gray-600 text-lg">
-          <div className="mt-10 text-red-500 font-bold">System</div>
-          <div className="ml-4 text-red-500 font-semibold cursor-pointer">Add or Edit Users</div>
-          <div className="ml-4 cursor-pointer hover:text-red-500">Add or Edit Roles</div>
-          <div className="ml-4 cursor-pointer hover:text-red-500">Edit permission</div>
-          <div className="ml-4 cursor-pointer hover:text-red-500">Assign Permission to role</div>
-        </div>
-      </div>
+    <div className="flex w-full h-full bg-white font-sans relative">
 
       <div className="flex-1 p-10 flex flex-col">
 
@@ -148,20 +187,46 @@ export default function UserManagement() {
           <div className="flex gap-4">
             <button 
               onClick={openAddModal} 
-              className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded font-bold transition"
+              disabled={!canEdit}
+              className={`px-5 py-2 rounded font-bold transition ${!canEdit ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-red-500 hover:bg-red-600 text-white'}`}
             >
-              Add new
+              Add new User
             </button>
             <button 
-              onClick={() => { if(selectedUsers.length===0) alert("Chọn user trước!"); else setShowConfirmModal(true); }}
-              className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded font-bold transition"
+              onClick={() => { if(selectedUsers.length===0) alert("Choose users first!"); else setShowConfirmModal(true); }}
+              disabled={!canEdit}
+              className={`px-5 py-2 rounded font-bold transition ${!canEdit ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-red-500 hover:bg-red-600 text-white'}`}
             >
               Lock/Unlock
             </button>
           </div>
           <div className="flex gap-3">
-            <button className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded font-bold transition">Import</button>
-            <button className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded font-bold transition">Export xls</button>
+            {/* NÚT IMPORT VÀ EXPORT */}
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              hidden 
+              accept=".xls,.xlsx" 
+              onChange={handleImportChange} 
+            />
+            
+            <button 
+              onClick={handleImportClick} 
+              disabled={!canEdit} // Chỉ có quyền Edit mới được Import file
+              className={`px-5 py-2 rounded font-bold transition shadow-sm border border-gray-300 ${
+                canEdit ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              Import
+            </button>
+            
+            <button 
+              onClick={handleExport}
+              // Export thì có thể cho Viewers tải xuống
+              className="px-5 py-2 rounded font-bold transition shadow-sm border border-gray-300 bg-red-500 hover:bg-red-600 text-white"
+            >
+              Export
+            </button>
           </div>
         </div>
 
@@ -184,7 +249,7 @@ export default function UserManagement() {
             <thead className="bg-yellow-500 text-white sticky top-0">
               <tr className="text-left whitespace-nowrap">
                 <th className="p-3 w-[60px] text-center">
-                  <input type="checkbox" className="w-4 h-4 cursor-pointer" checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0} onChange={handleSelectAll} />
+                  <input type="checkbox" disabled={!canEdit} className="w-4 h-4 cursor-pointer" checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0} onChange={handleSelectAll} />
                 </th>
                 <th className="p-3">Username</th>
                 <th className="p-3">Fullname</th>
@@ -205,7 +270,7 @@ export default function UserManagement() {
                   onDoubleClick={() => openEditModal(user)} // Double click để edit nhanh
                 >
                   <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
-                    <input type="checkbox" className="w-4 h-4 cursor-pointer" checked={selectedUsers.includes(user.username)} onChange={() => handleSelectRow(user.username)} />
+                    <input type="checkbox" disabled={!canEdit} className={`w-4 h-4 ${!canEdit ? 'cursor-not-allowed' : 'cursor-pointer accent-red-500'}`} checked={selectedUsers.includes(user.username)} onChange={() => handleSelectRow(user.username)} />
                   </td>
                   <td className="p-3 font-semibold text-gray-800">{user.username}</td>
                   <td className="p-3">{user.fullname || user.fullName}</td>
@@ -232,6 +297,7 @@ export default function UserManagement() {
         onSave={handleSaveModal} 
         mode={modalMode} 
         initialData={selectedUserForEdit} 
+        canEdit={canEdit}
       />
 
       {/* Modal Lock/Unlock */}

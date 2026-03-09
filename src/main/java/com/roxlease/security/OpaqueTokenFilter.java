@@ -23,7 +23,7 @@ import java.util.Optional;
 public class OpaqueTokenFilter extends OncePerRequestFilter {
 
     private final ActiveSessionRepository sessionRepository;
-    private final UserDetailsService userDetailsService; // Inject thêm cái này
+    private final UserDetailsService userDetailsService;
 
     public OpaqueTokenFilter(ActiveSessionRepository sessionRepository, UserDetailsService userDetailsService) {
         this.sessionRepository = sessionRepository;

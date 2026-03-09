@@ -31,7 +31,7 @@ public class RoleController {
         try {
             roleService.createRole(request);
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(Collections.singletonMap("message", "Tạo Role thành công."));
+                    .body(Collections.singletonMap("message", "Create Role successfully."));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Collections.singletonMap("error", e.getMessage()));
@@ -42,7 +42,7 @@ public class RoleController {
     public ResponseEntity<?> updateRole(@PathVariable String roleName, @RequestBody RoleRequest request) {
         try {
             roleService.updateRole(roleName, request);
-            return ResponseEntity.ok(Collections.singletonMap("message", "Cập nhật Role thành công."));
+            return ResponseEntity.ok(Collections.singletonMap("message", "Update Role successfully."));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Collections.singletonMap("error", e.getMessage()));
@@ -53,7 +53,18 @@ public class RoleController {
     public ResponseEntity<?> deleteRole(@PathVariable String roleName) {
         try {
             roleService.deleteRole(roleName);
-            return ResponseEntity.ok(Collections.singletonMap("message", "Xóa Role thành công."));
+            return ResponseEntity.ok(Collections.singletonMap("message", "Delete Role successfully."));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/{roleName}/permissions")
+    public ResponseEntity<?> assignPermissions(@PathVariable String roleName, @RequestBody List<String> permissionIds) {
+        try {
+            roleService.assignPermissions(roleName, permissionIds);
+            return ResponseEntity.ok(Collections.singletonMap("message", "Assign permissions successfully."));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Collections.singletonMap("error", e.getMessage()));

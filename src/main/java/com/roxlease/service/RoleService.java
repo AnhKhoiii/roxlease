@@ -25,7 +25,7 @@ public class RoleService {
 
     public void createRole(RoleRequest request) {
         if (roleRepository.existsById(request.getRoleName())) {
-            throw new RuntimeException("Role này đã tồn tại trong hệ thống.");
+            throw new RuntimeException("This role already exists in the system.");
         }
         Role role = new Role();
         role.setRoleName(request.getRoleName().toUpperCase());
@@ -37,7 +37,7 @@ public class RoleService {
 
     public void updateRole(String roleName, RoleRequest request) {
         Role existingRole = roleRepository.findById(roleName)
-                .orElseThrow(() -> new RuntimeException("Role không tồn tại."));
+                .orElseThrow(() -> new RuntimeException("Role does not exist."));
         
         existingRole.setDescription(request.getDescription());
         existingRole.setIsSystem(request.getIsSystem() != null ? request.getIsSystem() : false);
@@ -47,11 +47,19 @@ public class RoleService {
 
     public void deleteRole(String roleName) {
         if (!roleRepository.existsById(roleName)) {
-            throw new RuntimeException("Role không tồn tại.");
+            throw new RuntimeException("Role does not exist.");
         }
         if (userRepository.existsByRoleName(roleName)) {
-            throw new RuntimeException("Không thể xóa! Role [" + roleName + "] đang được gán cho người dùng.");
+            throw new RuntimeException("Cannot delete! Role [" + roleName + "] is currently assigned to users.");
         }
         roleRepository.deleteById(roleName);
+    }
+
+    // --- GÁN QUYỀN CHO ROLE ---
+    public void assignPermissions(String roleName, List<String> permissionIds) {
+        Role role = roleRepository.findById(roleName)
+                .orElseThrow(() -> new RuntimeException("Role does not exist."));
+        role.setPermissionsIds(permissionIds);
+        roleRepository.save(role);
     }
 }

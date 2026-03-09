@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axiosInstance from "../api/axiosInstance";
 
-export default function UserModal({ isOpen, onClose, onSave, mode, initialData }) {
+export default function UserModal({ isOpen, onClose, onSave, mode, initialData, canEdit }) {
   // --- QUẢN LÝ DỮ LIỆU FORM ---
   const [formData, setFormData] = useState({
     username: "", password: "", fullName: "", company: "", department: "",
@@ -119,37 +119,41 @@ export default function UserModal({ isOpen, onClose, onSave, mode, initialData }
         <div className="bg-[#EFB034] flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-6">
             <h2 className="text-xl font-bold text-black uppercase tracking-tight">
-              {mode === "ADD" ? "Add new user" : "Edit user"}
+              {/* Đổi tiêu đề nếu chỉ có quyền xem */}
+              {mode === "ADD" ? "Add new user" : (!canEdit ? "View user details" : "Edit user")}
             </h2>
-            <button onClick={() => handleSave(false)} className="bg-[#DE3B40] hover:bg-[#C11C22] text-white px-5 py-1 rounded font-semibold text-sm transition-all shadow-sm">
-              {mode === "ADD" ? "Save" : "Update"}
-            </button>
-            {mode === "ADD" && (
-              <button onClick={() => handleSave(true)} className="bg-[#DE3B40] hover:bg-[#C12126] text-white px-5 py-1 rounded font-semibold text-sm transition-all shadow-sm">
-                Save and add another
-              </button>
+            
+            {/* ẨN NÚT SAVE/UPDATE NẾU KHÔNG CÓ QUYỀN EDIT */}
+            {canEdit && (
+              <>
+                <button onClick={() => handleSave(false)} className="bg-[#DE3B40] hover:bg-[#C11C22] text-white px-5 py-1 rounded font-semibold text-sm transition-all shadow-sm">
+                  {mode === "ADD" ? "Save" : "Update"}
+                </button>
+                {mode === "ADD" && (
+                  <button onClick={() => handleSave(true)} className="bg-[#DE3B40] hover:bg-[#C12126] text-white px-5 py-1 rounded font-semibold text-sm transition-all shadow-sm">
+                    Save and add another
+                  </button>
+                )}
+              </>
             )}
           </div>
           <button onClick={onClose} className="text-gray-700 hover:text-black font-bold text-xl">✕</button>
         </div>
 
-        {/* NỘI DUNG FORM */}
+        {/* NỘI DUNG FORM - THÊM disabled={!canEdit} VÀO TẤT CẢ CÁC Ô */}
         <div className="p-8 grid grid-cols-3 gap-x-10 gap-y-6 text-sm text-gray-700">
           
-          {/* CỘT 1 */}
           <div className="flex flex-col gap-5">
             <div>
               <label className="font-semibold text-gray-700">User Name <span className="text-red-500">*</span></label>
               <input
                 value={formData.username}
                 onChange={(e) => handleChange('username', e.target.value)}
-                placeholder="UserName"
-                disabled={mode === "EDIT"}
+                disabled={mode === "EDIT" || !canEdit} 
                 className={`mt-1 w-full border rounded px-3 py-2 outline-none transition-colors ${
-                  errors.username ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-[#EFB034] disabled:bg-gray-100'
+                  errors.username ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-[#EFB034] disabled:bg-gray-100 disabled:text-gray-500 cursor-not-allowed'
                 }`}
               />
-              {errors.username && <p className="text-red-500 text-xs mt-1">Username is required and must be at least 4 characters long.</p>}
             </div>
 
             <div>
@@ -157,8 +161,9 @@ export default function UserModal({ isOpen, onClose, onSave, mode, initialData }
               <select 
                 value={formData.roleName}
                 onChange={(e) => handleChange('roleName', e.target.value)}
-                className={`mt-1 w-full border rounded px-3 py-2 outline-none transition-colors bg-white cursor-pointer ${
-                  errors.roleName ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-[#EFB034]'
+                disabled={!canEdit}
+                className={`mt-1 w-full border rounded px-3 py-2 outline-none transition-colors bg-white ${
+                  errors.roleName ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-[#EFB034] disabled:bg-gray-100 disabled:text-gray-500 cursor-not-allowed'
                 }`}
               >
                 <option value="">-- Select Role --</option>
@@ -166,90 +171,58 @@ export default function UserModal({ isOpen, onClose, onSave, mode, initialData }
                   <option key={index} value={r.name || r.roleName}>{r.name || r.roleName}</option>
                 ))}
               </select>
-              {errors.roleName && <p className="text-red-500 text-xs mt-1">Please select a Role</p>}
             </div>
 
-            <div>
-              <label className="font-semibold text-gray-700">User password {mode === "ADD" && <span className="text-red-500">*</span>}</label>
-              <input
-                type="password"
-                value={formData.password}
-                onChange={(e) => handleChange('password', e.target.value)}
-                placeholder={mode === "EDIT" ? "(Bỏ trống nếu không đổi)" : "Userpassword"}
-                className={`mt-1 w-full border rounded px-3 py-2 outline-none transition-colors ${
-                  errors.password ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-[#EFB034]'
-                }`}
-              />
-              {errors.password && <p className="text-red-500 text-xs mt-1">Password is required and must be at least 8 characters long.</p>}
-            </div>
+            {/* Chỉ hiện ô nhập Password nếu CÓ QUYỀN EDIT */}
+            {canEdit && (
+              <div>
+                <label className="font-semibold text-gray-700">User password {mode === "ADD" && <span className="text-red-500">*</span>}</label>
+                <input
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => handleChange('password', e.target.value)}
+                  placeholder={mode === "EDIT" ? "(Bỏ trống nếu không đổi)" : "Userpassword"}
+                  className={`mt-1 w-full border rounded px-3 py-2 outline-none transition-colors ${
+                    errors.password ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-[#EFB034]'
+                  }`}
+                />
+              </div>
+            )}
 
             <div className="flex items-end gap-3">
               <div className="flex-1">
                 <label className="font-semibold text-gray-400">Failed attempts</label>
                 <input value={formData.failedAttempts} disabled className="mt-1 w-full border border-red-100 rounded px-3 py-2 bg-gray-50 text-gray-500 font-bold text-center" />
               </div>
-              <button onClick={() => setFormData({...formData, failedAttempts: 0})} className="bg-[#379AE6] hover:bg-[#2d82c2] text-white px-4 py-2 rounded font-semibold text-xs h-[38px] transition-colors">
-                Reset
-              </button>
+              {/* Chỉ hiện nút Reset nếu có quyền edit */}
+              {canEdit && (
+                <button onClick={() => setFormData({...formData, failedAttempts: 0})} className="bg-[#379AE6] hover:bg-[#2d82c2] text-white px-4 py-2 rounded font-semibold text-xs h-[38px] transition-colors">
+                  Reset
+                </button>
+              )}
             </div>
           </div>
 
-          {/* CỘT 2 */}
           <div className="flex flex-col gap-5">
             <div>
               <label className="font-semibold text-gray-700">Full name <span className="text-red-500">*</span></label>
-              <input
-                value={formData.fullName}
-                onChange={(e) => handleChange('fullName', e.target.value)}
-                placeholder="Fullname"
-                className={`mt-1 w-full border rounded px-3 py-2 outline-none transition-colors ${
-                  errors.fullName ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-[#EFB034]'
-                }`}
-              />
-              {errors.fullName && <p className="text-red-500 text-xs mt-1">Please enter Full name</p>}
+              <input value={formData.fullName} disabled={!canEdit} onChange={(e) => handleChange('fullName', e.target.value)} className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none disabled:bg-gray-100 disabled:text-gray-500 cursor-not-allowed" />
             </div>
-
             <div>
               <label className="font-semibold text-gray-700">Email <span className="text-red-500">*</span></label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleChange('email', e.target.value)}
-                placeholder="abc@tnteco.vn"
-                className={`mt-1 w-full border rounded px-3 py-2 outline-none transition-colors ${
-                  errors.email ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-[#EFB034]'
-                }`}
-              />
-              {errors.email && <p className="text-red-500 text-xs mt-1">Please enter a valid email address</p>}
+              <input type="email" value={formData.email} disabled={!canEdit} onChange={(e) => handleChange('email', e.target.value)} className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none disabled:bg-gray-100 disabled:text-gray-500 cursor-not-allowed" />
             </div>
-
             <div>
               <label className="font-semibold text-gray-700">Phone</label>
-              <input
-                value={formData.phone}
-                onChange={(e) => handleChange('phone', e.target.value)}
-                placeholder="+84123456789"
-                className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none focus:border-[#EFB034]"
-              />
+              <input value={formData.phone} disabled={!canEdit} onChange={(e) => handleChange('phone', e.target.value)} className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none disabled:bg-gray-100 disabled:text-gray-500 cursor-not-allowed" />
             </div>
-
             <div>
               <label className="font-semibold text-gray-700">Date of Birth</label>
-              <input
-                type="date"
-                value={formData.dob}
-                onChange={(e) => handleChange('dob', e.target.value)}
-                className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none focus:border-[#EFB034] uppercase"
-              />
+              <input type="date" value={formData.dob} disabled={!canEdit} onChange={(e) => handleChange('dob', e.target.value)} className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none uppercase disabled:bg-gray-100 disabled:text-gray-500 cursor-not-allowed" />
             </div>
-
             <div>
               <label className="font-semibold text-gray-700">Gender</label>
-              <select 
-                value={formData.gender}
-                onChange={(e) => handleChange('gender', e.target.value)}
-                className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none focus:border-[#EFB034] bg-white cursor-pointer"
-              >
+              <select value={formData.gender} disabled={!canEdit} onChange={(e) => handleChange('gender', e.target.value)} className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none bg-white disabled:bg-gray-100 disabled:text-gray-500 cursor-not-allowed">
                 <option value="">Gender</option>
                 <option value="MALE">Male</option>
                 <option value="FEMALE">Female</option>
@@ -258,57 +231,26 @@ export default function UserModal({ isOpen, onClose, onSave, mode, initialData }
             </div>
           </div>
 
-          {/* CỘT 3 */}
           <div className="flex flex-col gap-5">
             <div>
               <label className="font-semibold text-gray-700">Company</label>
-              <input
-                value={formData.company}
-                onChange={(e) => handleChange('company', e.target.value)}
-                placeholder="Company"
-                className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none focus:border-[#EFB034]"
-              />
+              <input value={formData.company} disabled={!canEdit} onChange={(e) => handleChange('company', e.target.value)} className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none disabled:bg-gray-100 disabled:text-gray-500 cursor-not-allowed" />
             </div>
-
             <div>
               <label className="font-semibold text-gray-700">Department</label>
-              <input
-                value={formData.department}
-                onChange={(e) => handleChange('department', e.target.value)}
-                placeholder="Department"
-                className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none focus:border-[#EFB034]"
-              />
+              <input value={formData.department} disabled={!canEdit} onChange={(e) => handleChange('department', e.target.value)} className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none disabled:bg-gray-100 disabled:text-gray-500 cursor-not-allowed" />
             </div>
-
             <div>
               <label className="font-semibold text-gray-700">Employee Title</label>
-              <input
-                value={formData.employeeTitle}
-                onChange={(e) => handleChange('employeeTitle', e.target.value)}
-                placeholder="Employee title"
-                className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none focus:border-[#EFB034]"
-              />
+              <input value={formData.employeeTitle} disabled={!canEdit} onChange={(e) => handleChange('employeeTitle', e.target.value)} className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none disabled:bg-gray-100 disabled:text-gray-500 cursor-not-allowed" />
             </div>
-
             <div>
               <label className="font-semibold text-gray-700">Manager</label>
-              <input
-                value={formData.manager}
-                onChange={(e) => handleChange('manager', e.target.value)}
-                placeholder="Manager"
-                className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none focus:border-[#EFB034]"
-              />
+              <input value={formData.manager} disabled={!canEdit} onChange={(e) => handleChange('manager', e.target.value)} className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none disabled:bg-gray-100 disabled:text-gray-500 cursor-not-allowed" />
             </div>
-
             <div>
               <label className="font-semibold text-gray-700">VPA site</label>
-              <input
-                value={formData.vpaSite}
-                onChange={(e) => handleChange('vpaSite', e.target.value)}
-                placeholder="VD: 90L, 80H"
-                className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none focus:border-[#EFB034]"
-              />
-              <p className="text-[12px] text-gray-500 mt-1 italic">Can enter multiple sites, separated by commas (,)</p>
+              <input value={formData.vpaSite} disabled={!canEdit} onChange={(e) => handleChange('vpaSite', e.target.value)} className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none disabled:bg-gray-100 disabled:text-gray-500 cursor-not-allowed" />
             </div>
           </div>
 

@@ -51,57 +51,24 @@ const DashboardLayout = () => {
   };
 
   // CẤU HÌNH MENU & PERMISSION
+  const hasModuleAccess = (moduleCode) => {
+    if (!currentUser || !currentUser.permissions) return false;
+    if (moduleCode === 'HOME') return true;
+    return currentUser.permissions.some(p => p.startsWith(`${moduleCode}_`));
+  };
+
   const menuItems = [
-    { 
-      name: 'Home', 
-      path: '/dashboard', 
-      permissions: ['VIEW_DASHBOARD'],
-      icon: <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path> 
-    },
-    { 
-      name: 'Space', 
-      path: '/space', 
-      permissions: ['VIEW_SPACE', 'MANAGE_SPACE'], 
-      icon: <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m-1 4h1m-1 4h1m-1-4h1m-1-4h1m-1-4h1"></path> 
-    },
-    { 
-      name: 'Lease', 
-      path: '/lease', 
-      permissions: ['VIEW_LEASE', 'MANAGE_LEASE'], 
-      icon: <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path> 
-    },
-    { 
-      name: 'Cost', 
-      path: '/cost', 
-      permissions: ['VIEW_COST', 'MANAGE_COST'], 
-      icon: <path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path> 
-    },
-    { 
-      name: 'Service desk', 
-      path: '/servicedesk', 
-      permissions: ['VIEW_SERVICE_DESK', 'MANAGE_SERVICE_DESK'], 
-      icon: <path d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"></path> 
-    },
-    { 
-      name: 'System', 
-      path: '/system', 
-      permissions: ['MANAGE_SYSTEM', 'MANAGE_ROLE', 'MANAGE_USER'],
-      icon: <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path> 
-    },
+    { name: 'Home', path: '/dashboard', code: 'HOME', icon: <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /> },
+    { name: 'Space', path: '/space', code: 'SPACE', icon: <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m-1 4h1m-1 4h1m-1-4h1m-1-4h1m-1-4h1" /> },
+    { name: 'Lease', path: '/lease', code: 'LEASE', icon: <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /> },
+    { name: 'Cost', path: '/cost', code: 'COST', icon: <path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /> },
+    { name: 'Service desk', path: '/servicedesk', code: 'SERVICEDESK', icon: <path d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" /> },
+    { name: 'System', path: '/system', code: 'SYSTEM', icon: <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /> },
   ];
 
-  // LỌC MENU DỰA TRÊN PERMISSIONS
-  const visibleMenuItems = menuItems.filter(item => {
-    // Nếu chưa load xong hoặc user không có mảng permissions -> Ẩn
-    if (!currentUser || !currentUser.permissions) return false;
-    
-    // Nếu user có ít nhất 1 permission trùng với mảng permissions yêu cầu của menu -> Hiện
-    return item.permissions.some(requiredPerm => currentUser.permissions.includes(requiredPerm));
-  });
+  const visibleMenuItems = menuItems.filter(item => hasModuleAccess(item.code));
 
-  if (isLoadingUser) {
-    return <div className="h-screen w-full flex items-center justify-center bg-[#F8F9FA]">Đang tải dữ liệu người dùng...</div>;
-  }
+  if (isLoadingUser) return <div className="h-screen w-full flex items-center justify-center bg-[#F8F9FA]">Loading...</div>;
 
   return (
     <div className="flex h-screen w-full bg-[#F8F9FA] overflow-hidden font-['Inter']">
@@ -125,7 +92,7 @@ const DashboardLayout = () => {
           </div>
         </div>
 
-        {/* RENDER MENU SAU KHI ĐÃ LỌC */}
+        {/* RENDER MENU */}
         <div className="flex-1 overflow-y-auto px-2">
           {visibleMenuItems.map((item, index) => (
             <NavLink
@@ -184,10 +151,11 @@ const DashboardLayout = () => {
           <button className="w-[28px] h-[28px] bg-[#4A90E2] rounded-full flex items-center justify-center text-white text-[14px] font-bold hover:bg-[#357ABD] transition-colors">?</button>
         </div>
 
-        <div className="flex-1 overflow-auto p-0">
-          <Outlet />
+        <div className="flex-1 overflow-auto bg-[#F8F9FA]">
+          <Outlet context={{ currentUser }} /> 
         </div>
       </div>
+
     </div>
   );
 };

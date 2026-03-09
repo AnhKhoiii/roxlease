@@ -1,5 +1,11 @@
 package com.roxlease.controller;
 
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.web.multipart.MultipartFile;
+
 import com.roxlease.dto.CreateUserRequest;
 import com.roxlease.dto.UserDetailResponse;
 import com.roxlease.dto.UserResponse;
@@ -27,16 +33,13 @@ public class UserController {
     }
 
     // --- CREATE USER ---
-    // Yêu cầu quyền USER_CREATE mới được phép gọi API này
-    //@PreAuthorize("hasAuthority('USER_CREATE')")
     @PostMapping
     public ResponseEntity<?> createUser(@Valid @RequestBody CreateUserRequest request) {
         try {
             userService.createUser(request);
             
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(Collections.singletonMap("message", "Tạo tài khoản người dùng thành công."));
-                    
+                    .body(Collections.singletonMap("message", "Create User successfully."));
         } catch (RuntimeException e) {
             // Bắt lỗi nghiệp vụ từ Service (như trùng Username, Email...)
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -45,8 +48,6 @@ public class UserController {
     }
 
     // --- VIEW LIST USERS ---
-    // Yêu cầu quyền USER_VIEW
-    //@PreAuthorize("hasAuthority('USER_VIEW')")
     @GetMapping
     public ResponseEntity<List<UserResponse>> getAllUsers() {
         // Trả về danh sách gọn nhẹ (UserResponse)
@@ -55,8 +56,6 @@ public class UserController {
     }
 
     // --- VIEW USER DETAIL ---
-    // Yêu cầu quyền USER_VIEW
-    //@PreAuthorize("hasAuthority('USER_VIEW')")
     @GetMapping("/{username}")
     public ResponseEntity<?> getUserDetail(@PathVariable String username) {
         try {
@@ -74,17 +73,15 @@ public class UserController {
     public ResponseEntity<?> handleValidationExceptions(MethodArgumentNotValidException ex) {
         // Tự động trả về câu thông báo này nếu bất kỳ trường @NotBlank nào bị bỏ trống
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Collections.singletonMap("error", "Thiếu thông tin bắt buộc. Vui lòng điền đầy đủ các trường đánh dấu đỏ."));
+                .body(Collections.singletonMap("error", "Missing required information. Please fill in all fields marked in red."));
     }
 
     // --- UPDATE INFORMATION ---
-    // Yêu cầu quyền USER_UPDATE mới được sửa
-    //@PreAuthorize("hasAuthority('USER_UPDATE')")
     @PutMapping("/{username}")
     public ResponseEntity<?> updateUser(@PathVariable String username, @Valid @RequestBody UpdateUserRequest request) {
         try {
             userService.updateUser(username, request);
-            return ResponseEntity.ok(Collections.singletonMap("message", "Cập nhật thông tin người dùng thành công."));
+            return ResponseEntity.ok(Collections.singletonMap("message", "Update User information successfully."));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Collections.singletonMap("error", e.getMessage()));
@@ -95,7 +92,7 @@ public class UserController {
     public ResponseEntity<?> lockUser(@PathVariable String username) {
         try {
             userService.lockUser(username);
-            return ResponseEntity.ok(Collections.singletonMap("message", "Khóa tài khoản thành công."));
+            return ResponseEntity.ok(Collections.singletonMap("message", "Lock User successfully."));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Collections.singletonMap("error", e.getMessage()));
@@ -106,8 +103,30 @@ public class UserController {
     public ResponseEntity<?> unlockUser(@PathVariable String username) {
         try {
             userService.unlockUser(username);
-            return ResponseEntity.ok(Collections.singletonMap("message", "Mở khóa tài khoản thành công."));
+            return ResponseEntity.ok(Collections.singletonMap("message", "Unlock User successfully."));
         } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    // --- API EXPORT EXCEL ---
+    @GetMapping("/export")
+    public ResponseEntity<Resource> exportUsers() {
+        InputStreamResource file = new InputStreamResource(userService.exportUsersToExcel());
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=users_roxlease.xlsx")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(file);
+    }
+
+    // --- API IMPORT EXCEL ---
+    @PostMapping("/import")
+    public ResponseEntity<?> importUsers(@RequestParam("file") MultipartFile file) {
+        try {
+            userService.importUsersFromExcel(file);
+            return ResponseEntity.ok(Collections.singletonMap("message", "Import dữ liệu thành công!"));
+        } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Collections.singletonMap("error", e.getMessage()));
         }

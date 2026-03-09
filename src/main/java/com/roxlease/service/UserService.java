@@ -1,5 +1,13 @@
 package com.roxlease.service;
 
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.web.multipart.MultipartFile;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.util.Iterator;
+
 import com.roxlease.model.Enum.Gender;
 import com.roxlease.dto.CreateUserRequest;
 import com.roxlease.dto.UpdateUserRequest;
@@ -29,10 +37,10 @@ public class UserService {
 
     public void createUser(CreateUserRequest request) {
         if (userRepository.existsById(request.getUsername())) {
-            throw new RuntimeException("Username đã tồn tại trong hệ thống.");
+            throw new RuntimeException("Username is already taken.");
         }
          if (userRepository.existsByEmail(request.getEmail())) {
-             throw new RuntimeException("Email đã được sử dụng.");
+             throw new RuntimeException("Email is already in use.");
          }
 
         User user = new User();
@@ -67,7 +75,7 @@ public class UserService {
 
     public UserDetailResponse getUserByUsername(String username) {
         User user = userRepository.findById(username)
-                .orElseThrow(() -> new RuntimeException("Dữ liệu người dùng không tồn tại hoặc đã bị xóa."));
+                .orElseThrow(() -> new RuntimeException("User data does not exist or has been deleted."));
         return mapToUserDetailResponse(user);
     }
 
@@ -109,12 +117,12 @@ public class UserService {
     public void updateUser(String username, UpdateUserRequest request) {
         // 1. Kiểm tra xem User có tồn tại không
         User existingUser = userRepository.findById(username)
-                .orElseThrow(() -> new RuntimeException("Người dùng không tồn tại hoặc đã bị xóa."));
+                .orElseThrow(() -> new RuntimeException("User does not exist or has been deleted."));
 
         // 2. Kiểm tra ngoại lệ: Email đã bị người khác sử dụng
         Optional<User> userWithEmail = userRepository.findByEmail(request.getEmail());
         if (userWithEmail.isPresent() && !userWithEmail.get().getUsername().equals(username)) {
-            throw new RuntimeException("Email này đã được sử dụng bởi một người dùng khác.");
+            throw new RuntimeException("This email is already in use by another user.");
         }
 
         if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
@@ -148,7 +156,7 @@ public class UserService {
     // --- KHÓA TÀI KHOẢN ---
     public void lockUser(String username) {
         User user = userRepository.findById(username)
-                .orElseThrow(() -> new RuntimeException("Người dùng không tồn tại."));
+                .orElseThrow(() -> new RuntimeException("User does not exist or has been deleted."));
         user.lockAccount();
         userRepository.save(user);
     }
@@ -156,8 +164,86 @@ public class UserService {
     // --- MỞ KHÓA TÀI KHOẢN ---
     public void unlockUser(String username) {
         User user = userRepository.findById(username)
-                .orElseThrow(() -> new RuntimeException("Người dùng không tồn tại."));
-        user.unlockAccount(); 
+                .orElseThrow(() -> new RuntimeException("User does not exist or has been deleted."));
+        user.unlockAccount();
         userRepository.save(user);
+    }
+
+    // --- XUẤT EXCEL (EXPORT) ---
+    public ByteArrayInputStream exportUsersToExcel() {
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("Users");
+
+            // Tạo dòng Header
+            Row headerRow = sheet.createRow(0);
+            String[] columns = {"Username", "Full Name", "Email", "Role", "Company", "Department", "Phone"};
+            for (int i = 0; i < columns.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(columns[i]);
+            }
+
+            // Đổ dữ liệu
+            List<User> users = userRepository.findAll();
+            int rowIdx = 1;
+            for (User user : users) {
+                Row row = sheet.createRow(rowIdx++);
+                row.createCell(0).setCellValue(user.getUsername() != null ? user.getUsername() : "");
+                row.createCell(1).setCellValue(user.getFullname() != null ? user.getFullname() : "");
+                row.createCell(2).setCellValue(user.getEmail() != null ? user.getEmail() : "");
+                row.createCell(3).setCellValue(user.getRoleName() != null ? user.getRoleName() : "");
+                row.createCell(4).setCellValue(user.getCompany() != null ? user.getCompany() : "");
+                row.createCell(5).setCellValue(user.getDepartment() != null ? user.getDepartment() : "");
+                row.createCell(6).setCellValue(user.getPhone() != null ? user.getPhone() : "");
+            }
+            workbook.write(out);
+            return new ByteArrayInputStream(out.toByteArray());
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi khi xuất dữ liệu ra file Excel: " + e.getMessage());
+        }
+    }
+
+    // --- NHẬP EXCEL (IMPORT) ---
+    public void importUsersFromExcel(MultipartFile file) {
+        try (InputStream is = file.getInputStream(); Workbook workbook = new XSSFWorkbook(is)) {
+            Sheet sheet = workbook.getSheetAt(0);
+            Iterator<Row> rows = sheet.iterator();
+
+            int rowNumber = 0;
+            while (rows.hasNext()) {
+                Row currentRow = rows.next();
+                
+                // Bỏ qua dòng Header (dòng 0)
+                if (rowNumber == 0) { rowNumber++; continue; }
+
+                String username = getCellValue(currentRow.getCell(0));
+                // Bỏ qua nếu dòng trống hoặc Username đã tồn tại trong DB
+                if (username.isEmpty() || userRepository.existsById(username)) continue;
+
+                User user = new User();
+                user.setUsername(username);
+                user.setFullname(getCellValue(currentRow.getCell(1)));
+                user.setEmail(getCellValue(currentRow.getCell(2)));
+                user.setRoleName(getCellValue(currentRow.getCell(3)));
+                user.setCompany(getCellValue(currentRow.getCell(4)));
+                user.setDepartment(getCellValue(currentRow.getCell(5)));
+                user.setPhone(getCellValue(currentRow.getCell(6)));
+
+                // Set password mặc định cho user import (Mã hoá bằng BCrypt)
+                user.setUserPwd(passwordEncoder.encode("12345678aA@"));
+                userRepository.save(user);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error importing Excel file: Invalid format or corrupted file.");
+        }
+    }
+
+    // Hàm hỗ trợ đọc từng ô Excel
+    private String getCellValue(Cell cell) {
+        if (cell == null) return "";
+        switch (cell.getCellType()) {
+            case STRING: return cell.getStringCellValue();
+            case NUMERIC: return String.valueOf((long) cell.getNumericCellValue());
+            default: return "";
+        }
     }
 }

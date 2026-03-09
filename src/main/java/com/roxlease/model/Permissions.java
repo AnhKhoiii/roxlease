@@ -18,6 +18,7 @@ public class Permissions {
 
     private String code;
     private String module;
+    private String application;
     private String action;
     private String description;
 
