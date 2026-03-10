@@ -2,14 +2,12 @@ import React, { useState, useEffect } from "react";
 import axiosInstance from "../api/axiosInstance";
 
 export default function UserModal({ isOpen, onClose, onSave, mode, initialData, canEdit }) {
-  // --- QUẢN LÝ DỮ LIỆU FORM ---
   const [formData, setFormData] = useState({
     username: "", password: "", fullName: "", company: "", department: "",
     roleName: "", email: "", status: "Active", phone: "", employeeTitle: "",
     dob: "", manager: "", gender: "", vpaSite: "", failedAttempts: 0
   });
 
-  // --- QUẢN LÝ LỖI VALIDATION (TÔ ĐỎ) ---
   const [errors, setErrors] = useState({});
   const [roles, setRoles] = useState([]);
 
@@ -31,7 +29,7 @@ export default function UserModal({ isOpen, onClose, onSave, mode, initialData, 
       if (mode === "EDIT" && initialData) {
         setFormData({ 
           ...initialData, 
-          password: "", // Xóa trắng password cũ
+          password: "",
           fullName: initialData.fullName || initialData.fullname || "",
           roleName: initialData.roleName || "",
           dob: initialData.dob || "", 
@@ -54,7 +52,6 @@ export default function UserModal({ isOpen, onClose, onSave, mode, initialData, 
 
   if (!isOpen) return null;
 
-  // --- HÀM CẬP NHẬT DỮ LIỆU VÀ XÓA LỖI ---
   const handleChange = (field, value) => {
     setFormData({ ...formData, [field]: value });
     if (errors[field]) {
@@ -62,9 +59,7 @@ export default function UserModal({ isOpen, onClose, onSave, mode, initialData, 
     }
   };
 
-  // --- HÀM XỬ LÝ LƯU (SAVE) ---
   const handleSave = (addAnother = false) => {
-    // 1. KIỂM TRA ĐIỀU KIỆN
     const newErrors = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -74,13 +69,11 @@ export default function UserModal({ isOpen, onClose, onSave, mode, initialData, 
     if (!formData.email.trim() || !emailRegex.test(formData.email)) newErrors.email = true;
     if (mode === "ADD" && (!formData.password || formData.password.length < 8)) newErrors.password = true;
 
-    // Nếu có lỗi, cập nhật state errors để tô đỏ ô và dừng lại
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
 
-    // 2. MAP DỮ LIỆU
     const processedFormData = {
       username: formData.username,
       email: formData.email,
@@ -94,7 +87,7 @@ export default function UserModal({ isOpen, onClose, onSave, mode, initialData, 
       birthday: formData.dob ? formData.dob : null,
       manager: formData.manager,
       gender: formData.gender ? formData.gender : null,
-      vpasite: typeof formData.vpaSite === 'string' && formData.vpaSite.trim() !== "" // Java cần "vpasite"
+      vpasite: typeof formData.vpaSite === 'string' && formData.vpaSite.trim() !== ""
         ? formData.vpaSite.split(',').map(site => site.trim()).filter(site => site !== "") 
         : (Array.isArray(formData.vpaSite) ? formData.vpaSite : [])
     };
@@ -115,15 +108,12 @@ export default function UserModal({ isOpen, onClose, onSave, mode, initialData, 
     <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 font-sans px-4">
       <div className="bg-white w-[1100px] rounded-lg shadow-lg overflow-hidden">
         
-        {/* HEADER */}
         <div className="bg-[#EFB034] flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-6">
             <h2 className="text-xl font-bold text-black uppercase tracking-tight">
-              {/* Đổi tiêu đề nếu chỉ có quyền xem */}
               {mode === "ADD" ? "Add new user" : (!canEdit ? "View user details" : "Edit user")}
             </h2>
             
-            {/* ẨN NÚT SAVE/UPDATE NẾU KHÔNG CÓ QUYỀN EDIT */}
             {canEdit && (
               <>
                 <button onClick={() => handleSave(false)} className="bg-[#DE3B40] hover:bg-[#C11C22] text-white px-5 py-1 rounded font-semibold text-sm transition-all shadow-sm">
@@ -140,7 +130,6 @@ export default function UserModal({ isOpen, onClose, onSave, mode, initialData, 
           <button onClick={onClose} className="text-gray-700 hover:text-black font-bold text-xl">✕</button>
         </div>
 
-        {/* NỘI DUNG FORM - THÊM disabled={!canEdit} VÀO TẤT CẢ CÁC Ô */}
         <div className="p-8 grid grid-cols-3 gap-x-10 gap-y-6 text-sm text-gray-700">
           
           <div className="flex flex-col gap-5">
@@ -173,7 +162,6 @@ export default function UserModal({ isOpen, onClose, onSave, mode, initialData, 
               </select>
             </div>
 
-            {/* Chỉ hiện ô nhập Password nếu CÓ QUYỀN EDIT */}
             {canEdit && (
               <div>
                 <label className="font-semibold text-gray-700">User password {mode === "ADD" && <span className="text-red-500">*</span>}</label>
@@ -194,7 +182,6 @@ export default function UserModal({ isOpen, onClose, onSave, mode, initialData, 
                 <label className="font-semibold text-gray-400">Failed attempts</label>
                 <input value={formData.failedAttempts} disabled className="mt-1 w-full border border-red-100 rounded px-3 py-2 bg-gray-50 text-gray-500 font-bold text-center" />
               </div>
-              {/* Chỉ hiện nút Reset nếu có quyền edit */}
               {canEdit && (
                 <button onClick={() => setFormData({...formData, failedAttempts: 0})} className="bg-[#379AE6] hover:bg-[#2d82c2] text-white px-4 py-2 rounded font-semibold text-xs h-[38px] transition-colors">
                   Reset

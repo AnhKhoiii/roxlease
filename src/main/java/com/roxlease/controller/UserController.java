@@ -14,13 +14,11 @@ import com.roxlease.dto.UpdateUserRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/users")
@@ -41,7 +39,6 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(Collections.singletonMap("message", "Create User successfully."));
         } catch (RuntimeException e) {
-            // Bắt lỗi nghiệp vụ từ Service (như trùng Username, Email...)
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Collections.singletonMap("error", e.getMessage()));
         }
@@ -50,7 +47,6 @@ public class UserController {
     // --- VIEW LIST USERS ---
     @GetMapping
     public ResponseEntity<List<UserResponse>> getAllUsers() {
-        // Trả về danh sách gọn nhẹ (UserResponse)
         List<UserResponse> users = userService.getAllUsers();
         return ResponseEntity.ok(users);
     }
@@ -59,11 +55,9 @@ public class UserController {
     @GetMapping("/{username}")
     public ResponseEntity<?> getUserDetail(@PathVariable String username) {
         try {
-            // Trả về thông tin đầy đủ (UserDetailResponse)
             UserDetailResponse user = userService.getUserByUsername(username);
             return ResponseEntity.ok(user);
         } catch (RuntimeException e) {
-            // Trả về 404 Not Found nếu người dùng không tồn tại
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Collections.singletonMap("error", e.getMessage()));
         }
@@ -71,7 +65,6 @@ public class UserController {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<?> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        // Tự động trả về câu thông báo này nếu bất kỳ trường @NotBlank nào bị bỏ trống
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Collections.singletonMap("error", "Missing required information. Please fill in all fields marked in red."));
     }
@@ -88,6 +81,7 @@ public class UserController {
         }
     }
 
+    // --- LOCK & UNLOCK USER ---
     @PostMapping("/{username}/lock")
     public ResponseEntity<?> lockUser(@PathVariable String username) {
         try {

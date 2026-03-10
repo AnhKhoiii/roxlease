@@ -85,16 +85,13 @@ export default function UserManagement() {
     setIsModalOpen(true);
   };
 
-  // --- HÀM MỞ MODAL EDIT ---
   const openEditModal = async (user) => {
     try {
-      // Gọi API lấy UserDetailResponse
       const response = await axiosInstance.get(`/users/${user.username}`);
       const userDetail = response.data;
 
       setModalMode("EDIT");
       
-      // Đổ dữ liệu chi tiết vào state
       setSelectedUserForEdit({ 
         ...userDetail, 
         fullName: userDetail.fullname || userDetail.fullName,
@@ -117,7 +114,6 @@ export default function UserManagement() {
         await axiosInstance.post('/users', formData);
         setShowNotification({ show: true, type: 'success', message: 'Successfully added new user!' });
       } else {
-        // Edit User (Ví dụ PUT /users/{username})
         await axiosInstance.put(`/users/${formData.username}`, formData);
         setShowNotification({ show: true, type: 'success', message: 'Successfully updated user information!' });
       }
@@ -133,10 +129,10 @@ export default function UserManagement() {
     }
   };
 
+  // --- XỬ LÝ EXPORT ---
   const handleExport = async () => {
     try {
       const response = await axiosInstance.get('/users/export', { responseType: 'blob' });
-      // Tạo một đường link ảo để trình duyệt tải file về
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -167,7 +163,7 @@ export default function UserManagement() {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setShowNotification({ show: true, type: 'success', message: 'Import data successfully!' });
-      fetchUsers(); // Gọi lại API để làm mới bảng User
+      fetchUsers();
     } catch (error) {
       setShowNotification({ show: true, type: 'error', message: error.response?.data?.error || 'Error importing data!' });
     } finally {
@@ -212,7 +208,7 @@ export default function UserManagement() {
             
             <button 
               onClick={handleImportClick} 
-              disabled={!canEdit} // Chỉ có quyền Edit mới được Import file
+              disabled={!canEdit}
               className={`px-5 py-2 rounded font-bold transition shadow-sm border border-gray-300 ${
                 canEdit ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
@@ -222,7 +218,6 @@ export default function UserManagement() {
             
             <button 
               onClick={handleExport}
-              // Export thì có thể cho Viewers tải xuống
               className="px-5 py-2 rounded font-bold transition shadow-sm border border-gray-300 bg-red-500 hover:bg-red-600 text-white"
             >
               Export
@@ -267,7 +262,7 @@ export default function UserManagement() {
                 <tr 
                   key={index} 
                   className="border-b hover:bg-gray-50 transition-colors whitespace-nowrap cursor-pointer"
-                  onDoubleClick={() => openEditModal(user)} // Double click để edit nhanh
+                  onDoubleClick={() => openEditModal(user)} 
                 >
                   <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                     <input type="checkbox" disabled={!canEdit} className={`w-4 h-4 ${!canEdit ? 'cursor-not-allowed' : 'cursor-pointer accent-red-500'}`} checked={selectedUsers.includes(user.username)} onChange={() => handleSelectRow(user.username)} />
@@ -323,14 +318,12 @@ export default function UserManagement() {
             : 'border-red-500 text-red-600'
         }`}>
           <div className="flex items-center gap-4">
-            {/* Icon tròn */}
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${
               showNotification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
             }`}>
               {showNotification.type === 'success' ? '✓' : '!'}
             </div>
             
-            {/* Nội dung tin nhắn */}
             <div className="flex flex-col">
               <span className="font-bold text-gray-800">
                 {showNotification.type === 'success' ? 'Success' : 'Error'}
@@ -339,7 +332,6 @@ export default function UserManagement() {
             </div>
           </div>
 
-          {/* Nút tắt */}
           <button 
             onClick={() => setShowNotification({ show: false, message: '', type: '' })}
             className="text-gray-400 hover:text-gray-800 focus:outline-none px-2 text-xl"

@@ -5,19 +5,15 @@ import axiosInstance from '../api/axiosInstance';
 const Profile = () => {
   const navigate = useNavigate();
   
-  // Trạng thái ẩn/hiện mật khẩu cho từng ô riêng biệt
   const [showPwd, setShowPwd] = useState({ current: false, new: false, confirm: false });
   const [formData, setFormData] = useState({ current: '', new: '', confirm: '' });
   
-  // Trạng thái thông báo (Success/Error)
   const [notification, setNotification] = useState({ show: false, type: '', message: '' });
 
-  // Hàm toggle ẩn hiện mật khẩu theo từng field id
   const toggleVisibility = (field) => {
     setShowPwd(prev => ({ ...prev, [field]: !prev[field] }));
   };
 
-  // Hàm kiểm tra định dạng mật khẩu mạnh (Frontend Validation)
   const validatePassword = (password) => {
     const regex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/;
     return regex.test(password);
@@ -27,7 +23,6 @@ const Profile = () => {
     e.preventDefault();
     setNotification({ show: false, type: '', message: '' });
 
-    // Kiểm tra mật khẩu mới và xác nhận mật khẩu có khớp không
     if (formData.new !== formData.confirm) {
       setNotification({ 
         show: true, 
@@ -37,7 +32,6 @@ const Profile = () => {
       return;
     }
 
-    // Kiểm tra định dạng mật khẩu mới
     if (!validatePassword(formData.new)) {
       setNotification({ 
         show: true, 
@@ -48,13 +42,11 @@ const Profile = () => {
     }
 
     try {
-      // Gọi API đổi mật khẩu
       await axiosInstance.post('/auth/change-password', {
         currentPassword: formData.current,
         newPassword: formData.new
       });
 
-      // THÀNH CÔNG: Hiển thị thông báo và yêu cầu đăng nhập lại
       setNotification({ 
         show: true, 
         type: 'success', 
@@ -63,14 +55,12 @@ const Profile = () => {
 
       setFormData({ current: '', new: '', confirm: '' });
 
-      // Đợi 2 giây để người dùng đọc thông báo rồi đá về trang Login
       setTimeout(() => {
-        localStorage.removeItem('jwt_token'); // Xóa token hiện tại
+        localStorage.removeItem('jwt_token');
         navigate('/login');
       }, 2500);
 
     } catch (error) {
-      // THẤT BẠI: Xử lý các lỗi từ Backend trả về
       const backendError = error.response?.data?.error || '';
       
       if (backendError === "WRONG_CURRENT_PASSWORD") {
@@ -114,7 +104,6 @@ const Profile = () => {
 
         {/* NỘI DUNG CHÍNH */}
         <div className="flex-1 max-w-[850px]">
-          {/* Thông báo lỗi/Thành công */}
           {notification.show && (
             <div className={`mb-8 p-4 rounded-[8px] border flex items-center justify-between ${
                 notification.type === 'success' ? 'bg-[#F1F9F4] border-[#1DD75B] text-[#1DD75B]' : 'bg-[#FFF0F0] border-[#DE3B40] text-[#DE3B40]'
@@ -152,7 +141,6 @@ const Profile = () => {
                     onClick={() => toggleVisibility(field.id)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-[#DE3B40] hover:text-[#C11C22]"
                   >
-                    {/* SVG Icon con mắt (ẩn/hiện) */}
                     <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
                       {showPwd[field.id] 
                         ? <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>

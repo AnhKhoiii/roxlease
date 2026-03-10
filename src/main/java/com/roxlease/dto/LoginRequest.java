@@ -12,12 +12,12 @@ import lombok.Builder;
 
 public class LoginRequest {
 
-    @NotBlank(message = "Username không được để trống")
-    @Size(min = 4, max = 20, message = "Username phải từ 4 đến 20 ký tự")
+    @NotBlank(message = "Username cannot be blank")
+    @Size(min = 4, max = 20, message = "Username must be between 4 and 20 characters")
     private String username;
 
-    @NotBlank(message = "Mật khẩu không được để trống")
-    @Size(min = 8, message = "Mật khẩu phải có ít nhất 8 ký tự")
+    @NotBlank(message = "Password cannot be blank")
+    @Size(min = 8, message = "Password must be at least 8 characters")
     private String password;
     
     private boolean rememberMe;

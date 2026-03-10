@@ -12,16 +12,13 @@ export default function AssignPermission() {
   
   const [searchTerm, setSearchTerm] = useState("");
   
-  // Mảng lưu ID các quyền ĐANG được gán cho Role hiện tại (State trên giao diện, chưa lưu Database)
   const [assignedPerms, setAssignedPerms] = useState([]); 
 
-  // Mảng lưu ID các dòng được Check trong 2 bảng
-  const [selectedToUnassign, setSelectedToUnassign] = useState([]); // Checkbox ở bảng trên
-  const [selectedToAssign, setSelectedToAssign] = useState([]);     // Checkbox ở bảng dưới
+  const [selectedToUnassign, setSelectedToUnassign] = useState([]);
+  const [selectedToAssign, setSelectedToAssign] = useState([]);    
 
   const [showNotification, setShowNotification] = useState({ show: false, message: "", type: "" });
 
-  // 1. FETCH DỮ LIỆU
   const fetchData = async () => {
     try {
       const [rolesRes, permsRes] = await Promise.all([
@@ -36,20 +33,17 @@ export default function AssignPermission() {
         setAssignedPerms(rolesRes.data[0].permissionsIds || []);
       }
     } catch (error) {
-      console.error("Lỗi khi tải dữ liệu:", error);
+      console.error("Loading error:", error);
     }
   };
 
   useEffect(() => { fetchData(); }, []);
 
-  // Lọc danh sách Role bên trái
   const filteredRoles = roles.filter(r => r.roleName.toLowerCase().includes(searchTerm.toLowerCase()));
 
-  // Chia Permission thành 2 tập hợp: Đã gán và Chưa gán
   const assignedList = permissions.filter(p => assignedPerms.includes(p.permissionId));
   const availableList = permissions.filter(p => !assignedPerms.includes(p.permissionId));
 
-  // 2. CHỌN ROLE BÊN TRÁI
   const handleRoleSelect = (role) => {
     setActiveRole(role);
     setAssignedPerms(role.permissionsIds || []);
@@ -57,17 +51,14 @@ export default function AssignPermission() {
     setSelectedToUnassign([]);
   };
 
-  // 3. LOGIC XỬ LÝ NÚT [ ASSIGN (Thêm vào) ]
   const handleAssign = () => {
     if (selectedToAssign.length === 0) return;
 
     let permsToAdd = [...selectedToAssign];
 
-    // Logic thông minh: Nếu thêm EDIT thì tự động thêm VIEW tương ứng (nếu chưa có)
     selectedToAssign.forEach(permId => {
       if (permId.endsWith('_EDIT')) {
         const viewPermId = permId.replace('_EDIT', '_VIEW');
-        // Kiểm tra xem VIEW có tồn tại trong hệ thống và chưa được gán hay không
         const viewExists = permissions.some(p => p.permissionId === viewPermId);
         if (viewExists && !assignedPerms.includes(viewPermId) && !permsToAdd.includes(viewPermId)) {
           permsToAdd.push(viewPermId);
@@ -76,16 +67,14 @@ export default function AssignPermission() {
     });
 
     setAssignedPerms(prev => [...prev, ...permsToAdd]);
-    setSelectedToAssign([]); // Xóa check
+    setSelectedToAssign([]);
   };
 
-  // 4. LOGIC XỬ LÝ NÚT [ UNASSIGN (Bỏ ra) ]
   const handleUnassign = () => {
     if (selectedToUnassign.length === 0) return;
 
     let permsToRemove = [...selectedToUnassign];
 
-    // Logic thông minh: Nếu rút quyền VIEW thì tự động rút luôn quyền EDIT tương ứng
     selectedToUnassign.forEach(permId => {
       if (permId.endsWith('_VIEW')) {
         const editPermId = permId.replace('_VIEW', '_EDIT');
@@ -96,20 +85,18 @@ export default function AssignPermission() {
     });
 
     setAssignedPerms(prev => prev.filter(id => !permsToRemove.includes(id)));
-    setSelectedToUnassign([]); // Xóa check
+    setSelectedToUnassign([]);
   };
 
-  // 5. LƯU VÀO DATABASE
   const handleSave = async () => {
     if (!activeRole) return;
     try {
       await axiosInstance.put(`/roles/${activeRole.roleName}/permissions`, assignedPerms);
-      setShowNotification({ show: true, type: 'success', message: 'Lưu cấu hình phân quyền thành công!' });
+      setShowNotification({ show: true, type: 'success', message: 'Save changes successfully!' });
       
-      // Update local state để không cần F5
       setRoles(roles.map(r => r.roleName === activeRole.roleName ? { ...r, permissionsIds: assignedPerms } : r));
     } catch (error) {
-      setShowNotification({ show: true, type: 'error', message: error.response?.data?.error || 'Lỗi lưu dữ liệu!' });
+      setShowNotification({ show: true, type: 'error', message: error.response?.data?.error || 'Error saving data!' });
     }
     setTimeout(() => setShowNotification({ show: false, message: '', type: '' }), 4000);
   };
@@ -117,7 +104,6 @@ export default function AssignPermission() {
   return (
     <div className="flex w-full h-full bg-white font-sans relative">
       
-      {/* ---------------- CỘT TRÁI: ROLE LIST ---------------- */}
       <div className="w-[300px] border-r border-gray-200 flex flex-col bg-white shrink-0">
         <div className="p-5 border-b border-gray-100">
           <h2 className="text-xl font-bold text-gray-800 mb-4">Select Roles</h2>
@@ -141,10 +127,8 @@ export default function AssignPermission() {
         </div>
       </div>
 
-      {/* ---------------- CỘT PHẢI: 2 BẢNG PERMISSION ---------------- */}
       <div className="flex-1 flex flex-col bg-[#F8F9FA] overflow-hidden">
         
-        {/* HEADER CỘT PHẢI */}
         <div className="p-6 bg-white border-b border-gray-200 flex justify-between items-center shrink-0 shadow-sm z-10">
           <h2 className="text-2xl font-bold text-gray-800">
             Role: <span className="text-red-500">{activeRole?.roleName || "..."}</span>
@@ -157,10 +141,8 @@ export default function AssignPermission() {
           </button>
         </div>
 
-        {/* KHU VỰC CHỨA 2 BẢNG (Kéo cuộn nội dung ở đây) */}
         <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
           
-          {/* ---- BẢNG 1: ASSIGNED PERMISSIONS (Đã gán) ---- */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col h-[400px] shrink-0">
             <div className="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center rounded-t-lg">
               <h3 className="text-lg font-bold text-green-600 flex items-center gap-2">
@@ -202,7 +184,6 @@ export default function AssignPermission() {
             </div>
           </div>
 
-          {/* ---- BẢNG 2: AVAILABLE PERMISSIONS (Chưa gán) ---- */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col h-[400px] shrink-0">
             <div className="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center rounded-t-lg">
               <h3 className="text-lg font-bold text-gray-600 flex items-center gap-2">
@@ -247,7 +228,6 @@ export default function AssignPermission() {
         </div>
       </div>
 
-      {/* TOAST THÔNG BÁO */}
       {showNotification.show && (
         <div className={`fixed bottom-8 right-8 z-[100] min-w-[320px] p-4 bg-white rounded-lg shadow-xl flex items-center justify-between border-l-4 transition-transform ${showNotification.type === 'success' ? 'border-green-500 text-green-600' : 'border-red-500 text-red-600'}`}>
           <div className="flex items-center gap-4">

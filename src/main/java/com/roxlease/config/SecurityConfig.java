@@ -22,14 +22,13 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable()) // Tắt CSRF vì chúng ta dùng Token
-            .cors(cors -> cors.configure(http)) // Cấu hình CORS cho ReactJS gọi sang
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // Không dùng Session của Servlet
+            .csrf(csrf -> csrf.disable()) 
+            .cors(cors -> cors.configure(http)) 
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) 
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/login", "/api/auth/register", "/error").permitAll() // Cho phép gọi API đăng nhập không cần token
-                .anyRequest().authenticated() // Tất cả các API khác đều bắt buộc phải có token hợp lệ
+                .requestMatchers("/api/auth/login", "/api/auth/register", "/error").permitAll() 
+                .anyRequest().authenticated() 
             )
-            // Thêm Filter của chúng ta vào TRƯỚC bước xác thực mặc định của Spring Security
             .addFilterBefore(opaqueTokenFilter, UsernamePasswordAuthenticationFilter.class);
             
         return http.build();

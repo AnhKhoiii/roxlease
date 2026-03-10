@@ -40,7 +40,7 @@ public class AuthService {
     public void register(RegisterRequest request) {
         // Kiểm tra username đã tồn tại chưa
         if (userRepository.findByUsername(request.getUsername()).isPresent()) {
-            throw new RuntimeException("Username đã tồn tại trong hệ thống");
+            throw new RuntimeException("Username already exists");
         }
 
         // Tạo User mới

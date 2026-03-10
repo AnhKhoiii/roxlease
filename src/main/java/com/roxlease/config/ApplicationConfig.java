@@ -1,7 +1,6 @@
 package com.roxlease.config;
 
 import com.roxlease.model.Permissions;
-import com.roxlease.model.Role;
 import com.roxlease.model.User;
 import com.roxlease.repository.PermissionRepository;
 import com.roxlease.repository.RoleRepository;
@@ -69,11 +68,9 @@ public class ApplicationConfig {
                 }
             }
 
-            // Trả về UserDetails cho Spring Security
             return org.springframework.security.core.userdetails.User
                     .withUsername(user.getUsername())
                     .password(user.getUserPwd())
-                    // Chặn đăng nhập nếu Status không phải ACTIVE
                     .accountLocked(user.getStatus() != com.roxlease.model.Enum.UserStatus.ACTIVE) 
                     .authorities(authorities)
                     .build();

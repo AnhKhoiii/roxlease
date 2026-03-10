@@ -76,7 +76,7 @@ export default function PermissionModal({ isOpen, onClose, onSave, mode, initial
 
           <div className="flex flex-col gap-2">
             <label className="font-bold text-gray-700">Description</label>
-            <textarea value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full border border-gray-300 rounded p-4 h-[120px] resize-none outline-none focus:border-yellow-500" placeholder="Mô tả quyền..." />
+            <textarea value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full border border-gray-300 rounded p-4 h-[120px] resize-none outline-none focus:border-yellow-500" placeholder="Description..." />
           </div>
         </div>
       </div>

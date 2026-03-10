@@ -80,13 +80,10 @@ export default function RoleManagement() {
       fetchRoles();
       setTimeout(() => setShowNotification({ show: false, message: '', type: '' }), 4000);
     } catch (error) {
-      // Đóng Modal Xác nhận xóa
       setShowDeleteConfirm(false);
       
-      // Lấy câu thông báo lỗi chuẩn xác từ Spring Boot ("Không thể xóa! Role [...] đang được gán...")
       const errorMessage = error.response?.data?.error || 'Error occurred!';
       
-      // Bật Modal Lỗi lên giữa màn hình
       setErrorModal({ show: true, message: errorMessage });
     }
   };

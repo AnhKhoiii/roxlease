@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 public class RoleRequest {
-    @NotBlank(message = "Tên Role không được để trống")
+    @NotBlank(message = "Role name is required")
     private String roleName;
     
     private String description;

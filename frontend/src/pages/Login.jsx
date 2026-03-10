@@ -63,22 +63,18 @@ const Login = () => {
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center font-['Inter'] overflow-hidden">
       
-      {/*Ảnh nền*/}
       <img 
         src={backgroundImage} 
         alt="ROX Lease Background" 
         className="absolute inset-0 w-full h-full object-cover z-0"
       />
 
-      {/*Dòng Copyright*/}
       <div className="absolute bottom-4 left-6 z-10 text-white/70 text-[12px]">
         © 2026 All Rights Reserved - ROX
       </div>
 
-      {/* KHUNG LOGIN */}
       <div className="relative z-10 w-[550px] p-[50px] bg-white/70 backdrop-blur-md rounded-[12px] shadow-2xl flex flex-col items-center border border-white/40">
         
-        {/* Logo */}
         <div className="w-[280px] h-[70px] mb-[40px] flex items-center justify-center">
           <img 
             src={logoImage} 
@@ -89,7 +85,6 @@ const Login = () => {
 
         <form className="flex flex-col w-full" onSubmit={handleLogin}>
           
-          {/* Label & Input Username */}
           <div className="mb-[20px] w-full">
              <label className="block text-[#323842] text-[14px] font-semibold mb-[8px]">Username</label>
              <input 
@@ -105,7 +100,6 @@ const Login = () => {
              />
           </div>
 
-          {/* Label & Input Password */}
           <div className="mb-[15px] w-full">
              <label className="block text-[#323842] text-[14px] font-semibold mb-[8px]">Password</label>
              <input 
@@ -122,14 +116,12 @@ const Login = () => {
              />
           </div>
 
-          {/* Dòng báo lỗi */}
           <div className="h-[20px] mb-[10px] flex items-center">
             {error && (
               <span className="text-[14px] text-[#E32128] font-medium">{error}</span>
             )}
           </div>
 
-          {/* Remember me & Forgot Password */}
           <div className="flex justify-between items-center w-full mb-[30px]">
             <div className="flex items-center gap-2">
                <input 
@@ -156,13 +148,11 @@ const Login = () => {
         </form>
       </div>
 
-      {/* Popup báo khóa tài khoản */}
       {isLocked && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#171a1f]/60 backdrop-blur-sm">
           <div className="w-[500px] p-8 bg-white rounded-[16px] shadow-2xl flex flex-col items-center relative">
             <button onClick={() => setIsLocked(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-xl font-bold">✕</button>
             <div className="text-red-500 mb-4">
-               {/* Icon Lock */}
                <svg className="w-20 h-20 fill-current" viewBox="0 0 24 24"><path d="M12 2C9.243 2 7 4.243 7 7v3H6c-1.103 0-2 .897-2 2v8c0 1.103.897 2 2 2h12c1.103 0 2-.897 2-2v-8c0-1.103-.897-2-2-2h-1V7c0-2.757-2.243-5-5-5zm-3 5c0-1.654 1.346-3 3-3s3 1.346 3 3v3H9V7zm9 13H6v-8h12v8z"/></svg>
             </div>
             <div className="text-center text-[#323842] text-[24px] font-bold">Account is locked</div>

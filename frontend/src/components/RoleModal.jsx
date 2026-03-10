@@ -5,7 +5,7 @@ export default function RoleModal({ isOpen, onClose, onSave, mode, initialData, 
     roleName: "",
     roleTitle: "", 
     vpaRestriction: "",
-    isSystem: false // Thêm state quản lý isSystem
+    isSystem: false
   });
 
   const [errors, setErrors] = useState({});
@@ -18,7 +18,7 @@ export default function RoleModal({ isOpen, onClose, onSave, mode, initialData, 
           roleName: initialData.roleName || "",
           roleTitle: initialData.description || initialData.roleTitle || "",
           vpaRestriction: initialData.vpaRestriction ? JSON.stringify(initialData.vpaRestriction, null, 2) : "",
-          isSystem: initialData.isSystem || false // Đổ dữ liệu isSystem cũ vào
+          isSystem: initialData.isSystem || false 
         });
       } else {
         setFormData({ roleName: "", roleTitle: "", vpaRestriction: "", isSystem: false });
@@ -47,7 +47,7 @@ export default function RoleModal({ isOpen, onClose, onSave, mode, initialData, 
       roleName: formData.roleName.toUpperCase(),
       description: formData.roleTitle,
       vpaRestriction: formData.vpaRestriction ? formData.vpaRestriction : null,
-      isSystem: formData.isSystem // Gửi isSystem lên Backend
+      isSystem: formData.isSystem
     };
 
     onSave(dataToSave);
@@ -59,15 +59,12 @@ export default function RoleModal({ isOpen, onClose, onSave, mode, initialData, 
 
       <div className="relative w-[500px] bg-white h-full shadow-2xl flex flex-col animate-slide-in-right">
         
-        {/* HEADER */}
         <div className="bg-[#EFB034] h-[100px] flex items-center justify-between px-8 shrink-0">
           <div className="flex items-center gap-6">
             <h2 className="text-2xl font-bold text-black tracking-tight">
-              {/* Đổi tiêu đề nếu chỉ có quyền VIEW */}
               {mode === "ADD" ? "Add new role" : (!canEdit ? "View role details" : "Edit role")}
             </h2>
             
-            {/* ẨN NÚT SAVE NẾU KHÔNG CÓ QUYỀN EDIT */}
             {canEdit && (
               <button onClick={handleSave} className="bg-[#DE3B40] hover:bg-[#C11C22] text-white px-5 py-1 rounded font-bold text-sm transition-all shadow-md">
                 Save
@@ -80,7 +77,6 @@ export default function RoleModal({ isOpen, onClose, onSave, mode, initialData, 
           </div>
         </div>
 
-        {/* FORM NHẬP LIỆU - THÊM disabled={!canEdit} */}
         <div className="p-10 flex flex-col gap-8 overflow-y-auto">
           
           <div className="flex flex-col gap-2">
@@ -88,7 +84,7 @@ export default function RoleModal({ isOpen, onClose, onSave, mode, initialData, 
             <input
               value={formData.roleName}
               onChange={(e) => handleChange('roleName', e.target.value)}
-              disabled={mode === "EDIT" || !canEdit} // Khóa nếu là EDIT hoặc ko có quyền
+              disabled={mode === "EDIT" || !canEdit} 
               className={`w-[350px] border rounded px-3 py-2 outline-none transition-all ${
                 errors.roleName ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-yellow-500 disabled:bg-gray-100 disabled:text-gray-500 cursor-not-allowed'
               }`}

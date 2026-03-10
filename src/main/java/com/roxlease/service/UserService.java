@@ -198,7 +198,7 @@ public class UserService {
             workbook.write(out);
             return new ByteArrayInputStream(out.toByteArray());
         } catch (Exception e) {
-            throw new RuntimeException("Lỗi khi xuất dữ liệu ra file Excel: " + e.getMessage());
+            throw new RuntimeException("Error exporting users to Excel: " + e.getMessage());
         }
     }
 
@@ -212,7 +212,6 @@ public class UserService {
             while (rows.hasNext()) {
                 Row currentRow = rows.next();
                 
-                // Bỏ qua dòng Header (dòng 0)
                 if (rowNumber == 0) { rowNumber++; continue; }
 
                 String username = getCellValue(currentRow.getCell(0));
