@@ -133,9 +133,11 @@ const Login = () => {
                  Remember me?
                </label>
             </div>
-            <a href="/forgot-password" className="text-[14px] font-bold text-[#E32128] hover:underline transition-all">
-              Forgot Password?
-            </a>
+              <div className="text-right mt-1">
+              <span onClick={() => navigate('/forgot-password')} className="text-sm text-red-500 font-semibold cursor-pointer hover:underline">
+              Forgot password?
+              </span>
+            </div>
           </div>
 
           <button 

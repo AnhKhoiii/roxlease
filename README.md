@@ -1,23 +1,23 @@
-# 🏢 ROX Lease - Real Estate & Space Management System
+# ROX Lease - Real Estate & Space Management System
 
 **ROX Lease** là một hệ thống quản lý cho thuê không gian và bất động sản toàn diện, được thiết kế theo kiến trúc Client-Server hiện đại. Dự án nổi bật với hệ thống phân quyền động **Dynamic RBAC (Role-Based Access Control)** chặt chẽ, cho phép quản trị viên cấu hình quyền truy cập (View/Edit) đến từng phân hệ và ứng dụng nhỏ nhất.
 
 ---
 
-## ✨ Tính năng nổi bật
+## Tính năng nổi bật
 
-### 🔐 Xác thực & Bảo mật (Authentication & Security)
+### Xác thực & Bảo mật (Authentication & Security)
 * **Đăng nhập / Đăng xuất:** Sử dụng Token-based authentication (JWT/Opaque Token) với cơ chế lưu trữ phiên làm việc (Active Session).
 * **Quên mật khẩu (Forgot Password):** Tích hợp gửi email chứa đường link xác thực bảo mật (chỉ sử dụng 1 lần, có thời hạn 15 phút).
 * **Đổi mật khẩu:** Yêu cầu mật khẩu mạnh (chứa chữ hoa, chữ thường, số, ký tự đặc biệt).
 
-### 🛡️ Phân quyền động (Dynamic RBAC)
+### Phân quyền động (Dynamic RBAC)
 * **Cấu trúc 3 lớp:** Module (Lớp 1) ➔ Application (Lớp 2) ➔ Action (VIEW / EDIT).
 * **Giao diện tự động thích ứng:** * Thanh Navigation (Sidebar) tự động ẩn/hiện các chức năng dựa trên quyền của User.
     * Nếu User chỉ có quyền `VIEW`, toàn bộ form nhập liệu, nút thêm/sửa/xóa sẽ tự động bị khóa (Disabled / Read-only) hoặc ẩn đi.
-* **Gán quyền thông minh (Assign Permission):** Giao diện 2 bảng (Assigned / Available).
+* **Gán quyền thông minh (Assign Permission):** Giao diện 2 bảng (Assigned / Available). Tự động mapping (Tick `EDIT` tự động cấp `VIEW`, bỏ `VIEW` tự động thu hồi `EDIT`).
 
-### 👥 Quản trị Hệ thống (System Management)
+### Quản trị Hệ thống (System Management)
 * **Quản lý User:** Thêm, sửa, khóa (Lock/Unlock) tài khoản nhân viên.
 * **Import/Export Excel:** Xuất danh sách User ra file `.xlsx` và Import hàng loạt User mới từ Excel (tích hợp Apache POI).
 * **Quản lý Role:** Tạo các vai trò (VD: System Admin, Space Manager) và gắn cờ System Role. Ngăn chặn xóa Role nếu đang có người dùng sử dụng.
@@ -25,7 +25,7 @@
 
 ---
 
-## 🛠️ Công nghệ sử dụng (Tech Stack)
+## Công nghệ sử dụng (Tech Stack)
 
 **Frontend:**
 * [React.js](https://react.dev/) (Vite)
@@ -39,13 +39,14 @@
 * [Spring Security](https://spring.io/projects/spring-security) (Bảo mật luồng API)
 * [Spring Data MongoDB](https://spring.io/projects/spring-data-mongodb) (Tương tác Database)
 * **Apache POI** (Xử lý file Excel)
+* **JavaMailSender** (Gửi Email SMTP)
 
 **Database:**
 * [MongoDB](https://www.mongodb.com/) (NoSQL)
 
 ---
 
-## 🚀 Hướng dẫn Cài đặt & Chạy dự án
+## Hướng dẫn Cài đặt & Chạy dự án
 
 ### 1. Yêu cầu môi trường (Prerequisites)
 * Đã cài đặt **Node.js** (v16 trở lên).
@@ -66,6 +67,13 @@
    jwt.secret=ChuoiBaoMatCuaBan...
    jwt.expiration=86400000
 
+   # Cấu hình Email (Dùng App Password của Gmail)
+   spring.mail.host=smtp.gmail.com
+   spring.mail.port=587
+   spring.mail.username=your-email@gmail.com
+   spring.mail.password=your-app-password
+   spring.mail.properties.mail.smtp.auth=true
+   spring.mail.properties.mail.smtp.starttls.enable=true
 Chạy lệnh cài đặt thư viện và khởi động Server:
 
 Bash
@@ -88,7 +96,7 @@ Bash
 npm run dev
 Giao diện Web sẽ chạy tại: http://localhost:5173
 
-📦 Khởi tạo Dữ liệu (Seeding Data)
+Khởi tạo Dữ liệu (Seeding Data)
 Để có thể trải nghiệm toàn bộ tính năng phân quyền, bạn cần thêm danh sách Permissions gốc vào MongoDB.
 
 Mở MongoDB Compass.
@@ -109,10 +117,10 @@ JSON
 ]
 Sau đó, bạn chỉ cần tạo một User, gán cho họ một Role, và cấp các mã Quyền tương ứng để thấy sự thay đổi giao diện theo thời gian thực!
 
-📁 Cấu trúc Thư mục chính
+Cấu trúc Thư mục chính
 Plaintext
 ROXLEASE/
-├── frontend/                   # 🌐 Frontend ReactJS (Vite)
+├── frontend/                   # Frontend ReactJS (Vite)
 │   ├── src/
 │   │   ├── api/                # Cấu hình Axios & Interceptors
 │   │   ├── components/         # Các Modal tái sử dụng (UserModal, RoleModal...)
@@ -120,7 +128,7 @@ ROXLEASE/
 │   │   └── pages/              # Các trang chính (Login, UserManagement, AssignPermission...)
 │   └── package.json
 │
-├── src/main/java/com/roxlease/ # ⚙️ Backend Spring Boot
+├── src/main/java/com/roxlease/ # Backend Spring Boot
 │   ├── config/                 # Cấu hình Security, CORS, MongoDB
 │   ├── controller/             # Các Endpoints REST API (Auth, User, Role, Perm)
 │   ├── dto/                    # Data Transfer Objects (Request / Response)

@@ -8,12 +8,16 @@ import UserManagement from './pages/UserManagement';
 import RoleManagement from './pages/RoleManagement';
 import PermissionManagement from './pages/PermissionManagement';
 import AssignPermission from './pages/AssignPermission';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         <Route path="/" element={<DashboardLayout />}>
           <Route index element={<Navigate to="dashboard" replace />} />

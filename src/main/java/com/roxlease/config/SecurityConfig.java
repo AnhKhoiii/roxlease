@@ -26,7 +26,7 @@ public class SecurityConfig {
             .cors(cors -> cors.configure(http)) 
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) 
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/login", "/api/auth/register", "/error").permitAll() 
+                .requestMatchers("/api/auth/login", "/api/auth/register", "/error", "/api/auth/forgot-password", "/api/auth/reset-password").permitAll() 
                 .anyRequest().authenticated() 
             )
             .addFilterBefore(opaqueTokenFilter, UsernamePasswordAuthenticationFilter.class);

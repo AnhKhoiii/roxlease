@@ -2,8 +2,10 @@ package com.roxlease.controller;
 
 import com.roxlease.dto.AuthResponse;
 import com.roxlease.dto.ChangePasswordRequest;
+import com.roxlease.dto.ForgotPasswordRequest;
 import com.roxlease.dto.LoginRequest;
 import com.roxlease.dto.RegisterRequest;
+import com.roxlease.dto.ResetPasswordRequest;
 import com.roxlease.model.ActiveSession;
 import com.roxlease.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -98,6 +100,26 @@ public class AuthController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Collections.singletonMap("error", "Lỗi hệ thống: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        try {
+            authService.forgotPassword(request.getEmail());
+            return ResponseEntity.ok(Collections.singletonMap("message", "Link đặt lại mật khẩu đã được gửi vào email của bạn."));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+        try {
+            authService.resetPassword(request.getToken(), request.getNewPassword());
+            return ResponseEntity.ok(Collections.singletonMap("message", "Đặt lại mật khẩu thành công. Bạn có thể đăng nhập ngay bây giờ."));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Collections.singletonMap("error", e.getMessage()));
         }
     }
 }
