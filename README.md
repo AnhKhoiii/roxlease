@@ -74,29 +74,35 @@
    spring.mail.password=your-app-password
    spring.mail.properties.mail.smtp.auth=true
    spring.mail.properties.mail.smtp.starttls.enable=true
-Chạy lệnh cài đặt thư viện và khởi động Server:
+* Chạy lệnh cài đặt thư viện và khởi động Server:
 
+```
 Bash
 mvn clean install
 mvn spring-boot:run
-Server Backend sẽ chạy tại: http://localhost:8080
+```
+* Server Backend sẽ chạy tại: http://localhost:8080
+
 
 3. Cài đặt Frontend (ReactJS)
-Mở một terminal mới, di chuyển vào thư mục frontend:
-
+* Mở một terminal mới, di chuyển vào thư mục frontend:
+```
 Bash
 cd frontend
-Cài đặt các package phụ thuộc:
-
+```
+* Cài đặt các package phụ thuộc:
+``
 Bash
 npm install
-Khởi động môi trường dev:
-
+```
+* Khởi động môi trường dev:
+```
 Bash
 npm run dev
+``
 Giao diện Web sẽ chạy tại: http://localhost:5173
 
-Khởi tạo Dữ liệu (Seeding Data)
+* Khởi tạo Dữ liệu (Seeding Data)
 Để có thể trải nghiệm toàn bộ tính năng phân quyền, bạn cần thêm danh sách Permissions gốc vào MongoDB.
 
 Mở MongoDB Compass.
@@ -105,7 +111,7 @@ Kết nối vào roxlease_db ➔ Chọn collection permissions.
 
 Chọn chế độ Insert JSON và dán mảng dữ liệu sau:
 
-JSON
+```JSON
 [
   { "_id": "SYSTEM_USER_VIEW", "code": "SYSTEM_USER_VIEW", "module": "SYSTEM", "application": "USER", "action": "VIEW", "description": "Chỉ xem danh sách người dùng" },
   { "_id": "SYSTEM_USER_EDIT", "code": "SYSTEM_USER_EDIT", "module": "SYSTEM", "application": "USER", "action": "EDIT", "description": "Thêm, sửa, khóa người dùng" },
@@ -115,9 +121,11 @@ JSON
   { "_id": "SYSTEM_PERMISSION_EDIT", "code": "SYSTEM_PERMISSION_EDIT", "module": "SYSTEM", "application": "PERMISSION", "action": "EDIT", "description": "Quản lý quyền" },
   { "_id": "SYSTEM_ASSIGN_EDIT", "code": "SYSTEM_ASSIGN_EDIT", "module": "SYSTEM", "application": "ASSIGN", "action": "EDIT", "description": "Gán quyền cho Role" }
 ]
+```
 Sau đó, bạn chỉ cần tạo một User, gán cho họ một Role, và cấp các mã Quyền tương ứng để thấy sự thay đổi giao diện theo thời gian thực!
 
-Cấu trúc Thư mục chính
+* Cấu trúc Thư mục chính
+```
 frontend/src/
 ├── api/
 ├── assets/
@@ -141,3 +149,4 @@ frontend/src/
 │   └── space/ (Để trống)
 ├── App.jsx
 └── main.jsx
+```
