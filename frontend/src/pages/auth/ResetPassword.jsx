@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import axiosInstance from '../api/axiosInstance';
-import logo from '../assets/login_logo.png';
-import bg from '../assets/login_bg.png';
+import axiosInstance from '../../api/axiosInstance';
+import logo from '../../assets/login_logo.png';
+import bg from '../../assets/login_bg.png';
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();

@@ -118,21 +118,26 @@ JSON
 Sau đó, bạn chỉ cần tạo một User, gán cho họ một Role, và cấp các mã Quyền tương ứng để thấy sự thay đổi giao diện theo thời gian thực!
 
 Cấu trúc Thư mục chính
-Plaintext
-ROXLEASE/
-├── frontend/                   # Frontend ReactJS (Vite)
-│   ├── src/
-│   │   ├── api/                # Cấu hình Axios & Interceptors
-│   │   ├── components/         # Các Modal tái sử dụng (UserModal, RoleModal...)
-│   │   ├── layouts/            # Nested Layouts (DashboardLayout, SystemLayout)
-│   │   └── pages/              # Các trang chính (Login, UserManagement, AssignPermission...)
-│   └── package.json
-│
-├── src/main/java/com/roxlease/ # Backend Spring Boot
-│   ├── config/                 # Cấu hình Security, CORS, MongoDB
-│   ├── controller/             # Các Endpoints REST API (Auth, User, Role, Perm)
-│   ├── dto/                    # Data Transfer Objects (Request / Response)
-│   ├── model/                  # MongoDB Document Entities (User, Role, Token...)
-│   ├── repository/             # Tương tác MongoDB (MongoRepository)
-│   └── service/                # Xử lý Logic nghiệp vụ (Auth, Excel, Email...)
-└── pom.xml                     # Quản lý thư viện Maven
+frontend/src/
+├── api/
+├── assets/
+├── components/
+│   └── system/
+│       ├── UserModal.jsx
+│       ├── RoleModal.jsx
+│       └── PermissionModal.jsx
+├── layouts/
+│   ├── DashboardLayout.jsx
+│   └── SystemLayout.jsx
+├── pages/
+│   ├── auth/
+│   │   ├── Login.jsx
+│   │   ├── ForgotPassword.jsx
+│   │   └── ResetPassword.jsx
+│   ├── system/
+│   │   ├── UserManagement.jsx
+│   │   ├── RoleManagement.jsx
+│   │   └── ...
+│   └── space/ (Để trống)
+├── App.jsx
+└── main.jsx

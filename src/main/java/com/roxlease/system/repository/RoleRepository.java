@@ -1,6 +1,6 @@
-package com.roxlease.repository;
+package com.roxlease.system.repository;
 
-import com.roxlease.model.Role;
+import com.roxlease.system.model.Role;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 public interface RoleRepository extends MongoRepository<Role, String> {

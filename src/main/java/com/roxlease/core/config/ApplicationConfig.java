@@ -1,10 +1,11 @@
-package com.roxlease.config;
+package com.roxlease.core.config;
 
-import com.roxlease.model.Permissions;
-import com.roxlease.model.User;
-import com.roxlease.repository.PermissionRepository;
-import com.roxlease.repository.RoleRepository;
-import com.roxlease.repository.UserRepository;
+import com.roxlease.system.model.Permissions;
+import com.roxlease.system.model.User;
+import com.roxlease.system.repository.PermissionRepository;
+import com.roxlease.system.repository.RoleRepository;
+import com.roxlease.system.model.Enum.UserStatus;
+import com.roxlease.system.repository.UserRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -71,7 +72,7 @@ public class ApplicationConfig {
             return org.springframework.security.core.userdetails.User
                     .withUsername(user.getUsername())
                     .password(user.getUserPwd())
-                    .accountLocked(user.getStatus() != com.roxlease.model.Enum.UserStatus.ACTIVE) 
+                    .accountLocked(user.getStatus() != UserStatus.ACTIVE)
                     .authorities(authorities)
                     .build();
         };

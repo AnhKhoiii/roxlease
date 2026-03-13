@@ -1,4 +1,4 @@
-package com.roxlease.model.Enum;
+package com.roxlease.system.model.Enum;
 
 public enum Gender {
     MALE,

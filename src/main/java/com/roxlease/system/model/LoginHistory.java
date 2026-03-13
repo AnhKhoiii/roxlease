@@ -1,9 +1,9 @@
-package com.roxlease.model;
+package com.roxlease.system.model;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
-import com.roxlease.model.Enum.LoginStatus;
+import com.roxlease.system.model.Enum.LoginStatus;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

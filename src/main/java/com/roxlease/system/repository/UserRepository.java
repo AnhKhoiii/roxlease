@@ -1,9 +1,9 @@
-package com.roxlease.repository;
+package com.roxlease.system.repository;
 
-import com.roxlease.model.Enum.UserStatus;
+import com.roxlease.system.model.Enum.UserStatus;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
-import com.roxlease.model.User;
+import com.roxlease.system.model.User;
 
 import java.util.List;
 import java.util.Optional;

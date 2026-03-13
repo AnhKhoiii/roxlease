@@ -1,5 +1,5 @@
 
-package com.roxlease.model;
+package com.roxlease.system.model;
 
 import org.springframework.context.annotation.ComponentScan.Filter;
 import org.springframework.data.annotation.Id;

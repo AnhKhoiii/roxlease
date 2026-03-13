@@ -1,4 +1,4 @@
-package com.roxlease.model;
+package com.roxlease.system.model;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;

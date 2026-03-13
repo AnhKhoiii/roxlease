@@ -1,6 +1,6 @@
-package com.roxlease.dto;
+package com.roxlease.system.dto;
 
-import com.roxlease.model.Enum.UserStatus;
+import com.roxlease.system.model.Enum.UserStatus;
 import lombok.Data;
 
 @Data

@@ -1,15 +1,15 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Login from './pages/Login';
+import Login from './pages/auth/Login';
 import DashboardLayout from './layouts/DashboardLayout'; 
 import SystemLayout from './layouts/SystemLayout';
 import Profile from './pages/Profile';
-import UserManagement from './pages/UserManagement';
-import RoleManagement from './pages/RoleManagement';
-import PermissionManagement from './pages/PermissionManagement';
-import AssignPermission from './pages/AssignPermission';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
+import UserManagement from './pages/system/UserManagement';
+import RoleManagement from './pages/system/RoleManagement';
+import PermissionManagement from './pages/system/PermissionManagement';
+import AssignPermission from './pages/system/AssignPermission';
+import ForgotPassword from './pages/auth/ForgotPassword';
+import ResetPassword from './pages/auth/ResetPassword';
 
 function App() {
   return (

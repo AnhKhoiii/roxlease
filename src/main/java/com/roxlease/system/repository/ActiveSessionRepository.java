@@ -1,6 +1,6 @@
-package com.roxlease.repository;
+package com.roxlease.system.repository;
 
-import com.roxlease.model.ActiveSession;
+import com.roxlease.system.model.ActiveSession;
 
 import org.springframework.data.mongodb.repository.MongoRepository;
 import java.util.Optional;

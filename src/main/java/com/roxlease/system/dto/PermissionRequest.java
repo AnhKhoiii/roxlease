@@ -1,4 +1,4 @@
-package com.roxlease.dto;
+package com.roxlease.system.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;

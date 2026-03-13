@@ -1,13 +1,12 @@
-package com.roxlease.controller;
+package com.roxlease.system.controller;
 
-import com.roxlease.dto.AuthResponse;
-import com.roxlease.dto.ChangePasswordRequest;
-import com.roxlease.dto.ForgotPasswordRequest;
-import com.roxlease.dto.LoginRequest;
-import com.roxlease.dto.RegisterRequest;
-import com.roxlease.dto.ResetPasswordRequest;
-import com.roxlease.model.ActiveSession;
-import com.roxlease.service.AuthService;
+import com.roxlease.system.dto.AuthResponse;
+import com.roxlease.system.dto.ChangePasswordRequest;
+import com.roxlease.system.dto.ForgotPasswordRequest;
+import com.roxlease.system.dto.LoginRequest;
+import com.roxlease.system.dto.ResetPasswordRequest;
+import com.roxlease.system.model.ActiveSession;
+import com.roxlease.system.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

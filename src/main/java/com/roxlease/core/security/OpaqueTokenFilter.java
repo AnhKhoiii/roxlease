@@ -1,7 +1,7 @@
-package com.roxlease.security;
+package com.roxlease.core.security;
 
-import com.roxlease.model.ActiveSession;
-import com.roxlease.repository.ActiveSessionRepository;
+import com.roxlease.system.model.ActiveSession;
+import com.roxlease.system.repository.ActiveSessionRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,7 +15,6 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.util.Collections;
 import java.util.Date;
 import java.util.Optional;
 

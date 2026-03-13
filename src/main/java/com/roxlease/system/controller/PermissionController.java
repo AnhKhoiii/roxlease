@@ -1,8 +1,8 @@
-package com.roxlease.controller;
+package com.roxlease.system.controller;
 
-import com.roxlease.dto.PermissionRequest;
-import com.roxlease.model.Permissions;
-import com.roxlease.service.PermissionService;
+import com.roxlease.system.dto.PermissionRequest;
+import com.roxlease.system.model.Permissions;
+import com.roxlease.system.service.PermissionService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

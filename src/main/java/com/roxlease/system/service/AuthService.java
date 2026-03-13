@@ -1,19 +1,19 @@
-package com.roxlease.service;
+package com.roxlease.system.service;
 
-import com.roxlease.dto.RegisterRequest;
-import com.roxlease.model.ActiveSession;
-import com.roxlease.model.LoginHistory;
-import com.roxlease.model.User;
-import com.roxlease.model.Enum.UserStatus;
-import com.roxlease.repository.ActiveSessionRepository;
-import com.roxlease.repository.LoginHistoryRepository;
-import com.roxlease.repository.UserRepository;
+import com.roxlease.system.dto.RegisterRequest;
+import com.roxlease.system.model.ActiveSession;
+import com.roxlease.system.model.LoginHistory;
+import com.roxlease.system.model.User;
+import com.roxlease.system.model.Enum.UserStatus;
+import com.roxlease.system.repository.ActiveSessionRepository;
+import com.roxlease.system.repository.LoginHistoryRepository;
+import com.roxlease.system.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
-import com.roxlease.model.PasswordResetToken;
-import com.roxlease.repository.PasswordResetTokenRepository;
+import com.roxlease.system.model.PasswordResetToken;
+import com.roxlease.system.repository.PasswordResetTokenRepository;
 
 import java.time.Instant;
 import java.time.LocalDateTime;

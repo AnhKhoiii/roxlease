@@ -1,4 +1,4 @@
-package com.roxlease.model;
+package com.roxlease.system.model;
 
 import lombok.Data;
 import org.springframework.data.annotation.Id;

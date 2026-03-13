@@ -1,4 +1,4 @@
-package com.roxlease.controller;
+package com.roxlease.system.controller;
 
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
@@ -6,11 +6,11 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.roxlease.dto.CreateUserRequest;
-import com.roxlease.dto.UserDetailResponse;
-import com.roxlease.dto.UserResponse;
-import com.roxlease.service.UserService;
-import com.roxlease.dto.UpdateUserRequest;
+import com.roxlease.system.dto.CreateUserRequest;
+import com.roxlease.system.dto.UserDetailResponse;
+import com.roxlease.system.dto.UserResponse;
+import com.roxlease.system.service.UserService;
+import com.roxlease.system.dto.UpdateUserRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

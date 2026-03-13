@@ -1,9 +1,9 @@
-package com.roxlease.service;
+package com.roxlease.system.service;
 
-import com.roxlease.dto.RoleRequest;
-import com.roxlease.model.Role;
-import com.roxlease.repository.RoleRepository;
-import com.roxlease.repository.UserRepository;
+import com.roxlease.system.dto.RoleRequest;
+import com.roxlease.system.model.Role;
+import com.roxlease.system.repository.RoleRepository;
+import com.roxlease.system.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

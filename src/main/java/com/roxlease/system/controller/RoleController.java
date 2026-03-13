@@ -1,8 +1,8 @@
-package com.roxlease.controller;
+package com.roxlease.system.controller;
 
-import com.roxlease.dto.RoleRequest;
-import com.roxlease.model.Role;
-import com.roxlease.service.RoleService;
+import com.roxlease.system.dto.RoleRequest;
+import com.roxlease.system.model.Role;
+import com.roxlease.system.service.RoleService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

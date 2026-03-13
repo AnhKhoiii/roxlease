@@ -1,6 +1,8 @@
-package com.roxlease.dto;
+package com.roxlease.system.dto;
 
-import com.roxlease.model.Enum.*;
+import com.roxlease.system.model.Enum.*;
+import com.roxlease.system.model.Enum.Gender;
+import com.roxlease.system.model.Enum.UserStatus;
 import lombok.Data;
 import java.time.LocalDate;
 import java.util.List;

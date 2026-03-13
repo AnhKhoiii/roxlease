@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import axiosInstance from "../api/axiosInstance";
-import UserModal from "../components/UserModal";
+import axiosInstance from "../../api/axiosInstance";
+import UserModal from "../../components/system/UserModal";
 import { useOutletContext } from 'react-router-dom';
 
 export default function UserManagement() {

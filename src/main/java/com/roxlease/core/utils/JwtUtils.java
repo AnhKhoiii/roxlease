@@ -1,4 +1,4 @@
-package com.roxlease.utils;
+package com.roxlease.core.utils;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;

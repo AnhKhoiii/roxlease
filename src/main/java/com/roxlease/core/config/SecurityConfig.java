@@ -1,6 +1,6 @@
-package com.roxlease.config;
+package com.roxlease.core.config;
 
-import com.roxlease.security.OpaqueTokenFilter;
+import com.roxlease.core.security.OpaqueTokenFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;

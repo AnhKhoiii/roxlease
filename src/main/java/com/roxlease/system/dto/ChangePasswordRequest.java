@@ -1,4 +1,4 @@
-package com.roxlease.dto;
+package com.roxlease.system.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

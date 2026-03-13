@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import axiosInstance from "../api/axiosInstance";
-import RoleModal from "../components/RoleModal";
+import axiosInstance from "../../api/axiosInstance";
+import RoleModal from "../../components/system/RoleModal";
 import { useOutletContext } from 'react-router-dom';
 
 export default function RoleManagement() {

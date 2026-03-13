@@ -1,8 +1,8 @@
-package com.roxlease.service;
+package com.roxlease.system.service;
 
-import com.roxlease.dto.PermissionRequest;
-import com.roxlease.model.Permissions;
-import com.roxlease.repository.PermissionRepository;
+import com.roxlease.system.dto.PermissionRequest;
+import com.roxlease.system.model.Permissions;
+import com.roxlease.system.repository.PermissionRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

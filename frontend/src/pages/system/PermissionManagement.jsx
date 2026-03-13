@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import axiosInstance from "../api/axiosInstance";
-import PermissionModal from "../components/PermissionModal";
+import axiosInstance from "../../api/axiosInstance";
+import PermissionModal from "../../components/system/PermissionModal";
 import { useOutletContext } from 'react-router-dom';
 
 export default function PermissionManagement() {
