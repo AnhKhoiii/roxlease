@@ -10,6 +10,8 @@ import PermissionManagement from './pages/system/PermissionManagement';
 import AssignPermission from './pages/system/AssignPermission';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
+import SpaceLayout from './layouts/SpaceLayout';
+import SpaceConsole from './pages/space/SpaceConsole'
 
 function App() {
   return (
@@ -22,12 +24,15 @@ function App() {
         <Route path="/" element={<DashboardLayout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<div className="p-8">Home Dashboard</div>} />
-          <Route path="space" element={<div className="p-8">Space Screen</div>} />
+
+          <Route path="space" element={SpaceLayout} />
+            <Route path="space/location" element={<SpaceConsole />} />
+            
           <Route path="lease" element={<div className="p-8">Lease Screen</div>} />
           <Route path="cost" element={<div className="p-8">Cost Screen</div>} />
           <Route path="servicedesk" element={<div className="p-8">Service desk Screen</div>} />
           
-          <Route path="system" element={<SystemLayout />}>
+          <Route path="system" element={<SystemLayout/>}>
             <Route path="user" element={<UserManagement />} />
             <Route path="role" element={<RoleManagement />} />
             <Route path="permission" element={<PermissionManagement />} /> 

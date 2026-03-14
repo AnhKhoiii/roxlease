@@ -20,4 +20,9 @@ public class City {
 
     @Field("country_id")
     private String countryId;
+
+    @Field("region_id") 
+    private String regionId;
+
+    private String timezone;
 }
