@@ -243,7 +243,7 @@ export default function SpaceConsole() {
                       {treeData.countries.map(c => <option key={c.countryId} value={c.countryId}>{c.countryId} - {c.countryName}</option>)}
                     </select>
                   </div>
-                  <div><label className="block text-sm font-bold text-gray-700 mb-2">Region ID (Auto)</label><input value={formData.regionId} disabled className="border border-gray-300 rounded w-full px-4 py-2 bg-gray-100 text-gray-500 font-bold cursor-not-allowed" /></div>
+                  <div><label className="block text-sm font-bold text-gray-700 mb-2">Region ID</label><input value={formData.regionId} disabled className="border border-gray-300 rounded w-full px-4 py-2 bg-gray-100 text-gray-500 font-bold cursor-not-allowed" /></div>
                   <div><label className="block text-sm font-bold text-gray-700 mb-2">Timezone</label><input value={formData.timezone} onChange={e => setFormData({...formData, timezone: e.target.value})} disabled={!canEdit} className="border border-gray-300 rounded w-full px-4 py-2 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="VD: GMT-5" /></div>
                 </div>
               )}

@@ -25,9 +25,12 @@ function App() {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<div className="p-8">Home Dashboard</div>} />
 
-          <Route path="space" element={SpaceLayout} />
-            <Route path="space/location" element={<SpaceConsole />} />
+          <Route path="space" element={<SpaceLayout />}>
             
+            <Route path="location" element={<SpaceConsole />} />
+
+          </Route>
+
           <Route path="lease" element={<div className="p-8">Lease Screen</div>} />
           <Route path="cost" element={<div className="p-8">Cost Screen</div>} />
           <Route path="servicedesk" element={<div className="p-8">Service desk Screen</div>} />

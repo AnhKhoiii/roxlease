@@ -61,7 +61,11 @@ public class LocationController {
 
     @DeleteMapping("/regions/{id}")
     public ResponseEntity<?> deleteRegion(@PathVariable String id) {
-        // Có thể thêm logic kiểm tra xem có Country nào đang dùng Region này không trước khi xóa
+        // KIỂM TRA RÀNG BUỘC
+        if (countryRepo.existsByRegionId(id)) {
+            return ResponseEntity.badRequest().body(Collections.singletonMap("error", "Cannot delete Region in use."));
+        }
+        
         regionRepo.deleteById(id);
         return ResponseEntity.ok(Collections.singletonMap("message", "Region deleted successfully!"));
     }
@@ -87,12 +91,16 @@ public class LocationController {
 
     @DeleteMapping("/countries/{id}")
     public ResponseEntity<?> deleteCountry(@PathVariable String id) {
+        if (cityRepo.existsByCountryId(id)) {
+            return ResponseEntity.badRequest().body(Collections.singletonMap("error", "Cannot delete Country in use."));
+        }
+
         countryRepo.deleteById(id);
         return ResponseEntity.ok(Collections.singletonMap("message", "Country deleted successfully!"));
     }
 
     // ==========================================
-    // 4. CITY API (CÓ LOGIC ÉP REGION ID)
+    // 4. CITY API
     // ==========================================
     @PostMapping("/cities")
     public ResponseEntity<?> createCity(@RequestBody City req) {
