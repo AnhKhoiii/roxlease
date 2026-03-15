@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import axiosInstance from "../../api/axiosInstance";
 import { useOutletContext } from "react-router-dom"; // IMPORT ĐỂ LẤY QUYỀN
 
-export default function SpaceConsole() {
+export default function Location() {
   // === LẤY QUYỀN TỪ LAYOUT ===
   const { currentUser } = useOutletContext();
   const canEdit = currentUser?.permissions?.includes('SPACE_LOCATION_EDIT');

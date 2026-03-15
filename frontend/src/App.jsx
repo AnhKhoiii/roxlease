@@ -11,7 +11,10 @@ import AssignPermission from './pages/system/AssignPermission';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
 import SpaceLayout from './layouts/SpaceLayout';
-import SpaceConsole from './pages/space/SpaceConsole'
+import GeoLocation from './pages/space/GeoLocation'
+import BackgroundDataLayout from './layouts/BackgroundDataLayout';
+import PropertyConsole from './pages/space/PropertyConsole';
+import AmenityConsole from './pages/space/AmenityConsole';
 
 function App() {
   return (
@@ -27,8 +30,13 @@ function App() {
 
           <Route path="space" element={<SpaceLayout />}>
             
-            <Route path="location" element={<SpaceConsole />} />
+            <Route path="background-data" element={<BackgroundDataLayout />}>
+                <Route path="geo-location" element={<GeoLocation />} />
+                <Route path="property" element={<PropertyConsole />} />
+                <Route path="amenity" element={<AmenityConsole />} />
+            </Route>
 
+            <Route path="building" element={<div className="p-8 font-bold text-xl">Màn hình Quản lý Tòa Nhà</div>} />
           </Route>
 
           <Route path="lease" element={<div className="p-8">Lease Screen</div>} />
