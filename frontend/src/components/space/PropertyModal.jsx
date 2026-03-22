@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import axiosInstance from "../../api/axiosInstance"; // Gọi trực tiếp axiosInstance từ dự án của bạn
 
 // ================= CÁC COMPONENT DÙNG CHUNG =================
 const Header = ({ title, onClose, onSave, onDelete, canEdit, mode }) => {
@@ -56,25 +57,35 @@ const TextArea = ({ label, value, onChange, disabled, placeholder }) => (
   </div>
 );
 
-const Upload = ({ label, disabled }) => (
+// MỚI: Cập nhật component Upload để xử lý việc chọn file thực tế
+const Upload = ({ label, disabled, accept, onChange, hint }) => (
   <div className="flex flex-col gap-1.5">
     <label className="font-bold text-[13px] text-gray-700">{label}</label>
-    <input type="file" disabled={disabled} className="border border-gray-300 rounded px-3 py-2 outline-none disabled:bg-gray-100 disabled:text-gray-500 text-[14px] file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-bold file:bg-gray-200 file:text-gray-700 hover:file:bg-gray-300 cursor-pointer w-full bg-white" />
+    <input 
+      type="file" 
+      accept={accept}
+      onChange={(e) => onChange && onChange(e.target.files[0])}
+      disabled={disabled} 
+      className="border border-gray-300 rounded px-3 py-2 outline-none disabled:bg-gray-100 disabled:text-gray-500 text-[14px] file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-bold file:bg-gray-200 file:text-gray-700 hover:file:bg-gray-300 cursor-pointer w-full bg-white" 
+    />
+    {hint && <span className="text-xs text-gray-500 italic mt-1">{hint}</span>}
   </div>
 );
 
 // ================= COMPONENT CHÍNH =================
 export default function PropertyModal({ 
   isOpen, onClose, onSave, onDelete, mode, initialData, activeTab, canEdit = true, 
-  sites = [], buildings = []  // Nhận dữ liệu cha từ Component cha
+  sites = [], buildings = []  
 }) {
   const [formData, setFormData] = useState({});
   const [errors, setErrors] = useState({});
+  const [isUploadingDxf, setIsUploadingDxf] = useState(false); // State quản lý loading khi đang parse DXF
 
   useEffect(() => {
     if (isOpen) {
       setFormData(initialData || {});
       setErrors({});
+      setIsUploadingDxf(false);
     }
   }, [isOpen, initialData]);
 
@@ -83,6 +94,30 @@ export default function PropertyModal({
   const handleChange = (field, value) => {
     setFormData({ ...formData, [field]: value });
     if (errors[field]) setErrors({ ...errors, [field]: null });
+  };
+
+  // MỚI: Hàm xử lý gọi API Parse DXF trực tiếp từ Modal (Dành cho Edit Mode)
+  const handleUploadDxf = async () => {
+    if (!formData.flId || !formData.dxfFile) {
+      alert("Vui lòng chọn file .dxf hợp lệ!");
+      return;
+    }
+    const uploadData = new FormData();
+    uploadData.append('file', formData.dxfFile);
+
+    setIsUploadingDxf(true);
+    try {
+      const response = await axiosInstance.post(`/floors/${formData.flId}/upload-dxf`, uploadData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      alert("Bóc tách thành công! Layer SU và RM đã được đưa vào Database.");
+      // Tùy chọn: Có thể trigger reload danh sách room ở đây nếu cần
+    } catch (error) {
+      console.error("Lỗi upload DXF:", error);
+      alert("Quá trình bóc tách thất bại. Vui lòng kiểm tra lại cấu trúc file CAD hoặc Log Server.");
+    } finally {
+      setIsUploadingDxf(false);
+    }
   };
 
   const handleSaveAction = (isSaveAndAdd = false) => {
@@ -116,6 +151,8 @@ export default function PropertyModal({
     });
 
     if (payload.dateBuilt === "") payload.dateBuilt = null;
+    
+    // Gửi payload ra component cha. Nếu có formData.dxfFile, component cha sẽ nhận được luôn
     onSave(payload, isSaveAndAdd);
   };
 
@@ -139,10 +176,7 @@ export default function PropertyModal({
             <div className="grid grid-cols-3 gap-10">
               <div className="space-y-6">
                 <Input label="Site ID *" value={formData.siteId} onChange={v => handleChange('siteId', v)} disabled={mode === "EDIT" || !canEdit} error={errors.siteId} placeholder="VD: S-HCM-01" />
-                
-                {/* Ở phiên bản trước City ID vẫn đang gõ cứng 2 thành phố, sau này nếu bạn có bảng City thì map tương tự như Site/Building nhé */}
                 <Select label="City ID *" value={formData.cityId} onChange={v => handleChange('cityId', v)} disabled={!canEdit} error={errors.cityId} options={[{value: 'HCM', label: 'Ho Chi Minh'}, {value: 'HAN', label: 'Ha Noi'}]} />
-                
                 <Select label="Division *" value={formData.division} onChange={v => handleChange('division', v)} disabled={!canEdit} options={[{value: 'OFFICE', label: 'Office'}, {value: 'COMPLEX', label: 'Complex'}, {value: 'HOUSE', label: 'House'}, {value: 'INDUSTRIAL_ZONE', label: 'Industrial Zone'}]} />
               </div>
               <div className="space-y-6">
@@ -157,7 +191,8 @@ export default function PropertyModal({
                   <Input label="Longitude" type="number" value={formData.longitude} onChange={v => handleChange('longitude', v)} disabled={!canEdit} />
                   <Input label="Latitude (lat)" type="number" value={formData.lat} onChange={v => handleChange('lat', v)} disabled={!canEdit} />
                 </div>
-                <Upload label="Site Image" disabled={!canEdit} />
+                {/* Upload tĩnh cho image chưa xử lý */}
+                <Upload label="Site Image" disabled={!canEdit} accept="image/*" />
               </div>
             </div>
           )}
@@ -167,8 +202,6 @@ export default function PropertyModal({
             <div className="grid grid-cols-3 gap-10">
               <div className="space-y-6">
                 <Input label="Building ID (blId) *" value={formData.blId} onChange={v => handleChange('blId', v)} disabled={mode === "EDIT" || !canEdit} error={errors.blId} />
-                
-                {/* LẤY DANH SÁCH SITE TỪ DATABASE */}
                 <Select 
                   label="Site ID *" 
                   value={formData.siteId} 
@@ -177,7 +210,6 @@ export default function PropertyModal({
                   error={errors.siteId} 
                   options={sites.map(site => ({ value: site.siteId, label: `${site.siteId} - ${site.siteName || ''}` }))} 
                 />
-                
                 <Input label="Gross External Area (sqm)" type="number" value={formData.areaGrossExt} onChange={v => handleChange('areaGrossExt', v)} disabled={!canEdit} />
                 <Input label="Gross Internal Area (sqm)" type="number" value={formData.areaGrossInt} onChange={v => handleChange('areaGrossInt', v)} disabled={!canEdit} />
               </div>
@@ -194,7 +226,7 @@ export default function PropertyModal({
                   <Input label="Longitude" type="number" value={formData.longitude} onChange={v => handleChange('longitude', v)} disabled={!canEdit} />
                   <Input label="Latitude (lat)" type="number" value={formData.lat} onChange={v => handleChange('lat', v)} disabled={!canEdit} />
                 </div>
-                <Upload label="Building Image" disabled={!canEdit} />
+                <Upload label="Building Image" disabled={!canEdit} accept="image/*" />
               </div>
             </div>
           )}
@@ -204,8 +236,6 @@ export default function PropertyModal({
             <div className="grid grid-cols-2 gap-10">
               <div className="space-y-6">
                 <Input label="Floor ID (flId) *" value={formData.flId} onChange={v => handleChange('flId', v)} disabled={mode === "EDIT" || !canEdit} error={errors.flId} />
-                
-                {/* LẤY DANH SÁCH BUILDING TỪ DATABASE */}
                 <Select 
                   label="Building ID (blId) *" 
                   value={formData.blId} 
@@ -214,18 +244,43 @@ export default function PropertyModal({
                   error={errors.blId} 
                   options={buildings.map(b => ({ value: b.blId, label: `${b.blId} - ${b.blName || ''}` }))} 
                 />
-
                 <Input label="Floor Name" value={formData.flName} onChange={v => handleChange('flName', v)} disabled={!canEdit} />
               </div>
               <div className="space-y-6">
                 <Input label="GFA (Gross Floor Area)" type="number" value={formData.gfa} onChange={v => handleChange('gfa', v)} disabled={!canEdit} />
                 <Input label="NFA (Net Floor Area)" type="number" value={formData.nfa} onChange={v => handleChange('nfa', v)} disabled={!canEdit} />
-                <Upload label="Drawing Upload (.dwg, .pdf)" disabled={!canEdit} />
+                
+                {/* MỚI: TÍCH HỢP UPLOAD DXF */}
+                <div className="p-4 border border-dashed border-[#EFB034] rounded-lg bg-[#fffdf8] shadow-sm">
+                  <Upload 
+                    label="Auto-parse Floor Plan (.dxf)" 
+                    accept=".dxf"
+                    onChange={file => handleChange('dxfFile', file)}
+                    disabled={!canEdit} 
+                    hint="Hệ thống sẽ tự động đọc tọa độ để chuẩn bị cho màn hình View 2D sau này."
+                  />
+                  
+                  {/* Logic nút bóc tách */}
+                  {mode === "EDIT" && formData.dxfFile && (
+                    <button 
+                      onClick={handleUploadDxf}
+                      disabled={isUploadingDxf}
+                      className="mt-4 w-full bg-[#EFB034] hover:bg-[#d69d2e] text-black font-bold py-2.5 rounded transition-colors text-sm disabled:opacity-50"
+                    >
+                      {isUploadingDxf ? "Đang xử lý DXF..." : "Tiến hành bóc tách (Upload & Parse)"}
+                    </button>
+                  )}
+                  {mode === "ADD" && formData.dxfFile && (
+                    <p className="mt-3 text-[12px] font-semibold text-[#DE3B40]">
+                      * Vui lòng nhấn nút "Save" ở góc trên để tạo Floor trước khi hệ thống có thể bóc tách file DXF.
+                    </p>
+                  )}
+                </div>
+
               </div>
             </div>
           )}
         </div>
-        
       </div>
     </div>
   );

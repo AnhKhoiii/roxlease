@@ -32,12 +32,8 @@ export default function PropertyConsole() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      if (activeTab === 'suite' || activeTab === 'room') {
-        setDataList([]);
-        setChildData([]);
-        return;
-      }
-      
+      // ĐÃ XÓA đoạn chặn if (activeTab === 'suite' || activeTab === 'room') ở đây để cho phép gọi API
+
       const endpoint = `/space/properties/${activeTab}s`;
       const res = await axiosInstance.get(endpoint);
       setDataList(res.data);
@@ -91,8 +87,6 @@ export default function PropertyConsole() {
     if (!childData || childData.length === 0) return 0;
     if (activeTab === 'site') return childData.filter(b => b.siteId === item.siteId).length;
     if (activeTab === 'building') return childData.filter(f => f.blId === item.blId).length;
-    // Tương lai nếu có API Rooms thì tính cho Floor ở đây:
-    // if (activeTab === 'floor') return childData.filter(r => r.flId === item.flId).length;
     return 0;
   };
 
@@ -271,7 +265,7 @@ export default function PropertyConsole() {
                       <>
                         <td className="px-6 py-3">
                             <span className="bg-blue-100 text-blue-700 text-xs px-2.5 py-1 rounded font-bold">
-                                {getChildCount(item)} Phòng
+                                - Phòng
                             </span>
                         </td>
                         <td className="px-6 py-3 font-bold text-gray-800">{item.flId}</td>
@@ -279,6 +273,26 @@ export default function PropertyConsole() {
                         <td className="px-6 py-3 text-gray-600">{item.blId}</td>
                         <td className="px-6 py-3 text-gray-600">{item.gfa || '-'}</td>
                         <td className="px-6 py-3 text-gray-600">{item.nfa || '-'}</td>
+                      </>
+                    )}
+
+                    {/* RENDERING CHO SUITE */}
+                    {activeTab === 'suite' && (
+                      <>
+                        <td className="px-6 py-3 font-bold text-gray-800">{item.suiteId || '-'}</td>
+                        <td className="px-6 py-3 text-gray-600">{item.suiteCode || item.layerName || '-'}</td>
+                        <td className="px-6 py-3 text-gray-600">{item.flId || '-'}</td>
+                        <td className="px-6 py-3 text-gray-600">-</td> 
+                      </>
+                    )}
+
+                    {/* RENDERING CHO ROOM */}
+                    {activeTab === 'room' && (
+                      <>
+                        <td className="px-6 py-3 font-bold text-gray-800">{item.roomId || '-'}</td>
+                        <td className="px-6 py-3 text-gray-600">{item.roomCode || item.layerName || '-'}</td>
+                        <td className="px-6 py-3 text-gray-600">{item.flId || '-'}</td>
+                        <td className="px-6 py-3 text-gray-600">-</td> 
                       </>
                     )}
                   </tr>

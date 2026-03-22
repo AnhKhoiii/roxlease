@@ -117,13 +117,17 @@ const Profile = () => {
           )}
 
           <form onSubmit={handleSave} className="space-y-4">
+            {/* Đã xóa dấu * ra khỏi chuỗi label */}
             {[
-              { id: 'current', label: 'Current password *', placeholder: 'Current Password' },
-              { id: 'new', label: 'New Password *', placeholder: 'New Password' },
-              { id: 'confirm', label: 'Confirm Password *', placeholder: 'Confirm Password' }
+              { id: 'current', label: 'Current password', placeholder: 'Current Password' },
+              { id: 'new', label: 'New Password', placeholder: 'New Password' },
+              { id: 'confirm', label: 'Confirm Password', placeholder: 'Confirm Password' }
             ].map((field) => (
               <div key={field.id} className="bg-[#F8F9FA] p-6 rounded-[8px] flex items-center">
-                <label className="w-[240px] text-[18px] font-bold text-[#323842]">{field.label}</label>
+                {/* Đã thêm thẻ span chứa dấu * với màu đỏ */}
+                <label className="w-[240px] text-[18px] font-bold text-[#323842]">
+                  {field.label} <span className="text-[#E32128]">*</span>
+                </label>
                 <div className="relative flex-1">
                   <input 
                     type={showPwd[field.id] ? 'text' : 'password'}

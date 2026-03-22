@@ -17,7 +17,7 @@ export default function UserModal({ isOpen, onClose, onSave, mode, initialData, 
         const response = await axiosInstance.get('/roles');
         setRoles(response.data); 
       } catch (error) {
-        console.error("Lỗi khi lấy danh sách Role:", error);
+        console.error("Error getting roles:", error);
       }
     };
     if (isOpen) fetchRoles();
@@ -140,7 +140,7 @@ export default function UserModal({ isOpen, onClose, onSave, mode, initialData, 
                 onChange={(e) => handleChange('username', e.target.value)}
                 disabled={mode === "EDIT" || !canEdit} 
                 className={`mt-1 w-full border rounded px-3 py-2 outline-none transition-colors ${
-                  errors.username ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-[#EFB034] disabled:bg-gray-100 disabled:text-gray-500 cursor-not-allowed'
+                  errors.username ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-[#EFB034] disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed'
                 }`}
               />
             </div>
@@ -152,7 +152,7 @@ export default function UserModal({ isOpen, onClose, onSave, mode, initialData, 
                 onChange={(e) => handleChange('roleName', e.target.value)}
                 disabled={!canEdit}
                 className={`mt-1 w-full border rounded px-3 py-2 outline-none transition-colors bg-white ${
-                  errors.roleName ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-[#EFB034] disabled:bg-gray-100 disabled:text-gray-500 cursor-not-allowed'
+                  errors.roleName ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-[#EFB034] disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed'
                 }`}
               >
                 <option value="">-- Select Role --</option>
@@ -180,7 +180,7 @@ export default function UserModal({ isOpen, onClose, onSave, mode, initialData, 
             <div className="flex items-end gap-3">
               <div className="flex-1">
                 <label className="font-semibold text-gray-400">Failed attempts</label>
-                <input value={formData.failedAttempts} disabled className="mt-1 w-full border border-red-100 rounded px-3 py-2 bg-gray-50 text-gray-500 font-bold text-center" />
+                <input value={formData.failedAttempts} disabled className="mt-1 w-full border border-red-100 rounded px-3 py-2 bg-gray-50 text-gray-500 font-bold text-center disabled:cursor-not-allowed" />
               </div>
               {canEdit && (
                 <button onClick={() => setFormData({...formData, failedAttempts: 0})} className="bg-[#379AE6] hover:bg-[#2d82c2] text-white px-4 py-2 rounded font-semibold text-xs h-[38px] transition-colors">
@@ -193,23 +193,23 @@ export default function UserModal({ isOpen, onClose, onSave, mode, initialData, 
           <div className="flex flex-col gap-5">
             <div>
               <label className="font-semibold text-gray-700">Full name <span className="text-red-500">*</span></label>
-              <input value={formData.fullName} disabled={!canEdit} onChange={(e) => handleChange('fullName', e.target.value)} className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none disabled:bg-gray-100 disabled:text-gray-500 cursor-not-allowed" />
+              <input value={formData.fullName} disabled={!canEdit} onChange={(e) => handleChange('fullName', e.target.value)} className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed" />
             </div>
             <div>
               <label className="font-semibold text-gray-700">Email <span className="text-red-500">*</span></label>
-              <input type="email" value={formData.email} disabled={!canEdit} onChange={(e) => handleChange('email', e.target.value)} className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none disabled:bg-gray-100 disabled:text-gray-500 cursor-not-allowed" />
+              <input type="email" value={formData.email} disabled={!canEdit} onChange={(e) => handleChange('email', e.target.value)} className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed" />
             </div>
             <div>
               <label className="font-semibold text-gray-700">Phone</label>
-              <input value={formData.phone} disabled={!canEdit} onChange={(e) => handleChange('phone', e.target.value)} className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none disabled:bg-gray-100 disabled:text-gray-500 cursor-not-allowed" />
+              <input value={formData.phone} disabled={!canEdit} onChange={(e) => handleChange('phone', e.target.value)} className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed" />
             </div>
             <div>
               <label className="font-semibold text-gray-700">Date of Birth</label>
-              <input type="date" value={formData.dob} disabled={!canEdit} onChange={(e) => handleChange('dob', e.target.value)} className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none uppercase disabled:bg-gray-100 disabled:text-gray-500 cursor-not-allowed" />
+              <input type="date" value={formData.dob} disabled={!canEdit} onChange={(e) => handleChange('dob', e.target.value)} className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none uppercase disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed" />
             </div>
             <div>
               <label className="font-semibold text-gray-700">Gender</label>
-              <select value={formData.gender} disabled={!canEdit} onChange={(e) => handleChange('gender', e.target.value)} className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none bg-white disabled:bg-gray-100 disabled:text-gray-500 cursor-not-allowed">
+              <select value={formData.gender} disabled={!canEdit} onChange={(e) => handleChange('gender', e.target.value)} className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none bg-white disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed">
                 <option value="">Gender</option>
                 <option value="MALE">Male</option>
                 <option value="FEMALE">Female</option>
@@ -221,23 +221,23 @@ export default function UserModal({ isOpen, onClose, onSave, mode, initialData, 
           <div className="flex flex-col gap-5">
             <div>
               <label className="font-semibold text-gray-700">Company</label>
-              <input value={formData.company} disabled={!canEdit} onChange={(e) => handleChange('company', e.target.value)} className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none disabled:bg-gray-100 disabled:text-gray-500 cursor-not-allowed" />
+              <input value={formData.company} disabled={!canEdit} onChange={(e) => handleChange('company', e.target.value)} className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed" />
             </div>
             <div>
               <label className="font-semibold text-gray-700">Department</label>
-              <input value={formData.department} disabled={!canEdit} onChange={(e) => handleChange('department', e.target.value)} className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none disabled:bg-gray-100 disabled:text-gray-500 cursor-not-allowed" />
+              <input value={formData.department} disabled={!canEdit} onChange={(e) => handleChange('department', e.target.value)} className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed" />
             </div>
             <div>
               <label className="font-semibold text-gray-700">Employee Title</label>
-              <input value={formData.employeeTitle} disabled={!canEdit} onChange={(e) => handleChange('employeeTitle', e.target.value)} className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none disabled:bg-gray-100 disabled:text-gray-500 cursor-not-allowed" />
+              <input value={formData.employeeTitle} disabled={!canEdit} onChange={(e) => handleChange('employeeTitle', e.target.value)} className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed" />
             </div>
             <div>
               <label className="font-semibold text-gray-700">Manager</label>
-              <input value={formData.manager} disabled={!canEdit} onChange={(e) => handleChange('manager', e.target.value)} className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none disabled:bg-gray-100 disabled:text-gray-500 cursor-not-allowed" />
+              <input value={formData.manager} disabled={!canEdit} onChange={(e) => handleChange('manager', e.target.value)} className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed" />
             </div>
             <div>
               <label className="font-semibold text-gray-700">VPA site</label>
-              <input value={formData.vpaSite} disabled={!canEdit} onChange={(e) => handleChange('vpaSite', e.target.value)} className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none disabled:bg-gray-100 disabled:text-gray-500 cursor-not-allowed" />
+              <input value={formData.vpaSite} disabled={!canEdit} onChange={(e) => handleChange('vpaSite', e.target.value)} className="mt-1 w-full border border-gray-300 rounded px-3 py-2 outline-none disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed" />
             </div>
           </div>
 

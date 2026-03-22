@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
+import java.util.Map;
 
 @Data
 @NoArgsConstructor
@@ -13,10 +14,10 @@ import org.springframework.data.mongodb.core.mapping.Field;
 @Document(collection = "suites")
 public class Suite {
     @Id
-    private Integer suiteId;
+    private String suiteId;
 
     @Field("cad_object_id")
-    private Integer cadObjectId;
+    private String cadObjectId;
 
     @Field("fl_id")
     private String flId;
@@ -24,5 +25,10 @@ public class Suite {
     @Field("suite_code")
     private String suiteCode;
 
+    @Field("geometry")
+    private Map<String, Object> geometry;
+
     private Double area;
+
+    
 }

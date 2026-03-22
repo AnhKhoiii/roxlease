@@ -3,9 +3,13 @@ package com.roxlease.space.controller;
 import com.roxlease.space.model.Building;
 import com.roxlease.space.model.Floor;
 import com.roxlease.space.model.Site;
+import com.roxlease.space.model.Room;
+import com.roxlease.space.model.Suite;
 import com.roxlease.space.repository.BuildingRepository;
 import com.roxlease.space.repository.FloorRepository;
 import com.roxlease.space.repository.SiteRepository;
+import com.roxlease.space.repository.RoomRepository;
+import com.roxlease.space.repository.SuiteRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,11 +22,16 @@ public class PropertyController {
     private final SiteRepository siteRepo;
     private final BuildingRepository buildingRepo;
     private final FloorRepository floorRepo;
+    private final RoomRepository roomRepo;
+    private final SuiteRepository suiteRepo;
 
-    public PropertyController(SiteRepository siteRepo, BuildingRepository buildingRepo, FloorRepository floorRepo) {
+    // Cập nhật constructor để inject RoomRepository và SuiteRepository
+    public PropertyController(SiteRepository siteRepo, BuildingRepository buildingRepo, FloorRepository floorRepo, RoomRepository roomRepo, SuiteRepository suiteRepo) {
         this.siteRepo = siteRepo;
         this.buildingRepo = buildingRepo;
         this.floorRepo = floorRepo;
+        this.roomRepo = roomRepo;
+        this.suiteRepo = suiteRepo;
     }
 
     // ================= SITE API =================
@@ -117,5 +126,15 @@ public class PropertyController {
     public ResponseEntity<?> deleteFloor(@PathVariable String id) {
         floorRepo.deleteById(id);
         return ResponseEntity.ok(Collections.singletonMap("message", "Floor deleted successfully!"));
+    }
+    
+    @GetMapping("/rooms")
+    public ResponseEntity<?> getAllRooms() {
+        return ResponseEntity.ok(roomRepo.findAll());
+    }
+
+    @GetMapping("/suites")
+    public ResponseEntity<?> getAllSuites() {
+        return ResponseEntity.ok(suiteRepo.findAll());
     }
 }
