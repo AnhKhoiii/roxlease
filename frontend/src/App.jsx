@@ -15,6 +15,7 @@ import GeoLocation from './pages/space/GeoLocation'
 import BackgroundDataLayout from './layouts/BackgroundDataLayout';
 import PropertyConsole from './pages/space/PropertyConsole';
 import AmenityConsole from './pages/space/AmenityConsole';
+import SpaceConsole from './pages/space/SpaceConsole';
 
 function App() {
   return (
@@ -35,6 +36,8 @@ function App() {
                 <Route path="property" element={<PropertyConsole />} />
                 <Route path="amenity" element={<AmenityConsole />} />
             </Route>
+            
+            <Route path="console" element={<SpaceConsole />} />
 
             <Route path="building" element={<div className="p-8 font-bold text-xl">Màn hình Quản lý Tòa Nhà</div>} />
           </Route>
