@@ -94,7 +94,7 @@ export default function AmenityConsole() {
   const headers = ["Amenity ID", "Amenity Name", "Building ID", "Amenity Type"];
 
   return (
-    <div className="bg-gray-100 min-h-[calc(100vh-60px)] p-6 font-sans flex flex-col relative">
+    <div className="bg-gray-100 h-[calc(100vh-60px)] p-6 font-sans flex flex-col relative">
       
       {/* NỘI DUNG CHÍNH */}
       <div className="bg-white rounded-md shadow flex-1 flex flex-col overflow-hidden">

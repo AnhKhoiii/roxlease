@@ -11,6 +11,7 @@ import com.roxlease.space.repository.SiteRepository;
 import com.roxlease.space.repository.RoomRepository;
 import com.roxlease.space.repository.SuiteRepository;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
@@ -121,12 +122,6 @@ public class PropertyController {
         req.setFlId(id);
         return ResponseEntity.ok(floorRepo.save(req));
     }
-
-    @DeleteMapping("/floors/{id}")
-    public ResponseEntity<?> deleteFloor(@PathVariable String id) {
-        floorRepo.deleteById(id);
-        return ResponseEntity.ok(Collections.singletonMap("message", "Floor deleted successfully!"));
-    }
     
     @GetMapping("/rooms")
     public ResponseEntity<?> getAllRooms() {
@@ -136,5 +131,17 @@ public class PropertyController {
     @GetMapping("/suites")
     public ResponseEntity<?> getAllSuites() {
         return ResponseEntity.ok(suiteRepo.findAll());
+    }
+
+    @DeleteMapping("/floors/{id}")
+    @Transactional
+    public ResponseEntity<?> deleteFloor(@PathVariable String id) {
+        
+        roomRepo.deleteByFlId(id);
+        suiteRepo.deleteByFlId(id);
+
+        floorRepo.deleteById(id);
+        
+        return ResponseEntity.ok(Collections.singletonMap("message", "Floor and its associated Rooms/Suites deleted successfully!"));
     }
 }

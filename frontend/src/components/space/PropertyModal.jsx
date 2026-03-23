@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import axiosInstance from "../../api/axiosInstance"; // Gọi trực tiếp axiosInstance từ dự án của bạn
 
 // ================= CÁC COMPONENT DÙNG CHUNG =================
 const Header = ({ title, onClose, onSave, onDelete, canEdit, mode }) => {
@@ -57,7 +56,6 @@ const TextArea = ({ label, value, onChange, disabled, placeholder }) => (
   </div>
 );
 
-// MỚI: Cập nhật component Upload để xử lý việc chọn file thực tế
 const Upload = ({ label, disabled, accept, onChange, hint }) => (
   <div className="flex flex-col gap-1.5">
     <label className="font-bold text-[13px] text-gray-700">{label}</label>
@@ -79,13 +77,11 @@ export default function PropertyModal({
 }) {
   const [formData, setFormData] = useState({});
   const [errors, setErrors] = useState({});
-  const [isUploadingDxf, setIsUploadingDxf] = useState(false); // State quản lý loading khi đang parse DXF
 
   useEffect(() => {
     if (isOpen) {
       setFormData(initialData || {});
       setErrors({});
-      setIsUploadingDxf(false);
     }
   }, [isOpen, initialData]);
 
@@ -94,30 +90,6 @@ export default function PropertyModal({
   const handleChange = (field, value) => {
     setFormData({ ...formData, [field]: value });
     if (errors[field]) setErrors({ ...errors, [field]: null });
-  };
-
-  // MỚI: Hàm xử lý gọi API Parse DXF trực tiếp từ Modal (Dành cho Edit Mode)
-  const handleUploadDxf = async () => {
-    if (!formData.flId || !formData.dxfFile) {
-      alert("Vui lòng chọn file .dxf hợp lệ!");
-      return;
-    }
-    const uploadData = new FormData();
-    uploadData.append('file', formData.dxfFile);
-
-    setIsUploadingDxf(true);
-    try {
-      const response = await axiosInstance.post(`/floors/${formData.flId}/upload-dxf`, uploadData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      alert("Bóc tách thành công! Layer SU và RM đã được đưa vào Database.");
-      // Tùy chọn: Có thể trigger reload danh sách room ở đây nếu cần
-    } catch (error) {
-      console.error("Lỗi upload DXF:", error);
-      alert("Quá trình bóc tách thất bại. Vui lòng kiểm tra lại cấu trúc file CAD hoặc Log Server.");
-    } finally {
-      setIsUploadingDxf(false);
-    }
   };
 
   const handleSaveAction = (isSaveAndAdd = false) => {
@@ -152,7 +124,7 @@ export default function PropertyModal({
 
     if (payload.dateBuilt === "") payload.dateBuilt = null;
     
-    // Gửi payload ra component cha. Nếu có formData.dxfFile, component cha sẽ nhận được luôn
+    // Đẩy toàn bộ dữ liệu (bao gồm cả file dxfFile nếu có) ra cho component Cha xử lý
     onSave(payload, isSaveAndAdd);
   };
 
@@ -191,7 +163,6 @@ export default function PropertyModal({
                   <Input label="Longitude" type="number" value={formData.longitude} onChange={v => handleChange('longitude', v)} disabled={!canEdit} />
                   <Input label="Latitude (lat)" type="number" value={formData.lat} onChange={v => handleChange('lat', v)} disabled={!canEdit} />
                 </div>
-                {/* Upload tĩnh cho image chưa xử lý */}
                 <Upload label="Site Image" disabled={!canEdit} accept="image/*" />
               </div>
             </div>
@@ -202,14 +173,7 @@ export default function PropertyModal({
             <div className="grid grid-cols-3 gap-10">
               <div className="space-y-6">
                 <Input label="Building ID (blId) *" value={formData.blId} onChange={v => handleChange('blId', v)} disabled={mode === "EDIT" || !canEdit} error={errors.blId} />
-                <Select 
-                  label="Site ID *" 
-                  value={formData.siteId} 
-                  onChange={v => handleChange('siteId', v)} 
-                  disabled={!canEdit} 
-                  error={errors.siteId} 
-                  options={sites.map(site => ({ value: site.siteId, label: `${site.siteId} - ${site.siteName || ''}` }))} 
-                />
+                <Select label="Site ID *" value={formData.siteId} onChange={v => handleChange('siteId', v)} disabled={!canEdit} error={errors.siteId} options={sites.map(site => ({ value: site.siteId, label: `${site.siteId} - ${site.siteName || ''}` }))} />
                 <Input label="Gross External Area (sqm)" type="number" value={formData.areaGrossExt} onChange={v => handleChange('areaGrossExt', v)} disabled={!canEdit} />
                 <Input label="Gross Internal Area (sqm)" type="number" value={formData.areaGrossInt} onChange={v => handleChange('areaGrossInt', v)} disabled={!canEdit} />
               </div>
@@ -236,43 +200,26 @@ export default function PropertyModal({
             <div className="grid grid-cols-2 gap-10">
               <div className="space-y-6">
                 <Input label="Floor ID (flId) *" value={formData.flId} onChange={v => handleChange('flId', v)} disabled={mode === "EDIT" || !canEdit} error={errors.flId} />
-                <Select 
-                  label="Building ID (blId) *" 
-                  value={formData.blId} 
-                  onChange={v => handleChange('blId', v)} 
-                  disabled={!canEdit} 
-                  error={errors.blId} 
-                  options={buildings.map(b => ({ value: b.blId, label: `${b.blId} - ${b.blName || ''}` }))} 
-                />
+                <Select label="Building ID (blId) *" value={formData.blId} onChange={v => handleChange('blId', v)} disabled={!canEdit} error={errors.blId} options={buildings.map(b => ({ value: b.blId, label: `${b.blId} - ${b.blName || ''}` }))} />
                 <Input label="Floor Name" value={formData.flName} onChange={v => handleChange('flName', v)} disabled={!canEdit} />
               </div>
               <div className="space-y-6">
                 <Input label="GFA (Gross Floor Area)" type="number" value={formData.gfa} onChange={v => handleChange('gfa', v)} disabled={!canEdit} />
                 <Input label="NFA (Net Floor Area)" type="number" value={formData.nfa} onChange={v => handleChange('nfa', v)} disabled={!canEdit} />
                 
-                {/* MỚI: TÍCH HỢP UPLOAD DXF */}
+                {/* AUTO PARSE DXF UPLOAD */}
                 <div className="p-4 border border-dashed border-[#EFB034] rounded-lg bg-[#fffdf8] shadow-sm">
                   <Upload 
-                    label="Auto-parse Floor Plan (.dxf)" 
+                    label="Drawing Upload (.dxf)" 
                     accept=".dxf"
                     onChange={file => handleChange('dxfFile', file)}
                     disabled={!canEdit} 
-                    hint="Hệ thống sẽ tự động đọc tọa độ để chuẩn bị cho màn hình View 2D sau này."
+                    hint="System will auto-parse the drawing upon saving."
                   />
-                  
-                  {/* Logic nút bóc tách */}
-                  {mode === "EDIT" && formData.dxfFile && (
-                    <button 
-                      onClick={handleUploadDxf}
-                      disabled={isUploadingDxf}
-                      className="mt-4 w-full bg-[#EFB034] hover:bg-[#d69d2e] text-black font-bold py-2.5 rounded transition-colors text-sm disabled:opacity-50"
-                    >
-                      {isUploadingDxf ? "Đang xử lý DXF..." : "Tiến hành bóc tách (Upload & Parse)"}
-                    </button>
-                  )}
-                  {mode === "ADD" && formData.dxfFile && (
-                    <p className="mt-3 text-[12px] font-semibold text-[#DE3B40]">
-                      * Vui lòng nhấn nút "Save" ở góc trên để tạo Floor trước khi hệ thống có thể bóc tách file DXF.
+                  {formData.dxfFile && (
+                    <p className="mt-3 text-[13px] font-semibold text-green-600 flex items-center gap-1">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+                      Ready to parse: {formData.dxfFile.name}
                     </p>
                   )}
                 </div>

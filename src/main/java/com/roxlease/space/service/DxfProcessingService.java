@@ -9,6 +9,7 @@ import com.roxlease.space.repository.SuiteRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -31,6 +32,7 @@ public class DxfProcessingService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    @Transactional // Đảm bảo việc xóa và lưu phải thành công cùng nhau
     public void processAndSaveFloorPlan(String floorId, MultipartFile file) throws Exception {
         // 1. Lưu file tạm thời
         Path tempDir = Files.createTempDirectory("dxf_uploads");
@@ -56,22 +58,27 @@ public class DxfProcessingService {
         }
         
         int exitCode = process.waitFor();
-        tempFile.delete(); // Xóa file tạm
-
+        tempFile.delete(); 
+        
         if (exitCode != 0 || output.toString().contains("\"error\"")) {
             throw new RuntimeException("Lỗi xử lý DXF: " + output);
         }
 
-        // 4. Parse JSON và lưu vào Database
+        // BỔ SUNG: Xóa sạch dữ liệu Room và Suite cũ của Tầng này trước khi import cái mới
+        roomRepository.deleteByFlId(floorId);
+        suiteRepository.deleteByFlId(floorId);
+
         JsonNode rootNode = objectMapper.readTree(output.toString());
         
-        // --- Xử lý ROOMS ---
         List<Room> roomsToSave = new ArrayList<>();
         if (rootNode.has("rooms")) {
             for (JsonNode roomNode : rootNode.get("rooms")) {
                 Room room = new Room();
                 room.setFlId(floorId);
                 room.setRoomCode(roomNode.get("layer").asText() + "-" + UUID.randomUUID().toString().substring(0, 4));
+                
+                // LƯU DIỆN TÍCH
+                if(roomNode.has("area")) room.setArea(roomNode.get("area").asDouble());
                 
                 Map<String, Object> geomMap = objectMapper.convertValue(roomNode.get("geometry"), Map.class);
                 room.setGeometry(geomMap);
@@ -80,13 +87,15 @@ public class DxfProcessingService {
             roomRepository.saveAll(roomsToSave);
         }
 
-        // --- Xử lý SUITES ---
         List<Suite> suitesToSave = new ArrayList<>();
         if (rootNode.has("suites")) {
             for (JsonNode suiteNode : rootNode.get("suites")) {
                 Suite suite = new Suite();
                 suite.setFlId(floorId);
-                
+                suite.setSuiteCode(suiteNode.get("layer").asText() + "-" + UUID.randomUUID().toString().substring(0, 4));
+
+                if(suiteNode.has("area")) suite.setArea(suiteNode.get("area").asDouble());
+
                 Map<String, Object> geomMap = objectMapper.convertValue(suiteNode.get("geometry"), Map.class);
                 suite.setGeometry(geomMap);
                 suitesToSave.add(suite);

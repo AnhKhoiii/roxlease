@@ -3,6 +3,7 @@ package com.roxlease.space.repository;
 import com.roxlease.space.model.Room;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -11,4 +12,7 @@ public interface RoomRepository extends MongoRepository<Room, String> {
     
     List<Room> findByFlId(String flId);
     
+    @Transactional
+    void deleteByFlId(String flId);
+
 }
