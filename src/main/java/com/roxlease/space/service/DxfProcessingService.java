@@ -2,8 +2,10 @@ package com.roxlease.space.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.roxlease.space.model.Floor; // Thêm Model Floor
 import com.roxlease.space.model.Room;
 import com.roxlease.space.model.Suite;
+import com.roxlease.space.repository.FloorRepository; // Thêm Repository Floor
 import com.roxlease.space.repository.RoomRepository;
 import com.roxlease.space.repository.SuiteRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +26,11 @@ import java.util.UUID;
 @Service
 public class DxfProcessingService {
 
+    // ================= ĐÂY LÀ PHẦN BẠN BỊ THIẾU =================
+    @Autowired
+    private FloorRepository floorRepository;
+    // ============================================================
+
     @Autowired
     private RoomRepository roomRepository;
     
@@ -41,7 +48,6 @@ public class DxfProcessingService {
 
         // 2. Gọi Python script
         String pythonCmd = System.getProperty("os.name").toLowerCase().contains("win") ? "python" : "python3";
-        // Đảm bảo đường dẫn này trỏ đúng đến file script ở bước 2
         String scriptPath = new File("scripts/dxf_parser.py").getAbsolutePath(); 
 
         ProcessBuilder pb = new ProcessBuilder(pythonCmd, scriptPath, tempFile.getAbsolutePath());
@@ -64,12 +70,23 @@ public class DxfProcessingService {
             throw new RuntimeException("Lỗi xử lý DXF: " + output);
         }
 
-        // BỔ SUNG: Xóa sạch dữ liệu Room và Suite cũ của Tầng này trước khi import cái mới
+        // Xóa sạch dữ liệu Room và Suite cũ của Tầng này trước khi import cái mới
         roomRepository.deleteByFlId(floorId);
         suiteRepository.deleteByFlId(floorId);
 
         JsonNode rootNode = objectMapper.readTree(output.toString());
+
+        // ================= LƯU TRỰC TIẾP JSON VÀO FLOOR =================
+        Floor floor = floorRepository.findById(floorId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy Tầng với ID: " + floorId));
         
+        Map<String, Object> drawingMap = objectMapper.convertValue(rootNode, Map.class);
+        floor.setDrawingJson(drawingMap);
+        
+        floorRepository.save(floor);
+        // ======================================================================
+        
+        // --- Xử lý ROOMS ---
         List<Room> roomsToSave = new ArrayList<>();
         if (rootNode.has("rooms")) {
             for (JsonNode roomNode : rootNode.get("rooms")) {
@@ -87,6 +104,7 @@ public class DxfProcessingService {
             roomRepository.saveAll(roomsToSave);
         }
 
+        // --- Xử lý SUITES ---
         List<Suite> suitesToSave = new ArrayList<>();
         if (rootNode.has("suites")) {
             for (JsonNode suiteNode : rootNode.get("suites")) {
