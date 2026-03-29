@@ -15,7 +15,8 @@ export default function PropertyConsole() {
   // Dữ liệu cha (Dùng cho Dropdown của Modal và map ID)
   const [sites, setSites] = useState([]);
   const [buildings, setBuildings] = useState([]);
-  const [floors, setFloors] = useState([]); // MỚI: Thêm state lưu floors để map lấy blId
+  const [floors, setFloors] = useState([]); 
+  const [cities, setCities] = useState([]);
   
   // DỮ LIỆU CON (Dùng để đếm số lượng: 0 Tòa nhà, 0 Tầng, 0 Phòng...)
   const [childData, setChildData] = useState([]);
@@ -40,13 +41,14 @@ export default function PropertyConsole() {
       // LẤY DỮ LIỆU CON ĐỂ ĐẾM SỐ LƯỢNG
       try {
         if (activeTab === 'site') {
+          const cityRes = await axiosInstance.get('/space/properties/cities');
+          setCities(cityRes.data || []);
           const childRes = await axiosInstance.get('/space/properties/buildings');
           setChildData(childRes.data || []);
         } else if (activeTab === 'building') {
           const childRes = await axiosInstance.get('/space/properties/floors');
           setChildData(childRes.data || []);
         } else if (activeTab === 'floor') {
-          // MỚI: Lấy danh sách room để đếm số lượng phòng của mỗi Floor
           const childRes = await axiosInstance.get('/space/properties/rooms');
           setChildData(childRes.data || []);
         } else {
@@ -57,7 +59,7 @@ export default function PropertyConsole() {
         setChildData([]);
       }
 
-      // LẤY DỮ LIỆU CHA ĐỂ MAP ID
+      // LẤY DỮ LIỆU CHA ĐỂ MAP ID  
       if (activeTab === 'building') {
         const siteRes = await axiosInstance.get('/space/properties/sites');
         setSites(siteRes.data);
@@ -351,6 +353,7 @@ export default function PropertyConsole() {
           canEdit={canEdit} 
           sites={sites} 
           buildings={buildings}
+          cities={cities}
         />
       )}
 
