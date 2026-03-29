@@ -5,7 +5,6 @@ import L from "leaflet";
 import { useNavigate } from "react-router-dom";
 import "leaflet/dist/leaflet.css"; 
 
-// ================= COMPONENT CẬP NHẬT CAMERA TỰ ĐỘNG =================
 function MapUpdater({ geoJsonData }) {
   const map = useMap();
   useEffect(() => {
@@ -20,7 +19,6 @@ function MapUpdater({ geoJsonData }) {
   return null;
 }
 
-// ================= COMPONENT DROPDOWN TÌM KIẾM =================
 const SearchableSelect = ({ label, value, options, onChange, disabled, placeholder, highlight }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -46,15 +44,8 @@ const SearchableSelect = ({ label, value, options, onChange, disabled, placehold
 
   return (
     <div className="flex flex-col relative w-full" ref={wrapperRef}>
-      <label className={`text-[12px] font-bold mb-1 uppercase tracking-wide ${highlight ? 'text-blue-700' : 'text-gray-600'}`}>
-        {label}
-      </label>
-      <div
-        className={`border rounded-lg px-3 py-2 text-sm flex items-center justify-between transition-colors shadow-sm
-          ${disabled ? 'bg-gray-100 border-gray-200 cursor-not-allowed opacity-70' :
-            highlight ? 'bg-blue-50 border-blue-400 cursor-text hover:border-blue-500' : 'bg-white border-gray-300 cursor-text hover:border-[#EFB034]'}`}
-        onClick={() => { if (!disabled) setIsOpen(true); }}
-      >
+      <label className={`text-[12px] font-bold mb-1 uppercase tracking-wide ${highlight ? 'text-blue-700' : 'text-gray-600'}`}>{label}</label>
+      <div className={`border rounded-lg px-3 py-2 text-sm flex items-center justify-between transition-colors shadow-sm ${disabled ? 'bg-gray-100 border-gray-200 cursor-not-allowed opacity-70' : highlight ? 'bg-blue-50 border-blue-400 cursor-text hover:border-blue-500' : 'bg-white border-gray-300 cursor-text hover:border-[#EFB034]'}`} onClick={() => { if (!disabled) setIsOpen(true); }}>
         {isOpen ? (
           <input type="text" autoFocus className="w-full outline-none bg-transparent font-medium" placeholder="Type to search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
         ) : (
@@ -62,13 +53,10 @@ const SearchableSelect = ({ label, value, options, onChange, disabled, placehold
         )}
         <svg className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
       </div>
-
       {isOpen && (
         <div className="absolute top-[100%] left-0 w-full bg-white border border-gray-200 shadow-xl mt-1 max-h-56 overflow-y-auto z-[2000] rounded-lg">
           {filteredOptions.length > 0 ? filteredOptions.map(opt => (
-            <div key={opt.value} className={`px-3 py-2.5 cursor-pointer text-sm border-b border-gray-50 last:border-0 transition-colors ${value === opt.value ? 'bg-blue-100 font-bold text-blue-700' : 'text-gray-700 hover:bg-blue-50'}`}
-              onClick={(e) => { e.stopPropagation(); onChange(opt.value); setIsOpen(false); setSearchTerm(""); }}
-            >
+            <div key={opt.value} className={`px-3 py-2.5 cursor-pointer text-sm border-b border-gray-50 last:border-0 transition-colors ${value === opt.value ? 'bg-blue-100 font-bold text-blue-700' : 'text-gray-700 hover:bg-blue-50'}`} onClick={(e) => { e.stopPropagation(); onChange(opt.value); setIsOpen(false); setSearchTerm(""); }}>
               {opt.label}
             </div>
           )) : <div className="px-3 py-4 text-center text-gray-400 text-sm italic">No results found</div>}
@@ -78,10 +66,9 @@ const SearchableSelect = ({ label, value, options, onChange, disabled, placehold
   );
 };
 
-// ================= COMPONENT CHÍNH =================
 export default function SpaceConsole() {
   const navigate = useNavigate();
-  const mapRef = useRef(null);
+  const mapRef = useRef(null); 
 
   const [sites, setSites] = useState([]);
   const [buildings, setBuildings] = useState([]); 
@@ -107,23 +94,18 @@ export default function SpaceConsole() {
       setBuildings(blRes.data || []);
       setFloors(flRes.data || []);
     } catch (error) {
-      console.error("Error fetching hierarchy data:", error);
+      console.error("Lỗi lấy dữ liệu cấu trúc:", error);
     }
   };
 
   useEffect(() => { fetchHierarchyData(); }, []);
 
   useEffect(() => {
-    if (!selFloor) {
-      setGeoJsonData(null);
-      return;
-    }
-
+    if (!selFloor) { setGeoJsonData(null); return; }
     setIsLoadingMap(true);
     setSelectedPolygon(null);
     
     const currentFloor = floors.find(f => f.flId === selFloor);
-
     if (!currentFloor || !currentFloor.drawingJson) {
       setGeoJsonData({ type: "FeatureCollection", features: [] });
       setIsLoadingMap(false);
@@ -135,10 +117,10 @@ export default function SpaceConsole() {
 
     const addFeatures = (arr, type) => {
       (arr || []).forEach(item => {
-        if (item.geometry && item.geometry.coordinates) {
+        if (item.geometry && item.geometry.coordinates) { 
            rawFeatures.push({
              type: "Feature",
-             properties: { code: item.layer, type: type, area: item.area },
+             properties: { code: item.extracted_code || item.layer, type: type, area: item.area }, // Dùng mã chuẩn từ CAD
              geometry: item.geometry
            });
         }
@@ -170,7 +152,6 @@ export default function SpaceConsole() {
     } else {
       setGeoJsonData({ type: "FeatureCollection", features: [] });
     }
-
     setIsLoadingMap(false);
   }, [selFloor, floors]);
 
@@ -206,13 +187,16 @@ export default function SpaceConsole() {
 
   const siteOptions = sites.map(s => ({ value: s.siteId, label: s.siteId }));
   const buildingOptions = filteredBuildings.map(b => ({ value: b.blId, label: b.blId }));
-  const floorOptions = filteredFloors.map(f => ({ value: f.flId, label: `${f.flId} - ${f.flName}` }));
+  
+  // ================= CẮT BỎ TIỀN TỐ BUILDING Ở DROP DOWN TẦNG =================
+  const floorOptions = filteredFloors.map(f => {
+      const displayId = f.flId.includes('_') ? f.flId.split('_').pop() : f.flId;
+      return { value: f.flId, label: `${displayId} - ${f.flName}` };
+  });
 
   return (
-    // FULL SCREEN CONTAINER
     <div className="relative w-full h-[calc(100vh-60px)] bg-[#e5e5f7] overflow-hidden font-sans" style={{ backgroundImage: "radial-gradient(#444cf7 0.5px, #e5e5f7 0.5px)", backgroundSize: "10px 10px" }}>
       
-      {/* FLOATING TOP BAR (Nổi lên trên map) */}
       <div className="absolute top-6 left-6 z-[400] bg-white/95 backdrop-blur-md p-5 rounded-xl shadow-2xl border border-white/50 w-[850px] animate-[slideInDown_0.3s_ease-out]">
         <div className="flex items-end gap-5">
           <div className="flex-1 grid grid-cols-3 gap-5">
@@ -226,11 +210,9 @@ export default function SpaceConsole() {
         </div>
       </div>
 
-      {/* FLOATING LAYERS CONTROL */}
       {selFloor && !isLoadingMap && (
         <div className="absolute top-6 right-6 z-[400] bg-white/95 backdrop-blur-md p-5 rounded-xl shadow-2xl border border-white/50 min-w-[220px] animate-[slideInRight_0.3s_ease-out]">
           <h3 className="text-[13px] font-bold text-gray-800 mb-3 uppercase tracking-wide border-b pb-2">Layers Control</h3>
-          
           {[
             { id: 'ROOM', label: 'Phòng (RM)', color: '#2563eb', bg: '#bfdbfe' },
             { id: 'SUITE', label: 'DT Thuê (SU)', color: '#059669', bg: '#a7f3d0' },
@@ -238,24 +220,16 @@ export default function SpaceConsole() {
             { id: 'RF', label: 'Mái/Sàn (RF)', color: '#9333ea', bg: '#e9d5ff' }
           ].map(layer => (
             <label key={layer.id} className="flex items-center gap-3 cursor-pointer mb-2.5 p-1.5 hover:bg-gray-100 rounded-md transition-colors">
-              <input type="checkbox" className="w-4 h-4 text-blue-600 rounded cursor-pointer" 
-                checked={visibleLayers[layer.id]} 
-                onChange={() => setVisibleLayers(prev => ({...prev, [layer.id]: !prev[layer.id]}))} 
-              />
-              <span className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                <div className="w-4 h-4 border-2 rounded-sm" style={{ backgroundColor: layer.bg, borderColor: layer.color }}></div> {layer.label}
-              </span>
+              <input type="checkbox" className="w-4 h-4 text-blue-600 rounded cursor-pointer" checked={visibleLayers[layer.id]} onChange={() => setVisibleLayers(prev => ({...prev, [layer.id]: !prev[layer.id]}))} />
+              <span className="text-sm font-semibold text-gray-700 flex items-center gap-2"><div className="w-4 h-4 border-2 rounded-sm" style={{ backgroundColor: layer.bg, borderColor: layer.color }}></div> {layer.label}</span>
             </label>
           ))}
-          
           <button onClick={handleResetZoom} className="mt-4 w-full flex items-center justify-center gap-2 bg-gray-50 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold py-2 rounded-lg text-sm transition-colors shadow-sm">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
-            Reset Camera
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg> Reset Camera
           </button>
         </div>
       )}
 
-      {/* FLOATING DETAIL POPUP */}
       {selectedPolygon && (
         <div className="absolute bottom-8 left-8 z-[500] bg-white p-6 rounded-2xl shadow-2xl border border-gray-200 w-[320px] animate-[slideInUp_0.2s_ease-out]">
           <div className="flex justify-between items-start mb-4 border-b pb-3">
@@ -267,29 +241,16 @@ export default function SpaceConsole() {
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
           </div>
-          
           <div className="space-y-3 mb-5 bg-gray-50 p-3 rounded-lg border border-gray-100">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600 font-medium">Area type:</span>
-              <span className="text-sm font-bold text-gray-800 bg-white px-2 py-0.5 rounded shadow-sm border border-gray-200">{selectedPolygon.type}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600 font-medium">Area:</span>
-              <span className="text-lg font-black text-green-600">{selectedPolygon.area || 0} m²</span>
-            </div>
+            <div className="flex justify-between items-center"><span className="text-sm text-gray-600 font-medium">Loại diện tích:</span><span className="text-sm font-bold text-gray-800 bg-white px-2 py-0.5 rounded shadow-sm border border-gray-200">{selectedPolygon.type}</span></div>
+            <div className="flex justify-between items-center"><span className="text-sm text-gray-600 font-medium">Diện tích:</span><span className="text-lg font-black text-green-600">{selectedPolygon.area || 0} m²</span></div>
           </div>
-
-          <button 
-            onClick={() => navigate(`/space/background-data/property?tab=${selectedPolygon.type.toLowerCase()}&code=${selectedPolygon.code}`)}
-            className="w-full bg-[#EFB034] hover:bg-[#d69d2e] text-black font-bold py-2.5 rounded-lg shadow-md transition-transform active:scale-95 text-sm flex items-center justify-center gap-2"
-          >
-            View Detailed Record
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+          <button onClick={() => navigate(`/space/background-data/property?tab=${selectedPolygon.type.toLowerCase()}&code=${selectedPolygon.code}`)} className="w-full bg-[#EFB034] hover:bg-[#d69d2e] text-black font-bold py-2.5 rounded-lg shadow-md transition-transform active:scale-95 text-sm flex items-center justify-center gap-2">
+            View Detailed Record <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
           </button>
         </div>
       )}
 
-      {/* TRẠNG THÁI KHÔNG CÓ DỮ LIỆU / ĐANG TẢI */}
       {(!selFloor || isLoadingMap || (!hasMapData && !isLoadingMap)) && (
         <div className="absolute inset-0 z-[300] flex items-center justify-center pointer-events-none">
           {isLoadingMap ? (
@@ -299,38 +260,26 @@ export default function SpaceConsole() {
             </div>
           ) : selFloor ? (
             <div className="bg-white/95 backdrop-blur-md p-8 rounded-2xl shadow-2xl border border-red-100 flex flex-col items-center pointer-events-auto max-w-sm text-center">
-                <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-4 border border-red-100">
-                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                </div>
+                <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-4 border border-red-100"><svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg></div>
                 <p className="text-gray-900 font-black text-xl mb-2">No drawing data available</p>
-                <p className="text-gray-500 text-sm">This floor has no drawing data uploaded.</p>
+                <p className="text-gray-500 text-sm">Tầng này chưa được tải lên bản vẽ CAD. Vui lòng quay lại màn hình Property Console để upload file .dxf.</p>
             </div>
           ) : (
             <div className="bg-white/95 backdrop-blur-md px-8 py-5 rounded-full shadow-2xl flex items-center gap-4 border border-gray-100 pointer-events-auto animate-[bounce_2s_infinite]">
-              <div className="bg-blue-100 p-2 rounded-full text-blue-600">
-                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" /></svg>
-              </div>
-              <p className="text-gray-700 font-medium text-lg">
-                Choose <strong className="text-blue-600 font-bold mx-1">Site &rarr; Building &rarr; Floor</strong> to display the map   
-              </p>
+              <div className="bg-blue-100 p-2 rounded-full text-blue-600"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" /></svg></div>
+              <p className="text-gray-700 font-medium text-lg">Hãy chọn <strong className="text-blue-600 font-bold mx-1">Site &rarr; Building &rarr; Floor</strong> để hiển thị bản đồ</p>
             </div>
           )}
         </div>
       )}
 
-      {/* LỚP BẢN ĐỒ DƯỚI CÙNG */}
-      <MapContainer ref={mapRef} crs={L.CRS.Simple} minZoom={-5} maxZoom={5} className="w-full h-full z-0" style={{ backgroundColor: "transparent" }} zoomControl={false}>
+      <MapContainer ref={mapRef} crs={L.CRS.Simple} minZoom={-5} maxZoom={5} zoomSnap={0.1} zoomDelta={0.2} wheelPxPerZoomLevel={120} className="w-full h-full z-0" style={{ backgroundColor: "transparent" }} zoomControl={false}>
         <MapUpdater geoJsonData={displayGeoJsonData} />
-
         {hasMapData && (
-          <GeoJSON 
-            key={selFloor + JSON.stringify(visibleLayers)} 
-            data={displayGeoJsonData} 
-            style={getFeatureStyle}
+          <GeoJSON key={selFloor + JSON.stringify(visibleLayers)} data={displayGeoJsonData} style={getFeatureStyle}
             onEachFeature={(feature, layer) => {
               const tooltipContent = `<div style="font-family: sans-serif; padding: 2px;"><p style="margin: 0; font-weight: bold; color: #1f2937; font-size: 14px;">${feature.properties.code}</p></div>`;
               layer.bindTooltip(tooltipContent, { sticky: true });
-
               layer.on({
                 mouseover: (e) => { e.target.setStyle({ fillOpacity: 0.9, weight: 2.5 }); },
                 mouseout: (e) => { e.target.setStyle(getFeatureStyle(feature)); },

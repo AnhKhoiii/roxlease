@@ -2,10 +2,10 @@ package com.roxlease.space.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.roxlease.space.model.Floor; // Thêm Model Floor
+import com.roxlease.space.model.Floor;
 import com.roxlease.space.model.Room;
 import com.roxlease.space.model.Suite;
-import com.roxlease.space.repository.FloorRepository; // Thêm Repository Floor
+import com.roxlease.space.repository.FloorRepository;
 import com.roxlease.space.repository.RoomRepository;
 import com.roxlease.space.repository.SuiteRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,27 +26,18 @@ import java.util.UUID;
 @Service
 public class DxfProcessingService {
 
-    // ================= ĐÂY LÀ PHẦN BẠN BỊ THIẾU =================
-    @Autowired
-    private FloorRepository floorRepository;
-    // ============================================================
-
-    @Autowired
-    private RoomRepository roomRepository;
-    
-    @Autowired
-    private SuiteRepository suiteRepository;
+    @Autowired private FloorRepository floorRepository;
+    @Autowired private RoomRepository roomRepository;
+    @Autowired private SuiteRepository suiteRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Transactional // Đảm bảo việc xóa và lưu phải thành công cùng nhau
+    @Transactional 
     public void processAndSaveFloorPlan(String floorId, MultipartFile file) throws Exception {
-        // 1. Lưu file tạm thời
         Path tempDir = Files.createTempDirectory("dxf_uploads");
         File tempFile = new File(tempDir.toFile(), file.getOriginalFilename());
         file.transferTo(tempFile);
 
-        // 2. Gọi Python script
         String pythonCmd = System.getProperty("os.name").toLowerCase().contains("win") ? "python" : "python3";
         String scriptPath = new File("scripts/dxf_parser.py").getAbsolutePath(); 
 
@@ -54,7 +45,6 @@ public class DxfProcessingService {
         pb.redirectErrorStream(true);
         Process process = pb.start();
 
-        // 3. Đọc kết quả JSON từ Python
         StringBuilder output = new StringBuilder();
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
             String line;
@@ -70,54 +60,103 @@ public class DxfProcessingService {
             throw new RuntimeException("Lỗi xử lý DXF: " + output);
         }
 
-        // Xóa sạch dữ liệu Room và Suite cũ của Tầng này trước khi import cái mới
-        roomRepository.deleteByFlId(floorId);
-        suiteRepository.deleteByFlId(floorId);
-
         JsonNode rootNode = objectMapper.readTree(output.toString());
 
-        // ================= LƯU TRỰC TIẾP JSON VÀO FLOOR =================
         Floor floor = floorRepository.findById(floorId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy Tầng với ID: " + floorId));
         
         Map<String, Object> drawingMap = objectMapper.convertValue(rootNode, Map.class);
         floor.setDrawingJson(drawingMap);
-        
         floorRepository.save(floor);
-        // ======================================================================
-        
-        // --- Xử lý ROOMS ---
+
+        // ================= SMART UPSERT LOGIC =================
+        List<Room> existingRooms = roomRepository.findByFlId(floorId);
+        List<Suite> existingSuites = suiteRepository.findByFlId(floorId);
+
         List<Room> roomsToSave = new ArrayList<>();
         if (rootNode.has("rooms")) {
             for (JsonNode roomNode : rootNode.get("rooms")) {
-                Room room = new Room();
-                room.setFlId(floorId);
-                room.setRoomCode(roomNode.get("layer").asText() + "-" + UUID.randomUUID().toString().substring(0, 4));
-                
-                // LƯU DIỆN TÍCH
-                if(roomNode.has("area")) room.setArea(roomNode.get("area").asDouble());
-                
-                Map<String, Object> geomMap = objectMapper.convertValue(roomNode.get("geometry"), Map.class);
-                room.setGeometry(geomMap);
-                roomsToSave.add(room);
+                String cadId = roomNode.get("cad_id").asText();
+                String extractedCode = roomNode.has("extracted_code") && !roomNode.get("extracted_code").isNull() 
+                                       ? roomNode.get("extracted_code").asText() 
+                                       : roomNode.get("layer").asText() + "-" + cadId.substring(Math.max(0, cadId.length() - 4));
+
+                String compositeRoomId = floorId + "_" + extractedCode; 
+                Double newArea = roomNode.has("area") ? roomNode.get("area").asDouble() : 0.0;
+                Map<String, Object> newGeom = objectMapper.convertValue(roomNode.get("geometry"), Map.class);
+
+                Room matchedRoom = existingRooms.stream()
+                        .filter(r -> r.getRoomId() != null && r.getRoomId().equals(compositeRoomId))
+                        .findFirst()
+                        .orElse(null);
+
+                if (matchedRoom != null) {
+                    boolean isChanged = Math.abs(matchedRoom.getArea() - newArea) > 0.01 || !matchedRoom.getGeometry().equals(newGeom);
+                    if (isChanged) {
+                        matchedRoom.setVersion(matchedRoom.getVersion() != null ? matchedRoom.getVersion() + 1 : 2);
+                        matchedRoom.setArea(newArea);
+                        matchedRoom.setGeometry(newGeom);
+                    }
+                    matchedRoom.setRoomCode(extractedCode); 
+                    roomsToSave.add(matchedRoom);
+                    existingRooms.remove(matchedRoom); 
+                } else {
+                    Room newRoom = new Room();
+                    newRoom.setRoomId(compositeRoomId); 
+                    newRoom.setFlId(floorId);
+                    newRoom.setCadObjectId(cadId);
+                    newRoom.setRoomCode(extractedCode);
+                    newRoom.setRoomName("Room " + extractedCode); 
+                    newRoom.setArea(newArea);
+                    newRoom.setGeometry(newGeom);
+                    newRoom.setVersion(1);
+                    roomsToSave.add(newRoom);
+                }
             }
+            roomRepository.deleteAll(existingRooms);
             roomRepository.saveAll(roomsToSave);
         }
 
-        // --- Xử lý SUITES ---
         List<Suite> suitesToSave = new ArrayList<>();
         if (rootNode.has("suites")) {
             for (JsonNode suiteNode : rootNode.get("suites")) {
-                Suite suite = new Suite();
-                suite.setFlId(floorId);
-                suite.setSuiteCode(suiteNode.get("layer").asText() + "-" + UUID.randomUUID().toString().substring(0, 4));
+                String cadId = suiteNode.get("cad_id").asText();
+                String extractedCode = suiteNode.has("extracted_code") && !suiteNode.get("extracted_code").isNull() 
+                                       ? suiteNode.get("extracted_code").asText() 
+                                       : suiteNode.get("layer").asText() + "-" + cadId.substring(Math.max(0, cadId.length() - 4));
+                
+                String compositeSuiteId = floorId + "_" + extractedCode;
+                Double newArea = suiteNode.has("area") ? suiteNode.get("area").asDouble() : 0.0;
+                Map<String, Object> newGeom = objectMapper.convertValue(suiteNode.get("geometry"), Map.class);
 
-                if(suiteNode.has("area")) suite.setArea(suiteNode.get("area").asDouble());
+                Suite matchedSuite = existingSuites.stream()
+                        .filter(s -> s.getSuiteId() != null && s.getSuiteId().equals(compositeSuiteId))
+                        .findFirst()
+                        .orElse(null);
 
-                Map<String, Object> geomMap = objectMapper.convertValue(suiteNode.get("geometry"), Map.class);
-                suite.setGeometry(geomMap);
-                suitesToSave.add(suite);
+                if (matchedSuite != null) {
+                    boolean isChanged = Math.abs(matchedSuite.getArea() - newArea) > 0.01 || !matchedSuite.getGeometry().equals(newGeom);
+                    if (isChanged) {
+                        matchedSuite.setVersion(matchedSuite.getVersion() != null ? matchedSuite.getVersion() + 1 : 2);
+                        matchedSuite.setArea(newArea);
+                        matchedSuite.setGeometry(newGeom);
+                    }
+                    matchedSuite.setSuiteCode(extractedCode);
+                    suitesToSave.add(matchedSuite);
+                    existingSuites.remove(matchedSuite);
+                } else {
+                    Suite newSuite = new Suite();
+                    newSuite.setSuiteId(compositeSuiteId); 
+                    newSuite.setFlId(floorId);
+                    newSuite.setCadObjectId(cadId);
+                    newSuite.setSuiteCode(extractedCode);
+                    newSuite.setArea(newArea);
+                    newSuite.setGeometry(newGeom);
+                    newSuite.setVersion(1);
+                    suitesToSave.add(newSuite);
+                }
             }
+            suiteRepository.deleteAll(existingSuites);
             suiteRepository.saveAll(suitesToSave);
         }
     }

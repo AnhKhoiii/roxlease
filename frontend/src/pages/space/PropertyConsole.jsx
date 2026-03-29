@@ -81,7 +81,7 @@ export default function PropertyConsole() {
 
   useEffect(() => { fetchData(); }, [activeTab]);
 
-  const isReadOnlyTab = activeTab === 'suite' || activeTab === 'room';
+  const isReadOnlyTab = false; //activeTab === 'suite' || activeTab === 'room';
   
   const getIdField = () => {
     if (activeTab === 'building') return 'blId';

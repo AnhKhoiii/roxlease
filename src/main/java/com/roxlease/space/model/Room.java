@@ -32,4 +32,6 @@ public class Room {
     private String roomName;
 
     private Double area;
+
+    private Integer version = 1;
 }

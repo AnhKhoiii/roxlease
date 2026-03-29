@@ -144,4 +144,20 @@ public class PropertyController {
         
         return ResponseEntity.ok(Collections.singletonMap("message", "Floor and its associated Rooms/Suites deleted successfully!"));
     }
+
+    // ================= SỬA ROOM =================
+    @PutMapping("/rooms/{id}")
+    public ResponseEntity<?> updateRoom(@PathVariable String id, @RequestBody Room req) {
+        if (!roomRepo.existsById(id)) return ResponseEntity.badRequest().body(Collections.singletonMap("error", "Room not found!"));
+        req.setRoomId(id);
+        return ResponseEntity.ok(roomRepo.save(req));
+    }
+
+    // ================= SỬA SUITE =================
+    @PutMapping("/suites/{id}")
+    public ResponseEntity<?> updateSuite(@PathVariable String id, @RequestBody Suite req) {
+        if (!suiteRepo.existsById(id)) return ResponseEntity.badRequest().body(Collections.singletonMap("error", "Suite not found!"));
+        req.setSuiteId(id);
+        return ResponseEntity.ok(suiteRepo.save(req));
+    }
 }

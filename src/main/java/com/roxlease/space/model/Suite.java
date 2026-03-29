@@ -30,5 +30,5 @@ public class Suite {
 
     private Double area;
 
-    
+    private Integer version = 1;
 }
