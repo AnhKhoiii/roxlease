@@ -102,6 +102,12 @@ public class LocationController {
     // ==========================================
     // 4. CITY API
     // ==========================================
+
+    @GetMapping("/cities")
+    public ResponseEntity<?> getAllCities() {
+        return ResponseEntity.ok(cityRepo.findAll());
+    }
+
     @PostMapping("/cities")
     public ResponseEntity<?> createCity(@RequestBody City req) {
         if (cityRepo.existsById(req.getCityId())) {

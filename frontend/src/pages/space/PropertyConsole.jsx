@@ -12,15 +12,12 @@ export default function PropertyConsole() {
   const [activeTab, setActiveTab] = useState("site");
   const [dataList, setDataList] = useState([]);
   
-  // Dữ liệu cha (Dùng cho Dropdown của Modal và map ID)
   const [sites, setSites] = useState([]);
   const [buildings, setBuildings] = useState([]);
   const [floors, setFloors] = useState([]); 
   const [cities, setCities] = useState([]);
   
-  // DỮ LIỆU CON (Dùng để đếm số lượng: 0 Tòa nhà, 0 Tầng, 0 Phòng...)
   const [childData, setChildData] = useState([]);
-
   const [loading, setLoading] = useState(false);
   const [selectedRows, setSelectedRows] = useState([]);
 
@@ -38,10 +35,9 @@ export default function PropertyConsole() {
       const res = await axiosInstance.get(endpoint);
       setDataList(res.data);
 
-      // LẤY DỮ LIỆU CON ĐỂ ĐẾM SỐ LƯỢNG
       try {
         if (activeTab === 'site') {
-          const cityRes = await axiosInstance.get('/space/properties/cities');
+          const cityRes = await axiosInstance.get('/space/locations/cities');
           setCities(cityRes.data || []);
           const childRes = await axiosInstance.get('/space/properties/buildings');
           setChildData(childRes.data || []);
@@ -59,7 +55,6 @@ export default function PropertyConsole() {
         setChildData([]);
       }
 
-      // LẤY DỮ LIỆU CHA ĐỂ MAP ID  
       if (activeTab === 'building') {
         const siteRes = await axiosInstance.get('/space/properties/sites');
         setSites(siteRes.data);
@@ -67,11 +62,9 @@ export default function PropertyConsole() {
         const buildingRes = await axiosInstance.get('/space/properties/buildings');
         setBuildings(buildingRes.data);
       } else if (activeTab === 'suite' || activeTab === 'room') {
-        // MỚI: Lấy danh sách Floor để từ flId dò ra được blId (Building ID)
         const floorRes = await axiosInstance.get('/space/properties/floors');
         setFloors(floorRes.data);
       }
-
     } catch (error) {
       console.error("Loading failed", error);
       showToast('error', 'Cannot load data from the server!');
@@ -83,7 +76,7 @@ export default function PropertyConsole() {
 
   useEffect(() => { fetchData(); }, [activeTab]);
 
-  const isReadOnlyTab = false; //activeTab === 'suite' || activeTab === 'room';
+  const isReadOnlyTab = false; 
   
   const getIdField = () => {
     if (activeTab === 'building') return 'blId';
@@ -93,12 +86,10 @@ export default function PropertyConsole() {
     return 'siteId'; 
   };
 
-  // ================= HÀM ĐẾM SỐ LƯỢNG CON =================
   const getChildCount = (item) => {
     if (!childData || childData.length === 0) return 0;
     if (activeTab === 'site') return childData.filter(b => b.siteId === item.siteId).length;
     if (activeTab === 'building') return childData.filter(f => f.blId === item.blId).length;
-    // MỚI: Đếm số phòng cho mỗi tầng
     if (activeTab === 'floor') return childData.filter(r => r.flId === item.flId).length;
     return 0;
   };
@@ -117,35 +108,28 @@ export default function PropertyConsole() {
       const endpoint = `/space/properties/${activeTab}s`;
       const idField = getIdField();
 
-      // BƯỚC 1: Tách file DXF ra khỏi Payload chuẩn bị gửi lên server
       const dxfFile = formData.dxfFile;
       delete formData.dxfFile; 
 
-      // BƯỚC 2: Gọi API Lưu Tầng (Floor) trước
       if (isEdit) {
         await axiosInstance.put(`${endpoint}/${formData[idField]}`, formData);
       } else {
         await axiosInstance.post(endpoint, formData);
       }
 
-      // BƯỚC 3: Nếu Tầng lưu thành công VÀ người dùng có đính kèm file DXF -> TỰ ĐỘNG BÓC TÁCH
       if (activeTab === 'floor' && dxfFile) {
         showToast('success', 'Floor saved! Auto-parsing DXF file...');
-        
         const uploadData = new FormData();
         uploadData.append('file', dxfFile);
         
-        // Gọi API bóc tách bằng form-data
         await axiosInstance.post(`/floors/${formData.flId}/upload-dxf`, uploadData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
-        
         showToast('success', 'Auto-parsed DXF and imported Rooms/Suites successfully!');
       } else {
         showToast('success', 'The record was saved successfully!');
       }
 
-      // Đóng modal và tải lại bảng dữ liệu
       setIsModalOpen(false);
       fetchData(); 
       if (isSaveAndAdd) setTimeout(() => handleOpenAdd(), 300); 
@@ -183,9 +167,9 @@ export default function PropertyConsole() {
       case "building": return ["Number of Floors", "Building ID", "Building Name", "Site ID", "Longitude", "Latitude", "Address"];
       case "floor": return ["Number of Rooms", "Floor ID", "Floor Name", "Building ID", "Site ID", "GFA (sqm)", "NFA (sqm)"];
       
-      // MỚI: Đưa Area lên vị trí số 3, bổ sung Building ID ở cuối
-      case "suite": return ["Suite ID", "Suite Name", "Area (sqm)", "Floor ID", "Building ID"];
-      case "room": return ["Room ID", "Room Name", "Area (sqm)", "Floor ID", "Building ID"];
+      // ĐÃ SỬA: Tách riêng cột Code và Name
+      case "suite": return ["Suite ID", "Suite Code", "Suite Name", "Area (sqm)", "Floor ID", "Building ID"];
+      case "room": return ["Room ID", "Room Code", "Room Name", "Area (sqm)", "Floor ID", "Building ID"];
       default: return [];
     }
   };
@@ -208,10 +192,7 @@ export default function PropertyConsole() {
         ))}
       </div>
 
-      {/* TABS & NỘI DUNG CHÍNH */}
       <div className="bg-white rounded-md shadow flex-1 flex flex-col overflow-hidden">
-        
-        {/* TAB HEADER & NÚT BẤM */}
         <div className="flex justify-between items-center px-6 pt-4 border-b border-gray-200 shrink-0">
           <div className="flex gap-4">
             {tabs.map((tab) => (
@@ -230,14 +211,12 @@ export default function PropertyConsole() {
               <button onClick={handleOpenAdd} disabled={!canEdit} className={`px-5 py-2 rounded font-bold shadow-sm transition-colors text-[14px] ${canEdit ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>
                 + Add new
               </button>
-
             <button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-5 py-2 rounded font-bold shadow-sm transition-colors text-[14px]">
               Export
             </button>
           </div>
         </div>
 
-        {/* TABLE DỮ LIỆU */}
         <div className="flex-1 overflow-auto relative">
           {loading && (
              <div className="absolute inset-0 flex items-center justify-center bg-white/60 z-20 backdrop-blur-[1px]">
@@ -263,11 +242,8 @@ export default function PropertyConsole() {
               ) : (
                 dataList.map((item, i) => {
                   
-                  // Dò tìm Site ID và Building ID tương ứng
                   const parentBuilding = activeTab === 'floor' ? buildings.find(b => b.blId === item.blId) : null;
                   const siteIdForFloor = parentBuilding ? parentBuilding.siteId : '-';
-                  
-                  // MỚI: Dò tìm Building ID cho Room và Suite dựa trên flId
                   const parentFloor = (activeTab === 'room' || activeTab === 'suite') ? floors.find(f => f.flId === item.flId) : null;
                   const buildingIdForRoomSuite = parentFloor ? parentFloor.blId : '-';
 
@@ -297,12 +273,7 @@ export default function PropertyConsole() {
 
                     {activeTab === 'floor' && (
                       <>
-                        <td className="px-6 py-3">
-                            {/* MỚI: Hiển thị chuẩn xác số lượng phòng */}
-                            <span className="bg-blue-100 text-blue-700 text-xs px-2.5 py-1 rounded font-bold">
-                                {getChildCount(item)} Phòng
-                            </span>
-                        </td>
+                        <td className="px-6 py-3"><span className="bg-blue-100 text-blue-700 text-xs px-2.5 py-1 rounded font-bold">{getChildCount(item)} Phòng</span></td>
                         <td className="px-6 py-3 font-bold text-gray-800">{item.flId}</td>
                         <td className="px-6 py-3 text-gray-600">{item.flName}</td>
                         <td className="px-6 py-3 text-gray-600">{item.blId}</td>
@@ -312,23 +283,26 @@ export default function PropertyConsole() {
                       </>
                     )}
 
+                    {/* ĐÃ SỬA: Phân rõ Id (khóa chính), Code (Mã hiển thị), Name */}
                     {activeTab === 'suite' && (
                       <>
                         <td className="px-6 py-3 font-bold text-gray-800">{item.suiteId || '-'}</td>
-                        <td className="px-6 py-3 text-gray-600">{item.suiteCode || item.layerName || '-'}</td>
-                        <td className="px-6 py-3 font-bold text-green-600">{item.area ? `${item.area} m²` : '-'}</td> {/* Area ở vị trí số 3 */}
+                        <td className="px-6 py-3 font-semibold text-purple-600">{item.suiteCode || '-'}</td>
+                        <td className="px-6 py-3 text-gray-600">{item.suiteName || '-'}</td>
+                        <td className="px-6 py-3 font-bold text-green-600">{item.area ? `${item.area} m²` : '-'}</td>
                         <td className="px-6 py-3 text-gray-600">{item.flId || '-'}</td>
-                        <td className="px-6 py-3 font-semibold text-blue-600">{buildingIdForRoomSuite}</td> {/* Building ID ở cuối */}
+                        <td className="px-6 py-3 font-semibold text-blue-600">{buildingIdForRoomSuite}</td>
                       </>
                     )}
 
                     {activeTab === 'room' && (
                       <>
                         <td className="px-6 py-3 font-bold text-gray-800">{item.roomId || '-'}</td>
-                        <td className="px-6 py-3 text-gray-600">{item.roomCode || item.layerName || '-'}</td>
-                        <td className="px-6 py-3 font-bold text-green-600">{item.area ? `${item.area} m²` : '-'}</td> {/* Area ở vị trí số 3 */}
+                        <td className="px-6 py-3 font-semibold text-purple-600">{item.roomCode || '-'}</td>
+                        <td className="px-6 py-3 text-gray-600">{item.roomName || '-'}</td>
+                        <td className="px-6 py-3 font-bold text-green-600">{item.area ? `${item.area} m²` : '-'}</td>
                         <td className="px-6 py-3 text-gray-600">{item.flId || '-'}</td>
-                        <td className="px-6 py-3 font-semibold text-blue-600">{buildingIdForRoomSuite}</td> {/* Building ID ở cuối */}
+                        <td className="px-6 py-3 font-semibold text-blue-600">{buildingIdForRoomSuite}</td>
                       </>
                     )}
                   </tr>
@@ -340,7 +314,6 @@ export default function PropertyConsole() {
         </div>
       </div>
 
-      {/* MODALS */}
       {!isReadOnlyTab && (
         <PropertyModal 
           isOpen={isModalOpen} 

@@ -77,14 +77,12 @@ export default function PropertyModal({ isOpen, onClose, onSave, onDelete, mode,
 
     const payload = { ...formData };
     
-    // Tự động ghép BlId_FlId khi tạo mới Floor
     if (activeTab === 'floor' && mode === "ADD") {
         if (!payload.flId.startsWith(payload.blId + '_')) {
             payload.flId = `${payload.blId}_${payload.flId}`;
         }
     }
 
-    // Convert các trường số, thêm latitude, longitude, areaGrossExt, areaGrossInt, nfa
     const numericFields = ['latitude', 'longitude', 'areaGrossExt', 'areaGrossInt', 'gfa', 'nfa'];
     numericFields.forEach(field => {
        if (payload[field] === "" || payload[field] === undefined) { payload[field] = null; } 
@@ -109,20 +107,11 @@ export default function PropertyModal({ isOpen, onClose, onSave, onDelete, mode,
         <Header title={getModalTitle()} onClose={onClose} onSave={handleSaveAction} onDelete={onDelete} canEdit={canEdit} mode={mode} />
         <div className="overflow-y-auto p-8 pb-10 flex-1">
           
-          {/* ================= SITE MODAL ================= */}
           {activeTab === 'site' && (
             <div className="grid grid-cols-3 gap-8">
               <div className="space-y-5">
                 <Input label="Site ID *" value={formData.siteId} onChange={v => handleChange('siteId', v)} disabled={mode === "EDIT" || !canEdit} error={errors.siteId} />
-                <Select 
-                  label="City *" 
-                  value={formData.cityId} 
-                  onChange={v => handleChange('cityId', v)} 
-                  disabled={!canEdit} 
-                  error={errors.cityId} 
-                  // MỚI: Load động danh sách cities
-                  options={cities.map(c => ({ value: c.cityId, label: c.cityName || c.cityId }))} 
-                />
+                <Select label="City *" value={formData.cityId} onChange={v => handleChange('cityId', v)} disabled={!canEdit} error={errors.cityId} options={cities.map(c => ({ value: c.cityId, label: c.cityName || c.cityId }))} />
                 <Select label="Division *" value={formData.division} onChange={v => handleChange('division', v)} disabled={!canEdit} options={[{value: 'OFFICE', label: 'Office'}, {value: 'COMPLEX', label: 'Complex'}]} />
                 <Input label="Site Name" value={formData.siteName} onChange={v => handleChange('siteName', v)} disabled={!canEdit} />
                 <TextArea label="Address" value={formData.address} onChange={v => handleChange('address', v)} disabled={!canEdit} />
@@ -147,7 +136,6 @@ export default function PropertyModal({ isOpen, onClose, onSave, onDelete, mode,
             </div>
           )}
 
-          {/* ================= BUILDING MODAL ================= */}
           {activeTab === 'building' && (
             <div className="grid grid-cols-3 gap-8">
               <div className="space-y-5">
@@ -180,7 +168,6 @@ export default function PropertyModal({ isOpen, onClose, onSave, onDelete, mode,
             </div>
           )}
 
-          {/* ================= FLOOR MODAL ================= */}
           {activeTab === 'floor' && (
             <div className="grid grid-cols-2 gap-10">
               <div className="space-y-6">
@@ -206,20 +193,35 @@ export default function PropertyModal({ isOpen, onClose, onSave, onDelete, mode,
             </div>
           )}
 
-          {/* ================= ROOM / SUITE MODAL ================= */}
           {(activeTab === 'room' || activeTab === 'suite') && (
             <div className="grid grid-cols-2 gap-10">
               <div className="space-y-6">
+                <Input 
+                  label={activeTab === 'room' ? "Room ID (Composite Key)" : "Suite ID (Composite Key)"} 
+                  value={formData[activeTab === 'room' ? 'roomId' : 'suiteId']} 
+                  onChange={() => {}} 
+                  disabled={true} 
+                />
                 <Input label="Floor ID" value={formData.flId ? formData.flId.split('_').pop() : ''} onChange={() => {}} disabled={true} />
-                <Input label={activeTab === 'room' ? "Room Code" : "Suite Code"} value={formData[activeTab === 'room' ? 'roomCode' : 'suiteCode']} onChange={v => handleChange(activeTab === 'room' ? 'roomCode' : 'suiteCode', v)} disabled={!canEdit} />
-                <Input label={activeTab === 'room' ? "Room Name" : "Suite Name"} value={formData[activeTab === 'room' ? 'roomName' : 'suiteName']} onChange={v => handleChange(activeTab === 'room' ? 'roomName' : 'suiteName', v)} disabled={!canEdit} />
+                <Input 
+                  label={activeTab === 'room' ? "Room Code" : "Suite Code"} 
+                  value={formData[activeTab === 'room' ? 'roomCode' : 'suiteCode']} 
+                  onChange={v => handleChange(activeTab === 'room' ? 'roomCode' : 'suiteCode', v)} 
+                  disabled={!canEdit} 
+                />
+                <Input 
+                  label={activeTab === 'room' ? "Room Name" : "Suite Name"} 
+                  value={formData[activeTab === 'room' ? 'roomName' : 'suiteName']} 
+                  onChange={v => handleChange(activeTab === 'room' ? 'roomName' : 'suiteName', v)} 
+                  disabled={!canEdit} 
+                />
               </div>
               <div className="space-y-6">
                 <Input label="Calculated Area (m²)" value={formData.area} onChange={() => {}} disabled={true} />
                 <Input label="CAD Geometry Version" value={`v${formData.version || 1}.0`} onChange={() => {}} disabled={true} />
                 <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg shadow-sm">
-                  <p className="text-sm text-blue-800 font-semibold mb-1">Quy định Chỉnh sửa:</p>
-                  <p className="text-xs text-blue-600 leading-relaxed">Bạn chỉ có thể thay đổi Tên và Mã. Thông số Tọa độ, Diện tích và Version được hệ thống CAD khóa tự động.</p>
+                  <p className="text-sm text-blue-800 font-semibold mb-1">Edit rule:</p>
+                  <p className="text-xs text-blue-600 leading-relaxed">You can only edit the Code and Name.</p>
                 </div>
               </div>
             </div>
