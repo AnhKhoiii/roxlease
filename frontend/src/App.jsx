@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/auth/Login';
 import DashboardLayout from './layouts/DashboardLayout'; 
-import SystemLayout from './layouts/SystemLayout';
+import SystemLayout from './layouts/system/SystemLayout';
 import Profile from './pages/Profile';
 import UserManagement from './pages/system/UserManagement';
 import RoleManagement from './pages/system/RoleManagement';
@@ -10,12 +10,15 @@ import PermissionManagement from './pages/system/PermissionManagement';
 import AssignPermission from './pages/system/AssignPermission';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
-import SpaceLayout from './layouts/SpaceLayout';
+import SpaceLayout from './layouts/space/SpaceLayout';
 import GeoLocation from './pages/space/GeoLocation'
-import BackgroundDataLayout from './layouts/BackgroundDataLayout';
+import BackgroundDataLayout from './layouts/space/BackgroundDataLayout';
 import PropertyConsole from './pages/space/PropertyConsole';
 import AmenityConsole from './pages/space/AmenityConsole';
 import SpaceConsole from './pages/space/SpaceConsole';
+import LeaseLayout from './layouts/lease/LeaseLayout';
+import LeaseBackgroundData from './pages/lease/BackgroundDataConsole';
+import LeaseConsole from './pages/lease/LeaseConsole';
 
 function App() {
   return (
@@ -42,9 +45,14 @@ function App() {
             <Route path="building" element={<div className="p-8 font-bold text-xl">Màn hình Quản lý Tòa Nhà</div>} />
           </Route>
 
-          <Route path="lease" element={<div className="p-8">Lease Screen</div>} />
+          <Route path="lease" element={<LeaseLayout />}>
+            <Route path="dashboard" element={<div className="p-8">Lease Dashboard</div>} />
+            <Route path="console" element={<LeaseConsole />} />
+            <Route path="request" element={<div className="p-8">Lease Request</div>} />
+            <Route path="background-data" element={<LeaseBackgroundData />} />
+          </Route>
+
           <Route path="cost" element={<div className="p-8">Cost Screen</div>} />
-          <Route path="servicedesk" element={<div className="p-8">Service desk Screen</div>} />
           
           <Route path="system" element={<SystemLayout/>}>
             <Route path="user" element={<UserManagement />} />
