@@ -19,6 +19,7 @@ import SpaceConsole from './pages/space/SpaceConsole';
 import LeaseLayout from './layouts/lease/LeaseLayout';
 import LeaseBackgroundData from './pages/lease/BackgroundDataConsole';
 import LeaseConsole from './pages/lease/LeaseConsole';
+import LeaseDetail from './pages/lease/LeaseDetail';
 
 function App() {
   return (
@@ -48,6 +49,7 @@ function App() {
           <Route path="lease" element={<LeaseLayout />}>
             <Route path="dashboard" element={<div className="p-8">Lease Dashboard</div>} />
             <Route path="console" element={<LeaseConsole />} />
+              <Route path="console/:id" element={<LeaseDetail />} />
             <Route path="request" element={<div className="p-8">Lease Request</div>} />
             <Route path="background-data" element={<LeaseBackgroundData />} />
           </Route>

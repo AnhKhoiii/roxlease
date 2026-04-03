@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import axiosInstance from "../../api/axiosInstance";
+import { useNavigate } from "react-router-dom";
 
 // ==========================================
-// CÁC COMPONENT GIAO DIỆN DÙNG CHUNG TRONG MODAL
+// CÁC COMPONENT GIAO DIỆN (UI COMPONENTS)
 // ==========================================
 const Input = ({ label, value, onChange, type = "text", disabled, placeholder }) => (
   <div className="flex flex-col gap-0.5 w-full">
@@ -18,6 +19,19 @@ const Input = ({ label, value, onChange, type = "text", disabled, placeholder })
       }`}
     />
   </div>
+);
+
+const Checkbox = ({ label, checked, onChange, disabled }) => (
+  <label className={`flex items-center gap-1.5 cursor-pointer w-max ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}>
+    <input
+      type="checkbox"
+      checked={checked || false}
+      onChange={e => !disabled && onChange(e.target.checked)}
+      disabled={disabled}
+      className={`w-3 h-3 text-blue-600 rounded border-gray-300 focus:ring-blue-500 ${disabled ? 'bg-gray-200' : 'accent-blue-600'}`}
+    />
+    <span className="text-[11px] font-semibold text-gray-700">{label}</span>
+  </label>
 );
 
 const Select = ({ label, value, onChange, options = [], disabled }) => (
@@ -37,120 +51,148 @@ const Select = ({ label, value, onChange, options = [], disabled }) => (
   </div>
 );
 
-const Checkbox = ({ label, checked, onChange, disabled }) => (
-  <label className={`flex items-center gap-1.5 cursor-pointer w-max ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}>
-    <input
-      type="checkbox"
-      checked={checked || false}
-      onChange={e => !disabled && onChange(e.target.checked)}
-      disabled={disabled}
-      className={`w-3 h-3 text-blue-600 rounded border-gray-300 focus:ring-blue-500 ${disabled ? 'bg-gray-200' : 'accent-blue-600'}`}
-    />
-    <span className="text-[11px] font-semibold text-gray-700">{label}</span>
-  </label>
-);
+// 🚀 COMPONENT AUTOCOMPLETE (CHO PHÉP GÕ & LƯU CHÍNH XÁC CHỮ ĐÃ GÕ)
+const AutocompleteInput = ({ label, value, onChange, options = [], disabled, placeholder }) => {
+  const [isOpen, setIsOpen] = useState(false);
 
-const DataListInput = ({ label, value, onChange, options = [], disabled, listId, placeholder }) => (
-  <div className="flex flex-col gap-0.5 w-full">
-    <label className="font-bold text-[10px] text-gray-700 uppercase tracking-wide">{label}</label>
-    <input
-      list={listId}
-      value={value || ''}
-      onChange={e => onChange(e.target.value)}
-      disabled={disabled}
-      // Gợi ý người dùng click đúp để xem toàn bộ danh sách
-      placeholder={placeholder || "Double-click to view all..."}
-      className="border border-gray-300 rounded px-2 py-1 text-[11px] outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500 bg-white transition-shadow cursor-pointer"
-      autoComplete="off"
-    />
-    <datalist id={listId}>
-      {/* SỬA LỖI TẠI ĐÂY: In thẳng label ra, không dùng toán tử điều kiện để chống lỗi trình duyệt */}
-      {options.filter(Boolean).map((opt, idx) => (
-        <option key={`${listId}-${idx}`} value={opt.value}>
-          {opt.label}
-        </option>
-      ))}
-    </datalist>
-  </div>
-);
+  // Lọc option dựa vào chính giá trị user đang gõ (value)
+  const filteredOptions = options.filter(opt =>
+    (opt.label || "").toString().toLowerCase().includes((value || "").toString().toLowerCase()) ||
+    (opt.value || "").toString().toLowerCase().includes((value || "").toString().toLowerCase())
+  );
+
+  return (
+    <div className="flex flex-col gap-0.5 w-full relative">
+      <label className="font-bold text-[10px] text-gray-700 uppercase tracking-wide">{label}</label>
+      <input
+        type="text"
+        value={value || ''}
+        onChange={(e) => {
+          onChange(e.target.value); // Lưu chính xác từng ký tự người dùng gõ vào form
+          setIsOpen(true);
+        }}
+        onFocus={() => setIsOpen(true)}
+        onBlur={() => setTimeout(() => setIsOpen(false), 200)} // Delay để click chuột vào item không bị hụt
+        disabled={disabled}
+        placeholder={placeholder || "Type to search..."}
+        className="border border-gray-300 rounded px-2 py-1 text-[11px] outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500 bg-white transition-shadow"
+        autoComplete="off"
+      />
+      
+      {/* Box xổ xuống chỉ hiện khi đang focus và không bị disable */}
+      {isOpen && !disabled && (
+        <ul className="absolute z-[999] w-full bg-white border border-gray-300 shadow-xl max-h-48 overflow-y-auto top-[100%] left-0 rounded-md mt-1 divide-y divide-gray-100">
+          {filteredOptions.length > 0 ? (
+            filteredOptions.map((opt, idx) => (
+              <li
+                key={idx}
+                className="px-2.5 py-1.5 text-[11px] hover:bg-blue-50 cursor-pointer text-gray-800 transition-colors"
+                onMouseDown={(e) => {
+                  e.preventDefault(); 
+                  onChange(opt.value); // Khi click chọn, sẽ điền mã ID (value) vào ô
+                  setIsOpen(false);
+                }}
+              >
+                <span className="font-semibold text-blue-700">{opt.value}</span>
+                {opt.label !== opt.value && <span className="text-gray-500 ml-1">- {opt.label}</span>}
+              </li>
+            ))
+          ) : (
+            <li className="px-2.5 py-1.5 text-[11px] text-gray-400 italic">No matches...</li>
+          )}
+        </ul>
+      )}
+    </div>
+  );
+};
+
 
 // ==========================================
-// MODAL THÊM/SỬA LEASE (CÓ LOGIC PHÂN TẦNG SPACE)
+// MODAL CHÍNH (4 CỘT)
 // ==========================================
 function LeaseModal({ isOpen, onClose, onSave, mode, initialData }) {
   const [formData, setFormData] = useState({});
-  
-  // States chứa danh sách động từ API Space
   const [sites, setSites] = useState([]);
   const [buildings, setBuildings] = useState([]);
   const [floors, setFloors] = useState([]);
   const [suites, setSuites] = useState([]);
 
-  // Khởi tạo data khi mở form
   useEffect(() => {
     if (isOpen) {
       setFormData(initialData || {});
-      // Lấy danh sách Site ngay khi mở form
       fetchSites();
     }
   }, [isOpen, initialData]);
 
-  // Các hàm Fetch API Space (Có Try Catch chống sập nếu Backend chưa có API này)
+  // ================= FETCH DATA TỪ BACKEND =================
   const fetchSites = async () => {
     try {
       const res = await axiosInstance.get('/space/properties/sites');
-      setSites(Array.isArray(res.data) ? res.data : (res.data?.content || []));
-    } catch { setSites([]); }
+      const items = Array.isArray(res.data) ? res.data : (res.data?.content || []);
+      setSites(items.filter(Boolean).map(item => ({
+        value: item.siteId || item.id || '',
+        label: item.siteName || item.name || item.siteId || item.id || ''
+      })));
+    } catch (err) { setSites([]); }
   };
 
   const fetchBuildings = async (siteId) => {
     if (!siteId) return setBuildings([]);
     try {
-      const res = await axiosInstance.get(`/space/properties/buildings`, { params: { siteId } });
-      setBuildings(Array.isArray(res.data) ? res.data : (res.data?.content || []));
+      const res = await axiosInstance.get(`/space/properties/buildings`);
+      const items = Array.isArray(res.data) ? res.data : (res.data?.content || []);
+      const filtered = items.filter(item => item && item.siteId === siteId);
+      setBuildings(filtered.map(item => ({
+        value: item.blId || item.id || '',
+        label: item.blName || item.name || item.blId || item.id || ''
+      })));
     } catch { setBuildings([]); }
   };
 
   const fetchFloors = async (buildingId) => {
     if (!buildingId) return setFloors([]);
     try {
-      const res = await axiosInstance.get(`/space/properties/floors`, { params: { buildingId } });
-      setFloors(Array.isArray(res.data) ? res.data : (res.data?.content || []));
+      const res = await axiosInstance.get(`/space/properties/floors`);
+      const items = Array.isArray(res.data) ? res.data : (res.data?.content || []);
+      const filtered = items.filter(item => item && item.blId === buildingId);
+      setFloors(filtered.map(item => ({
+        value: item.flId || item.id || '',
+        label: item.flName || item.name || item.flId || item.id || ''
+      })));
     } catch { setFloors([]); }
   };
 
   const fetchSuites = async (floorId) => {
     if (!floorId) return setSuites([]);
     try {
-      const res = await axiosInstance.get(`/space/properties/suites`, { params: { floorId } });
-      setSuites(Array.isArray(res.data) ? res.data : (res.data?.content || []));
+      const res = await axiosInstance.get(`/space/properties/suites`);
+      const items = Array.isArray(res.data) ? res.data : (res.data?.content || []);
+      const filtered = items.filter(item => item && item.flId === floorId);
+      setSuites(filtered.map(item => ({
+        value: item.suiteId || item.id || '',
+        label: item.suiteCode || item.name || item.suiteId || item.id || ''
+      })));
     } catch { setSuites([]); }
   };
 
-  // Logic kích hoạt fetch tự động khi ID thay đổi
-  useEffect(() => { if (formData.siteId) fetchBuildings(formData.siteId); }, [formData.siteId]);
-  useEffect(() => { if (formData.buildingId) fetchFloors(formData.buildingId); }, [formData.buildingId]);
-  useEffect(() => { if (formData.floorId) fetchSuites(formData.floorId); }, [formData.floorId]);
+  // Kích hoạt fetch Cascading
+  useEffect(() => { if (formData.siteId) fetchBuildings(formData.siteId); else setBuildings([]); }, [formData.siteId]);
+  useEffect(() => { if (formData.buildingId) fetchFloors(formData.buildingId); else setFloors([]); }, [formData.buildingId]);
+  useEffect(() => { if (formData.floorId) fetchSuites(formData.floorId); else setSuites([]); }, [formData.floorId]);
 
   if (!isOpen) return null;
 
   const handleChange = (field, value) => {
     let updates = { [field]: value };
-
-    // Ép kiểu số
     if (['amountDeposit', 'rentUnitCost', 'serviceUnitCost', 'baseExchangeRate', 'areaNegotiated', 'areaCorridor'].includes(field)) {
       updates[field] = value === '' ? null : Number(value);
     }
-
-    // LOGIC CASCADING KHÔNG GIAN (Reset con khi cha thay đổi)
-    if (field === 'siteId') {
-      updates.buildingId = ''; updates.floorId = ''; updates.suiteId = '';
-    } else if (field === 'buildingId') {
-      updates.floorId = ''; updates.suiteId = '';
-    } else if (field === 'floorId') {
-      updates.suiteId = '';
-    }
-
+    
+    // Reset ô con khi ô cha thay đổi
+    if (field === 'siteId') { updates.buildingId = ''; updates.floorId = ''; updates.suiteId = ''; } 
+    else if (field === 'buildingId') { updates.floorId = ''; updates.suiteId = ''; } 
+    else if (field === 'floorId') { updates.suiteId = ''; }
+    
     setFormData(prev => ({ ...prev, ...updates }));
   };
 
@@ -162,31 +204,20 @@ function LeaseModal({ isOpen, onClose, onSave, mode, initialData }) {
   return (
     <div className="fixed inset-0 bg-black/50 z-[100] flex justify-center items-center backdrop-blur-sm p-4">
       <div className="bg-white w-[1200px] rounded-xl shadow-2xl flex flex-col overflow-hidden animate-[fadeIn_0.2s_ease-out] max-h-[95vh]">
-        
-        {/* HEADER */}
         <div className="bg-[#EFB034] px-5 py-3 flex justify-between items-center shrink-0">
-          <h2 className="text-base font-bold uppercase tracking-tight text-white drop-shadow-sm">
-            {mode === "ADD" ? "Add New Lease" : "Edit Lease"}
-          </h2>
+          <h2 className="text-base font-bold uppercase tracking-tight text-white drop-shadow-sm">{mode === "ADD" ? "Add New Lease" : "Edit Lease"}</h2>
           <div className="flex gap-2 items-center">
-            <button onClick={handleSaveAction} className="bg-[#DE3B40] hover:bg-[#C11C22] text-white px-5 py-1.5 rounded text-xs font-bold shadow-sm transition-colors">
-              Save
-            </button>
-            <button onClick={onClose} className="text-white hover:text-red-100 ml-1 transition-colors focus:outline-none">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
+            <button onClick={handleSaveAction} className="bg-[#DE3B40] hover:bg-[#C11C22] text-white px-5 py-1.5 rounded text-xs font-bold shadow-sm transition-colors">Save</button>
+            <button onClick={onClose} className="text-white hover:text-red-100 ml-1 transition-colors"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
           </div>
         </div>
-
-        {/* BODY - LAYOUT 4 CỘT */}
+        
         <div className="p-5 overflow-y-auto bg-gray-50 flex-1">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
             
             {/* CỘT 1 */}
             <div className="flex flex-col gap-3">
-              <div className="pb-0.5 border-b border-gray-100">
-                <span className="font-bold text-blue-800 text-[9px] uppercase tracking-wider">General & Timeline</span>
-              </div>
+              <div className="pb-0.5 border-b border-gray-100"><span className="font-bold text-blue-800 text-[9px] uppercase tracking-wider">General & Timeline</span></div>
               <Input label="Lease Code" value={formData.lsId} onChange={v => handleChange('lsId', v)} disabled={mode === "EDIT"} />
               <Input label="Description" value={formData.description} onChange={v => handleChange('description', v)} />
               <Input label="Signing Date" type="date" value={formData.signedDate} onChange={v => handleChange('signedDate', v)} />
@@ -197,15 +228,13 @@ function LeaseModal({ isOpen, onClose, onSave, mode, initialData }) {
               <Select label="Space Use" value={formData.spaceUse} onChange={v => handleChange('spaceUse', v)} options={['OFFICE', 'RETAIL', 'STORAGE']} />
             </div>
 
-            {/* CỘT 2: KHÔNG GIAN (VỚI TÍNH NĂNG VỪA GÕ VỪA CHỌN PHÂN TẦNG) */}
+            {/* CỘT 2: HIỂN THỊ CASCADING BẰNG AUTOCOMPLETE MỚI */}
             <div className="flex flex-col gap-3">
-              <div className="pb-0.5 border-b border-gray-100">
-                <span className="font-bold text-blue-800 text-[9px] uppercase tracking-wider">Location & Structure</span>
-              </div>
-              <DataListInput label="Site ID" listId="sitesList" value={formData.siteId} onChange={v => handleChange('siteId', v)} options={sites.map(s => s.siteId || s.id)} />
-              <DataListInput label="Building ID" listId="bldgsList" value={formData.buildingId} onChange={v => handleChange('buildingId', v)} options={buildings.map(b => b.buildingId || b.id)} disabled={!formData.siteId} placeholder={!formData.siteId ? "Select Site first..." : ""} />
-              <DataListInput label="Floor ID" listId="floorsList" value={formData.floorId} onChange={v => handleChange('floorId', v)} options={floors.map(f => f.floorId || f.id)} disabled={!formData.buildingId} placeholder={!formData.buildingId ? "Select Building first..." : ""} />
-              <DataListInput label="Suite ID" listId="suitesList" value={formData.suiteId} onChange={v => handleChange('suiteId', v)} options={suites.map(s => s.suiteId || s.id)} disabled={!formData.floorId} placeholder={!formData.floorId ? "Select Floor first..." : ""} />
+              <div className="pb-0.5 border-b border-gray-100"><span className="font-bold text-blue-800 text-[9px] uppercase tracking-wider">Location & Structure</span></div>
+              <AutocompleteInput label="Site ID" value={formData.siteId} onChange={v => handleChange('siteId', v)} options={sites} placeholder="Search Site ID..." />
+              <AutocompleteInput label="Building ID" value={formData.buildingId} onChange={v => handleChange('buildingId', v)} options={buildings} disabled={!formData.siteId} placeholder={!formData.siteId ? "Select Site first..." : "Search Building ID..."} />
+              <AutocompleteInput label="Floor ID" value={formData.floorId} onChange={v => handleChange('floorId', v)} options={floors} disabled={!formData.buildingId} placeholder={!formData.buildingId ? "Select Building first..." : "Search Floor ID..."} />
+              <AutocompleteInput label="Suite ID" value={formData.suiteId} onChange={v => handleChange('suiteId', v)} options={suites} disabled={!formData.floorId} placeholder={!formData.floorId ? "Select Floor first..." : "Search Suite ID..."} />
               
               <Input label="Amenity ID" value={formData.amenityId} onChange={v => handleChange('amenityId', v)} />
               <Select label="Lease / Sublease" value={formData.leaseSublease} onChange={v => handleChange('leaseSublease', v)} options={['MAIN_LEASE', 'SUBLEASE']} />
@@ -213,16 +242,13 @@ function LeaseModal({ isOpen, onClose, onSave, mode, initialData }) {
 
             {/* CỘT 3 */}
             <div className="flex flex-col gap-3">
-              <div className="pb-0.5 border-b border-gray-100">
-                <span className="font-bold text-blue-800 text-[9px] uppercase tracking-wider">Financial & Status</span>
-              </div>
+              <div className="pb-0.5 border-b border-gray-100"><span className="font-bold text-blue-800 text-[9px] uppercase tracking-wider">Financial & Status</span></div>
               <Input label="Deposit" type="number" value={formData.amountDeposit} onChange={v => handleChange('amountDeposit', v)} />
               <Input label="Rent Unit Cost" type="number" value={formData.rentUnitCost} onChange={v => handleChange('rentUnitCost', v)} />
               <Input label="Service Unit Cost" type="number" value={formData.serviceUnitCost} onChange={v => handleChange('serviceUnitCost', v)} />
               <Input label="Currency" value={formData.currency} onChange={v => handleChange('currency', v)} />
               <Input label="Base Exchange Rate" type="number" value={formData.baseExchangeRate} onChange={v => handleChange('baseExchangeRate', v)} />
               <Select label="Rent Type" value={formData.rentType} onChange={v => handleChange('rentType', v)} options={['FIXED', 'REVENUE_SHARE']} />
-              
               <div className="flex flex-col gap-2 mt-1 bg-gray-50 p-2.5 rounded border border-gray-200/60">
                 <Checkbox label="VAT Excluded?" checked={formData.vatExcluded} onChange={v => handleChange('vatExcluded', v)} />
                 <Checkbox label="Lease Signed?" checked={formData.isSign} onChange={v => handleChange('isSign', v)} />
@@ -231,37 +257,28 @@ function LeaseModal({ isOpen, onClose, onSave, mode, initialData }) {
               </div>
             </div>
 
-            {/* CỘT 4 & CỘT 5 */}
+            {/* CỘT 4 */}
             <div className="flex flex-col gap-3">
-              <div className="pb-0.5 border-b border-gray-100">
-                <span className="font-bold text-blue-800 text-[9px] uppercase tracking-wider">Parties & Area</span>
-              </div>
+              <div className="pb-0.5 border-b border-gray-100"><span className="font-bold text-blue-800 text-[9px] uppercase tracking-wider">Parties & Area</span></div>
               <Input label="Negotiated Area (sqm)" type="number" value={formData.areaNegotiated} onChange={v => handleChange('areaNegotiated', v)} />
               <Input label="Corridor Area (sqm)" type="number" value={formData.areaCorridor} onChange={v => handleChange('areaCorridor', v)} />
               <Input label="Parent Lease" value={formData.parentLsId} onChange={v => handleChange('parentLsId', v)} />
-              
               <div className="flex items-end gap-2 mt-0.5">
-                <div className="flex-1">
-                  <Input label="Party Name" value={formData.partyName} onChange={v => handleChange('partyName', v)} />
-                </div>
-                <div className="pb-1.5">
-                  <Checkbox label="Is Landlord?" checked={formData.isLandlord} onChange={v => handleChange('isLandlord', v)} />
-                </div>
+                <div className="flex-1"><Input label="Party Name" value={formData.partyName} onChange={v => handleChange('partyName', v)} /></div>
+                <div className="pb-1.5"><Checkbox label="Is Landlord?" checked={formData.isLandlord} onChange={v => handleChange('isLandlord', v)} /></div>
               </div>
-
               <Input label="Person In charge (PIC)" value={formData.pic} onChange={v => handleChange('pic', v)} />
             </div>
 
           </div>
         </div>
-
       </div>
     </div>
   );
 }
 
 // ==========================================
-// MÀN HÌNH CONSOLE CHÍNH (ĐÃ FIX LỖI CALL API)
+// MÀN HÌNH CONSOLE CHÍNH
 // ==========================================
 export default function LeaseConsole() {
   const [data, setData] = useState([]);
@@ -271,6 +288,7 @@ export default function LeaseConsole() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
   const [expanded, setExpanded] = useState(false);
+  const navigate = useNavigate();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState("ADD");
@@ -309,21 +327,11 @@ export default function LeaseConsole() {
   const fetchLeases = useCallback(async () => {
     setLoading(true);
     try {
-      const params = {
-        page, size, ...globalFilters, ...columnFilters,
-        ...(sortConfig.key ? { sortBy: sortConfig.key, sortDir: sortConfig.direction } : {})
-      };
-
-      Object.keys(params).forEach(key => {
-        if (params[key] === "" || params[key] === null || params[key] === undefined || params[key] === false) {
-          delete params[key];
-        }
-      });
-
+      const params = { page, size, ...globalFilters, ...columnFilters, ...(sortConfig.key ? { sortBy: sortConfig.key, sortDir: sortConfig.direction } : {}) };
+      Object.keys(params).forEach(key => { if (params[key] === "" || params[key] === null || params[key] === undefined || params[key] === false) { delete params[key]; } });
       const response = await axiosInstance.get("/lease/leases", { params });
       const responseData = response.data;
 
-      // XỬ LÝ LỖI KHÔNG HIỆN DATA (Hỗ trợ cả List và Page Spring Boot)
       if (Array.isArray(responseData)) {
         setData(responseData);
         setTotalElements(responseData.length);
@@ -334,7 +342,6 @@ export default function LeaseConsole() {
         setTotalElements(responseData.totalElements || 0);
       }
     } catch (error) {
-      console.error("Failed to fetch leases:", error);
       setData([]);
     } finally {
       setLoading(false);
@@ -362,10 +369,8 @@ export default function LeaseConsole() {
     setSortConfig({ key, direction });
   };
 
-  // Tính toán dữ liệu lọc ngay trên Frontend nếu Backend trả về mảng đầy đủ
   const filteredDataLocal = useMemo(() => {
      let filtered = [...data];
-     // Lọc cột
      Object.keys(columnFilters).forEach(key => {
          if(columnFilters[key]) {
              filtered = filtered.filter(item => String(item[key] || '').toLowerCase().includes(columnFilters[key].toLowerCase()));
@@ -388,8 +393,6 @@ export default function LeaseConsole() {
 
   return (
     <div className="flex flex-col h-full min-h-screen bg-gray-50 text-gray-800 font-sans p-4">
-      
-      {/* THANH TAB & ACTION BUTTONS */}
       <div className="mb-3 flex justify-between items-center shrink-0">
         <div className="flex gap-2">
           <button className="bg-red-50 text-[#DE3B40] font-bold px-6 py-2 text-sm rounded-t-md border-b-2 border-[#DE3B40] transition-colors">Select Lease</button>
@@ -401,7 +404,6 @@ export default function LeaseConsole() {
         </div>
       </div>
 
-      {/* GLOBAL FILTER FORM */}
       <div className="bg-white p-3 rounded-md shadow-sm border border-gray-200 mb-3 shrink-0 transition-all duration-300">
         <div className="flex flex-wrap gap-3 justify-between items-center mb-3">
           <h2 className="font-semibold text-gray-800 text-sm">Filter Leases</h2>
@@ -464,14 +466,14 @@ export default function LeaseConsole() {
         )}
       </div>
 
-      {/* TABLE SECTION */}
+      
+
       <div className="bg-white rounded-md shadow-sm border border-gray-200 flex-1 flex flex-col overflow-hidden relative">
         {loading && (
           <div className="absolute inset-0 z-20 bg-white/50 backdrop-blur-[1px] flex items-center justify-center">
             <svg className="animate-spin h-6 w-6 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
           </div>
         )}
-
         <div className="overflow-x-auto flex-1">
           <table className="w-full text-[13px] text-left whitespace-nowrap">
             <thead className="sticky top-0 z-10 shadow-sm">
@@ -500,7 +502,20 @@ export default function LeaseConsole() {
                   <tr key={item.lsId || index} className="hover:bg-blue-50/50 transition-colors group cursor-pointer" onDoubleClick={() => handleRowDoubleClick(item)}>
                     {columns.map((col) => (
                       <td key={`${index}-${col.key}`} className="px-3 py-1.5 text-gray-700 group-hover:text-gray-900 border-r border-gray-50 last:border-r-0">
-                        {item[col.key] || "-"}
+                        {/* 3. CẬP NHẬT RENDER CỘT Ở ĐÂY */}
+                        {col.key === "lsId" ? (
+                          <span 
+                            className="text-blue-600 hover:text-blue-800 underline font-medium cursor-pointer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/leases/console/${item.lsId}`);
+                            }}
+                          >
+                            {item[col.key]}
+                          </span>
+                        ) : (
+                          item[col.key] || "-"
+                        )}
                       </td>
                     ))}
                   </tr>
@@ -510,7 +525,8 @@ export default function LeaseConsole() {
           </table>
         </div>
 
-        {/* PAGINATION */}
+
+        
         <div className="bg-gray-50 border-t border-gray-200 px-4 py-2 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <span className="text-xs text-gray-600">Page <span className="font-semibold">{page + 1}</span> / {totalPages}</span>
@@ -528,7 +544,6 @@ export default function LeaseConsole() {
           </div>
         </div>
       </div>
-
       <LeaseModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveModal} mode={modalMode} initialData={selectedData} />
     </div>
   );
