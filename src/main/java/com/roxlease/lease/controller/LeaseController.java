@@ -23,6 +23,13 @@ public class LeaseController {
         return ResponseEntity.ok(leaseRepository.findAll());
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getLeaseById(@PathVariable String id) {
+        Lease lease = leaseRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Lease not found!"));
+        return ResponseEntity.ok(lease);
+    }
+
     @PostMapping
     public ResponseEntity<?> createLease(@RequestBody Lease lease) {
         if (lease.getLsId() != null && leaseRepository.existsById(lease.getLsId())) {

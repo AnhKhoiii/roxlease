@@ -22,11 +22,14 @@ import java.time.LocalDateTime;
 public class LeaseOption {
 
     @Id
-    private String opId; // Chuyển Integer sang String để tận dụng ObjectId
+    private String opId;
 
     @Indexed
     @Field("ls_id")
     private String lsId;
+
+    @Field("suite_id")
+    private String suiteId;
 
     @Field("op_description")
     private String opDescription;

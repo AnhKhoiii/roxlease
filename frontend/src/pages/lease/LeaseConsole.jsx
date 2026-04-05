@@ -378,8 +378,11 @@ export default function LeaseConsole() {
      });
      return filtered;
   }, [data, columnFilters]);
-
-  const handleOpenAdd = () => { setModalMode("ADD"); setSelectedData(null); setIsModalOpen(true); };
+  const handleOpenAdd = () => { 
+    setModalMode("ADD"); 
+    setSelectedData({ active: false }); // Trền mặc định active = false vào form
+    setIsModalOpen(true); 
+  };
   const handleRowDoubleClick = (item) => { setModalMode("EDIT"); setSelectedData(item); setIsModalOpen(true); };
 
   const handleSaveModal = async (formData) => {
@@ -508,7 +511,7 @@ export default function LeaseConsole() {
                             className="text-blue-600 hover:text-blue-800 underline font-medium cursor-pointer"
                             onClick={(e) => {
                               e.stopPropagation();
-                              navigate(`/leases/console/${item.lsId}`);
+                              navigate(`/lease/console/${item.lsId}`);
                             }}
                           >
                             {item[col.key]}
