@@ -125,8 +125,6 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData 
   const [formData, setFormData] = useState({});
   const [sites, setSites] = useState([]);
   const [buildings, setBuildings] = useState([]);
-  const [floors, setFloors] = useState([]);
-  const [suites, setSuites] = useState([]);
 
   useEffect(() => {
     if (isOpen) {
@@ -163,42 +161,8 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData 
     } catch { setBuildings([]); }
   };
 
-  const fetchFloors = async (buildingId) => {
-    if (!buildingId) return setFloors([]);
-    try {
-      const res = await axiosInstance.get(`/space/properties/floors`);
-      const items = Array.isArray(res.data) ? res.data : (res.data?.content || []);
-      
-      // Foreign Key: blId (từ Java Floor.java)
-      const filtered = items.filter(item => item && item.blId === buildingId);
-      
-      setFloors(filtered.map(item => ({
-        value: item.id || item.flId || '',
-        label: item.flName || item.name || item.id || '' // Dùng flName
-      })));
-    } catch { setFloors([]); }
-  };
-
-  const fetchSuites = async (floorId) => {
-    if (!floorId) return setSuites([]);
-    try {
-      const res = await axiosInstance.get(`/space/properties/suites`);
-      const items = Array.isArray(res.data) ? res.data : (res.data?.content || []);
-      
-      // Foreign Key: flId (từ Java Suite.java)
-      const filtered = items.filter(item => item && item.flId === floorId);
-      
-      setSuites(filtered.map(item => ({
-        value: item.id || item.suiteId || '',
-        label: item.suiteCode || item.name || item.id || '' // Dùng suiteCode
-      })));
-    } catch { setSuites([]); }
-  };
-
   // Kích hoạt fetch Cascading
   useEffect(() => { if (formData.siteId) fetchBuildings(formData.siteId); else setBuildings([]); }, [formData.siteId]);
-  useEffect(() => { if (formData.buildingId) fetchFloors(formData.buildingId); else setFloors([]); }, [formData.buildingId]);
-  useEffect(() => { if (formData.floorId) fetchSuites(formData.floorId); else setSuites([]); }, [formData.floorId]);
 
   if (!isOpen) return null;
 
@@ -209,9 +173,7 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData 
     }
     
     // Reset ô con khi ô cha thay đổi
-    if (field === 'siteId') { updates.buildingId = ''; updates.floorId = ''; updates.suiteId = ''; } 
-    else if (field === 'buildingId') { updates.floorId = ''; updates.suiteId = ''; } 
-    else if (field === 'floorId') { updates.suiteId = ''; }
+    if (field === 'siteId') { updates.buildingId = ''; }
     
     setFormData(prev => ({ ...prev, ...updates }));
   };
@@ -253,8 +215,6 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData 
               <div className="pb-0.5 border-b border-gray-100"><span className="font-bold text-blue-800 text-[9px] uppercase tracking-wider">Location & Structure</span></div>
               <SearchableSelect label="Site ID" value={formData.siteId} onChange={v => handleChange('siteId', v)} options={sites} />
               <SearchableSelect label="Building ID" value={formData.buildingId} onChange={v => handleChange('buildingId', v)} options={buildings} disabled={!formData.siteId} placeholder={!formData.siteId ? "Select Site first..." : "Search..."} />
-              <SearchableSelect label="Floor ID" value={formData.floorId} onChange={v => handleChange('floorId', v)} options={floors} disabled={!formData.buildingId} placeholder={!formData.buildingId ? "Select Building first..." : "Search..."} />
-              <SearchableSelect label="Suite ID" value={formData.suiteId} onChange={v => handleChange('suiteId', v)} options={suites} disabled={!formData.floorId} placeholder={!formData.floorId ? "Select Floor first..." : "Search..."} />
               <Input label="Amenity ID" value={formData.amenityId} onChange={v => handleChange('amenityId', v)} />
               <Select label="Lease / Sublease" value={formData.leaseSublease} onChange={v => handleChange('leaseSublease', v)} options={['MAIN_LEASE', 'SUBLEASE']} />
             </div>

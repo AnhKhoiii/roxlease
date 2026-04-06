@@ -77,12 +77,6 @@ public class Lease {
     @Field("building_id")
     private String buildingId;
 
-    @Field("floor_id")
-    private String floorId;
-
-    @Field("suite_id")
-    private String suiteId;
-
     private String pic; 
 
     // --- DỮ LIỆU TÀI CHÍNH ---

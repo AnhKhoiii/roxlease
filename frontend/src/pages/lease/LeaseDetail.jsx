@@ -6,6 +6,7 @@ import ContactsTab from "./tabs/ContactsTab";
 import ClausesTab from "./tabs/ClausesTab";
 import OptionsTab from "./tabs/OptionsTab";
 import AmendmentsTab from "./tabs/AmendmentsTab";
+import LeaseSuitesTab from "./tabs/LeaseSuitesTab";
 
 export default function LeaseDetail() {
   const { id } = useParams();
@@ -155,6 +156,7 @@ export default function LeaseDetail() {
           {activeTab === "Clauses" && <ClausesTab leaseId={lease.lsId} />}
           {activeTab === "Options" && <OptionsTab leaseId={lease.lsId} />}
           {activeTab === "Amendments" && <AmendmentsTab leaseId={lease.lsId} />}
+          {activeTab === "Suites" && <LeaseSuitesTab leaseId={lease.lsId} />}
         </div>    
       </div>
 

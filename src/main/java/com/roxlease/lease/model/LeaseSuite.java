@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 public class LeaseSuite {
 
     @Id
-    private String lsSuId; // Chuyển Integer thành String
+    private String lsSuId;
 
     @Indexed
     @Field("ls_id")
@@ -28,6 +28,11 @@ public class LeaseSuite {
     @Indexed
     @Field("su_id")
     private String suId;
+
+    private Boolean active;
+
+    @Field("doc")
+    private String docUrl;
 
     @Field("date_start")
     private LocalDate dateStart;

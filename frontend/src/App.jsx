@@ -21,6 +21,7 @@ import LeaseBackgroundData from './pages/lease/BackgroundDataConsole';
 import LeaseConsole from './pages/lease/LeaseConsole';
 import LeaseDetail from './pages/lease/LeaseDetail';
 import Request from './pages/lease/Request';
+import LeaseBackgroundDataLayout from './layouts/lease/LeaseBackgroundDataLayout';
 
 function App() {
   return (
@@ -52,7 +53,9 @@ function App() {
             <Route path="console" element={<LeaseConsole />} />
               <Route path="console/:id" element={<LeaseDetail />} />
             <Route path="request" element={<Request />} />
-            <Route path="background-data" element={<LeaseBackgroundData />} />
+            <Route path="background-data" element={<LeaseBackgroundDataLayout />} >
+                <Route path="party" element={<LeaseBackgroundData type="party" />} />
+            </Route>
           </Route>
 
           <Route path="cost" element={<div className="p-8">Cost Screen</div>} />

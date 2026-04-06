@@ -62,9 +62,6 @@ public class LeaseController {
         // Cập nhật Space (MỚI THÊM)
         existing.setSiteId(lease.getSiteId());
         existing.setBuildingId(lease.getBuildingId());
-        existing.setFloorId(lease.getFloorId());
-        existing.setSuiteId(lease.getSuiteId());
-
         // Cập nhật Enums
         existing.setLsType(lease.getLsType());
         existing.setRentType(lease.getRentType());
