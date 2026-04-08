@@ -114,8 +114,6 @@ function LeaseModal({ isOpen, onClose, onSave, mode, initialData }) {
   const [formData, setFormData] = useState({});
   const [sites, setSites] = useState([]);
   const [buildings, setBuildings] = useState([]);
-  const [floors, setFloors] = useState([]);
-  const [suites, setSuites] = useState([]);
 
   useEffect(() => {
     if (isOpen) {
@@ -149,36 +147,9 @@ function LeaseModal({ isOpen, onClose, onSave, mode, initialData }) {
     } catch { setBuildings([]); }
   };
 
-  const fetchFloors = async (buildingId) => {
-    if (!buildingId) return setFloors([]);
-    try {
-      const res = await axiosInstance.get(`/space/properties/floors`);
-      const items = Array.isArray(res.data) ? res.data : (res.data?.content || []);
-      const filtered = items.filter(item => item && item.blId === buildingId);
-      setFloors(filtered.map(item => ({
-        value: item.flId || item.id || '',
-        label: item.flName || item.name || item.flId || item.id || ''
-      })));
-    } catch { setFloors([]); }
-  };
-
-  const fetchSuites = async (floorId) => {
-    if (!floorId) return setSuites([]);
-    try {
-      const res = await axiosInstance.get(`/space/properties/suites`);
-      const items = Array.isArray(res.data) ? res.data : (res.data?.content || []);
-      const filtered = items.filter(item => item && item.flId === floorId);
-      setSuites(filtered.map(item => ({
-        value: item.suiteId || item.id || '',
-        label: item.suiteCode || item.name || item.suiteId || item.id || ''
-      })));
-    } catch { setSuites([]); }
-  };
 
   // Kích hoạt fetch Cascading
   useEffect(() => { if (formData.siteId) fetchBuildings(formData.siteId); else setBuildings([]); }, [formData.siteId]);
-  useEffect(() => { if (formData.buildingId) fetchFloors(formData.buildingId); else setFloors([]); }, [formData.buildingId]);
-  useEffect(() => { if (formData.floorId) fetchSuites(formData.floorId); else setSuites([]); }, [formData.floorId]);
 
   if (!isOpen) return null;
 
@@ -189,9 +160,7 @@ function LeaseModal({ isOpen, onClose, onSave, mode, initialData }) {
     }
     
     // Reset ô con khi ô cha thay đổi
-    if (field === 'siteId') { updates.buildingId = ''; updates.floorId = ''; updates.suiteId = ''; } 
-    else if (field === 'buildingId') { updates.floorId = ''; updates.suiteId = ''; } 
-    else if (field === 'floorId') { updates.suiteId = ''; }
+    if (field === 'siteId') { updates.buildingId = ''; }
     
     setFormData(prev => ({ ...prev, ...updates }));
   };
@@ -233,8 +202,6 @@ function LeaseModal({ isOpen, onClose, onSave, mode, initialData }) {
               <div className="pb-0.5 border-b border-gray-100"><span className="font-bold text-blue-800 text-[9px] uppercase tracking-wider">Location & Structure</span></div>
               <AutocompleteInput label="Site ID" value={formData.siteId} onChange={v => handleChange('siteId', v)} options={sites} placeholder="Search Site ID..." />
               <AutocompleteInput label="Building ID" value={formData.buildingId} onChange={v => handleChange('buildingId', v)} options={buildings} disabled={!formData.siteId} placeholder={!formData.siteId ? "Select Site first..." : "Search Building ID..."} />
-              <AutocompleteInput label="Floor ID" value={formData.floorId} onChange={v => handleChange('floorId', v)} options={floors} disabled={!formData.buildingId} placeholder={!formData.buildingId ? "Select Building first..." : "Search Floor ID..."} />
-              <AutocompleteInput label="Suite ID" value={formData.suiteId} onChange={v => handleChange('suiteId', v)} options={suites} disabled={!formData.floorId} placeholder={!formData.floorId ? "Select Floor first..." : "Search Suite ID..."} />
               
               <Input label="Amenity ID" value={formData.amenityId} onChange={v => handleChange('amenityId', v)} />
               <Select label="Lease / Sublease" value={formData.leaseSublease} onChange={v => handleChange('leaseSublease', v)} options={['MAIN_LEASE', 'SUBLEASE']} />
@@ -295,7 +262,7 @@ export default function LeaseConsole() {
   const [selectedData, setSelectedData] = useState(null);
 
   const initialGlobalFilters = {
-    siteId: "", buildingId: "", floorId: "", leaseId: "", landlordTenant: "", isLandlord: false,
+    siteId: "", buildingId: "", leaseId: "", landlordTenant: "", isLandlord: false,
     region: "", country: "", city: "", showLeases: "", showLeasesOptions: "",
     isSigned: false, isActive: false,
     assocSuite: false, assocAmenity: false,
@@ -304,7 +271,7 @@ export default function LeaseConsole() {
   };
 
   const initialColumnFilters = {
-    leaseCode: "", buildingCode: "", floor: "", tenantName: "", area: "",
+    leaseCode: "", buildingCode: "", tenantName: "", area: "",
     rentUnitCost: "", serviceUnitCost: "", startDate: "", endDate: ""
   };
 
@@ -315,7 +282,6 @@ export default function LeaseConsole() {
   const columns = [
     { key: "lsId", label: "Lease Code", sortable: true },
     { key: "buildingId", label: "Building ID", sortable: true },
-    { key: "floorId", label: "Floor ID", sortable: true },
     { key: "partyName", label: "Tenant Name", sortable: true },
     { key: "areaNegotiated", label: "Area", sortable: true },
     { key: "rentUnitCost", label: "Rent Unit Cost", sortable: true },
@@ -420,7 +386,6 @@ export default function LeaseConsole() {
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <input className="border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-500 bg-gray-50/50" placeholder="Site ID" value={globalFilters.siteId} onChange={(e) => handleGlobalFilterChange("siteId", e.target.value)} />
           <input className="border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-500 bg-gray-50/50" placeholder="Building ID" value={globalFilters.buildingId} onChange={(e) => handleGlobalFilterChange("buildingId", e.target.value)} />
-          <input className="border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-500 bg-gray-50/50" placeholder="Floor ID" value={globalFilters.floorId} onChange={(e) => handleGlobalFilterChange("floorId", e.target.value)} />
           <input className="border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-500 bg-gray-50/50" placeholder="Lease ID" value={globalFilters.leaseId} onChange={(e) => handleGlobalFilterChange("leaseId", e.target.value)} />
           <input className="border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-500 bg-gray-50/50" placeholder="Landlord/Tenant" value={globalFilters.landlordTenant} onChange={(e) => handleGlobalFilterChange("landlordTenant", e.target.value)} />
           <div className="flex items-center px-1"><label className="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked={globalFilters.isLandlord} onChange={(e) => handleGlobalFilterChange("isLandlord", e.target.checked)} className="w-3.5 h-3.5 text-blue-600 rounded" /><span className="text-xs font-medium text-gray-700">Is Landlord?</span></label></div>

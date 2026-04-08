@@ -101,7 +101,12 @@ public class PropertyController {
 
     // ================= FLOOR API =================
     @GetMapping("/floors")
-    public ResponseEntity<?> getAllFloors() {
+    public ResponseEntity<?> getAllFloors(@RequestParam(required = false) String buildingId) {
+        if (buildingId != null && !buildingId.isEmpty()) {
+            return ResponseEntity.ok(floorRepo.findAll().stream()
+                    .filter(f -> buildingId.equals(f.getBlId())) // Chú ý: Dùng getBlId() hoặc getBuildingId() tùy model của bạn
+                    .collect(java.util.stream.Collectors.toList()));
+        }
         return ResponseEntity.ok(floorRepo.findAll());
     }
 
@@ -129,8 +134,22 @@ public class PropertyController {
     }
 
     @GetMapping("/suites")
-    public ResponseEntity<?> getAllSuites() {
+    public ResponseEntity<?> getAllSuites(@RequestParam(required = false) String floorId) {
+        if (floorId != null && !floorId.isEmpty()) {
+            return ResponseEntity.ok(suiteRepo.findAll().stream()
+                    .filter(s -> floorId.equals(s.getFlId())) // Chú ý: Dùng getFlId() tùy model của bạn
+                    .collect(java.util.stream.Collectors.toList()));
+        }
         return ResponseEntity.ok(suiteRepo.findAll());
+    }
+
+    // THÊM MỚI API NÀY CHO TAB LEASE OPTIONS & SUITES Ở FRONTEND
+    @GetMapping("/suites/available")
+    public ResponseEntity<?> getAvailableSuites() {
+        // Trả về các Suite có thể thuê (Hiện tại trả về all, nếu sau này bạn có trường status thì bỏ comment dòng filter bên dưới)
+        return ResponseEntity.ok(suiteRepo.findAll().stream()
+                // .filter(s -> "AVAILABLE".equals(s.getStatus()))
+                .collect(java.util.stream.Collectors.toList()));
     }
 
     @DeleteMapping("/floors/{id}")

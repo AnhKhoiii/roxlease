@@ -23,7 +23,7 @@ public class LeaseSuiteService {
 
     public LeaseSuite createLeaseSuite(String lsId, LeaseSuite leaseSuite) {
         leaseSuite.setLsId(lsId);
-        leaseSuite.setActive(true); // Gán Suite vào lease thì thường là active luôn
+        leaseSuite.setActive(false);
         leaseSuite.setCreatedAt(LocalDateTime.now());
         leaseSuite.setUpdatedAt(LocalDateTime.now());
         return repository.save(leaseSuite);

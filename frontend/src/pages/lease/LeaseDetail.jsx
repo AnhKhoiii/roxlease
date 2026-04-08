@@ -152,11 +152,11 @@ export default function LeaseDetail() {
 
         <div className="p-3 flex-1 overflow-auto bg-white">
           {/* 4. CONTACTS TABLE */}
-          {activeTab === "Contacts" && <ContactsTab leaseId={lease.lsId} />}
-          {activeTab === "Clauses" && <ClausesTab leaseId={lease.lsId} />}
-          {activeTab === "Options" && <OptionsTab leaseId={lease.lsId} />}
-          {activeTab === "Amendments" && <AmendmentsTab leaseId={lease.lsId} />}
-          {activeTab === "Suites" && <LeaseSuitesTab leaseId={lease.lsId} />}
+          {activeTab === "Contacts" && <ContactsTab lease={lease} />}
+          {activeTab === "Clauses" && <ClausesTab lease={lease} />}
+          {activeTab === "Options" && <OptionsTab lease={lease} />}
+          {activeTab === "Amendments" && <AmendmentsTab lease={lease} />}
+          {activeTab === "Suites" && <LeaseSuitesTab lease={lease} />}
         </div>    
       </div>
 

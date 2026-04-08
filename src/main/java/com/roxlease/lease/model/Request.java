@@ -5,6 +5,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import com.roxlease.lease.model.Enum.RQStatus;
+import com.roxlease.lease.model.Enum.RQType;
 
 import java.time.LocalDateTime;
 
@@ -19,7 +20,7 @@ public class Request {
     private String id;
     
     private String requestId;
-    private String requestType;
+    private RQType requestType;
     private String siteId;
     private String createdBy;
     
@@ -32,4 +33,8 @@ public class Request {
     private LocalDateTime completedDate;
     private String comment;
     private String document;
+
+    private String targetId;
+    private String action;   
+    private java.util.Map<String, Object> requestData;
 }
