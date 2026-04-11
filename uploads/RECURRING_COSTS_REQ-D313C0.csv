@@ -1,0 +1,21 @@
+﻿Field Name,New Value
+recurringCostId,
+description,
+costType,Early Termination
+vatCountry,Viet Nam
+dateMatchLs,false
+overrideExchangeRate,false
+active,false
+startDate,null
+endDate,null
+period,null
+interval,1
+amountInBase,111
+amountOutBase,111
+amountInVat,11.1
+amountInTotal,122.1
+amountOutVat,11.1
+amountOutTotal,122.1
+exchangeRate,1
+currVat,0
+overrideVat,false

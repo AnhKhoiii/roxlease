@@ -48,7 +48,7 @@ export default function LeaseSuitesTab({ lease }) {
     try {
       const resLS = await axiosInstance.get(`/lease/leases/${leaseId}/suites`);
       const lsData = resLS.data?.content || resLS.data;
-      setLeaseSuites(Array.isArray(lsData) ? lsData : []); // Bảo vệ lỗi map is not a function
+      setLeaseSuites(Array.isArray(lsData) ? lsData : []); 
 
       const resMaster = await axiosInstance.get(`/space/properties/suites`);
       const msData = resMaster.data?.content || resMaster.data;
@@ -59,12 +59,8 @@ export default function LeaseSuitesTab({ lease }) {
         const flData = resFloors.data?.content || resFloors.data;
         setFloors(Array.isArray(flData) ? flData : []);
       }
-    } catch (error) { 
-      console.error("Failed to fetch suite data", error); 
-    } finally { 
-      setLoading(false); 
-      setSelectedIds([]); 
-    }
+    } catch (error) { console.error("Failed to fetch suite data", error); } 
+    finally { setLoading(false); setSelectedIds([]); }
   }, [leaseId, lease?.buildingId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -128,15 +124,11 @@ export default function LeaseSuitesTab({ lease }) {
       const cleanDataObj = sanitizePayload(dataObj);
       const suiteCode = cleanDataObj.suId || formData.suId;
       
-      // LOGIC BẮT WARNING XUNG ĐỘT
       if (suiteCode) {
         const checkRes = await axiosInstance.get(`/lease/requests/check-suite/${suiteCode}`);
         if (checkRes.data.hasPending) {
           const confirm = window.confirm(`⚠️ CẢNH BÁO: Mặt bằng [${suiteCode}] đang có một Request khác chờ duyệt trong hệ thống.\n\nBạn có chắc chắn muốn tiếp tục gửi Request tranh giành này không?`);
-          if (!confirm) {
-            setLoading(false);
-            return;
-          }
+          if (!confirm) { setLoading(false); return; }
         }
       }
 
@@ -152,9 +144,7 @@ export default function LeaseSuitesTab({ lease }) {
       } else if (actionType === "UPDATE" && originalData) {
         changedData = {};
         Object.keys(cleanDataObj).forEach(key => {
-          if (cleanDataObj[key] !== originalData[key] && key !== 'floorId') {
-            changedData[key] = cleanDataObj[key];
-          }
+          if (cleanDataObj[key] !== originalData[key] && key !== 'floorId') changedData[key] = cleanDataObj[key];
         });
       }
 
@@ -170,8 +160,40 @@ export default function LeaseSuitesTab({ lease }) {
     finally { setLoading(false); }
   };
 
+  // --- THÊM HÀM DELETE HÀNG LOẠT ---
+  const handleDelete = async () => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa các mục đã chọn?\n\n- Bản nháp (Chưa Active) sẽ bị xóa vĩnh viễn khỏi hệ thống.\n- Mục đang hiệu lực (Đã Active) sẽ được gửi Yêu cầu Duyệt Xóa vào hàng đợi.")) return;
+    
+    setLoading(true);
+    let deletedCount = 0;
+    let requestCount = 0;
+
+    try {
+      for (const id of selectedIds) {
+        const item = leaseSuites.find(c => c.lsSuId === id);
+        if (!item) continue;
+
+        if (item.active) {
+          const requestPayload = {
+            siteId: lease?.siteId || "Unknown", action: "DELETE", 
+            requestType: "SUITE_ASSIGNMENT", targetId: item.lsSuId, data: item
+          };
+          await axiosInstance.post("/lease/requests/submit-module", requestPayload).catch(e => console.warn(e));
+          requestCount++;
+        } else {
+          await axiosInstance.delete(`/lease/leases/${leaseId}/suites/${id}`).catch(e => console.warn(e));
+          deletedCount++;
+        }
+      }
+      alert(`Hoàn tất xử lý Xóa:\n- Xóa trực tiếp: ${deletedCount} bản nháp.\n- Đã gửi Yêu cầu Duyệt Xóa: ${requestCount} mục đang hoạt động.`);
+      setSelectedIds([]);
+      fetchData();
+    } catch (error) { alert("Có lỗi xảy ra trong quá trình xử lý xóa!"); } 
+    finally { setLoading(false); }
+  };
+
   const handleBulkSubmit = async () => {
-    if (!window.confirm(`Bạn có chắc muốn gửi yêu cầu duyệt cho ${selectedIds.length} mục đã chọn?`)) return;
+    if (!window.confirm(`Bạn có chắc muốn gửi yêu cầu duyệt CẬP NHẬT cho ${selectedIds.length} mục đã chọn?`)) return;
     setLoading(true);
     try {
       for (const id of selectedIds) {
@@ -180,7 +202,6 @@ export default function LeaseSuitesTab({ lease }) {
         const cleanDataObj = sanitizePayload(item);
         delete cleanDataObj.floorId;
 
-        // LOGIC BẮT WARNING HÀNG LOẠT
         const checkRes = await axiosInstance.get(`/lease/requests/check-suite/${cleanDataObj.suId}`);
         if (checkRes.data.hasPending) {
           const confirm = window.confirm(`⚠️ CẢNH BÁO: Mặt bằng [${cleanDataObj.suId}] đang có Request chờ duyệt.\n\nBấm OK để tiếp tục gửi tranh giành, bấm CANCEL để bỏ qua mặt bằng này.`);
@@ -193,7 +214,7 @@ export default function LeaseSuitesTab({ lease }) {
         };
         await axiosInstance.post("/lease/requests/submit-module", requestPayload);
       }
-      alert("Đã hoàn tất xử lý gửi yêu cầu duyệt hàng loạt!");
+      alert("Đã gửi yêu cầu duyệt hàng loạt thành công!");
       setSelectedIds([]);
       fetchData();
     } catch (error) { alert("Có lỗi xảy ra khi gửi yêu cầu duyệt hàng loạt!"); } 
@@ -211,7 +232,8 @@ export default function LeaseSuitesTab({ lease }) {
       <div className="flex justify-between items-center gap-2 mb-3">
         <div className="flex gap-2">
           <button onClick={() => { setFormData(initialForm); setOriginalData(null); setModalConfig({ isOpen: true, mode: "ADD" }); }} className="bg-[#DE3B40] hover:bg-[#C11C22] text-white px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors">Add Suite</button>
-          <button disabled={selectedIds.length === 0} className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${selectedIds.length > 0 ? "bg-red-50 text-[#DE3B40] border border-[#DE3B40]" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}>Delete Selected</button>
+          {/* GẮN SỰ KIỆN handleDelete CHO NÚT DELETE SELECTED */}
+          <button onClick={handleDelete} disabled={selectedIds.length === 0} className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${selectedIds.length > 0 ? "bg-red-50 text-[#DE3B40] border border-[#DE3B40]" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}>Delete Selected</button>
         </div>
         <button onClick={handleBulkSubmit} disabled={selectedIds.length === 0} className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${selectedIds.length > 0 ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}>Submit Request for Selected</button>
       </div>

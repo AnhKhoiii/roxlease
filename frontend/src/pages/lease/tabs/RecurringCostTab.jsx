@@ -46,6 +46,9 @@ const Checkbox = ({ label, checked, onChange, disabled }) => (
   </label>
 );
 
+// HÀM HELPER BẮT CHẶT ID
+const getCostId = (c) => c?.recurringCostId || c?.id || c?._id;
+
 // ==========================================
 // MAIN COMPONENT
 // ==========================================
@@ -57,11 +60,10 @@ export default function RecurringCostTab({ lease }) {
   const [modal, setModal] = useState({ isOpen: false, mode: "ADD" });
   const [selectedIds, setSelectedIds] = useState([]);
 
-  // ĐÃ SỬA: active mặc định là false
   const initialForm = {
     recurringCostId: "", description: "", costType: "", vatCountry: "", 
     dateMatchLs: false, overrideExchangeRate: false, overrideVatPercent: false, overrideVatAmount: false,
-    active: false, // <-- Mặc định là False
+    active: false, 
     exchangeRateOverrideVal: "", vatPercentOverrideVal: "", vatAmountOverrideVal: "",
     startDate: "", endDate: "", period: "", interval: 1, 
     amountInBase: "", amountOutBase: ""
@@ -69,9 +71,7 @@ export default function RecurringCostTab({ lease }) {
   const [formData, setFormData] = useState(initialForm);
 
   const [computed, setComputed] = useState({
-    systemVat: 0,
-    amountInVat: 0, amountInTotal: 0,
-    amountOutVat: 0, amountOutTotal: 0
+    systemVat: 0, amountInVat: 0, amountInTotal: 0, amountOutVat: 0, amountOutTotal: 0
   });
 
   const fetchData = useCallback(async () => {
@@ -127,43 +127,35 @@ export default function RecurringCostTab({ lease }) {
 
   }, [formData, vatCountries, modal.isOpen]);
 
-
   // ==============================================================
   // XỬ LÝ DỮ LIỆU TRƯỚC KHI LƯU
   // ==============================================================
   const formatPayload = (dataObj) => {
     let payload = { ...dataObj };
 
-    // 1. MAP AUTO-CALCULATED VALUES
     payload.amountInVat = computed.amountInVat;
     payload.amountInTotal = computed.amountInTotal;
     payload.amountOutVat = computed.amountOutVat;
     payload.amountOutTotal = computed.amountOutTotal;
 
-    // 2. ÉP KIỂU SỐ (NUMBER) ĐỂ KHÔNG BỊ LỖI STRING CHUỖI RỖNG
     payload.amountInBase = Number(payload.amountInBase || 0);
     payload.amountOutBase = Number(payload.amountOutBase || 0);
     payload.interval = Number(payload.interval || 1);
 
-    // 3. XỬ LÝ NGÀY THÁNG (Biến rỗng thành null)
     if (payload.startDate === "") payload.startDate = null;
     if (payload.endDate === "") payload.endDate = null;
+    if (payload.period === "") payload.period = null;
 
-    // 4. FIX LỖI ENUM: Ép chuỗi Period thành IN HOA (VD: "Month" -> "MONTH")
-    if (payload.period) {
-      payload.period = payload.period.toUpperCase();
-    } else {
-      payload.period = null;
-    }
-
-    // 5. MAP CÁC TRƯỜNG OVERRIDE CỦA GIAO DIỆN VỀ ĐÚNG TÊN CỘT BACKEND
     payload.exchangeRate = Number(payload.exchangeRateOverrideVal || 1);
     payload.currVat = Number(payload.vatAmountOverrideVal || 0); 
-    
-    // Gộp 2 ô tick VAT của giao diện thành 1 cột overrideVat của Backend
     payload.overrideVat = payload.overrideVatPercent || payload.overrideVatAmount;
 
-    // 6. XÓA CÁC TRƯỜNG RÁC CỦA UI ĐỂ TRÁNH SPRING BOOT BÁO LỖI UNRECOGNIZED FIELD
+    if (!payload.recurringCostId || payload.recurringCostId.trim() === "") {
+        delete payload.recurringCostId;
+    }
+    if (payload.id === "") delete payload.id;
+    if (payload._id === "") delete payload._id;
+
     delete payload.exchangeRateOverrideVal;
     delete payload.vatPercentOverrideVal;
     delete payload.vatAmountOverrideVal;
@@ -179,7 +171,12 @@ export default function RecurringCostTab({ lease }) {
       const payload = formatPayload(formData);
 
       if (modal.mode === "EDIT") {
-        await axiosInstance.put(`/lease/leases/${leaseId}/recurring-costs/${payload.recurringCostId}`, payload);
+        const costId = getCostId(payload) || getCostId(formData);
+        if (!costId) {
+            alert("Bản ghi này bị lỗi ID (Chuỗi rỗng). Vui lòng tích chọn Xóa nó đi và Tạo lại bản mới!");
+            setLoading(false); return;
+        }
+        await axiosInstance.put(`/lease/leases/${leaseId}/recurring-costs/${costId}`, payload);
       } else {
         await axiosInstance.post(`/lease/leases/${leaseId}/recurring-costs`, payload);
       }
@@ -194,17 +191,20 @@ export default function RecurringCostTab({ lease }) {
     try {
       setLoading(true);
       const payloadToSave = formatPayload(dataObj);
-      let targetId = payloadToSave.recurringCostId || payloadToSave.id; 
+      let targetId = getCostId(payloadToSave); 
 
       if (actionType === "CREATE") {
         const res = await axiosInstance.post(`/lease/leases/${leaseId}/recurring-costs`, payloadToSave);
-        targetId = res.data.recurringCostId || res.data.id; 
+        targetId = getCostId(res.data); 
+      } else if (!targetId) {
+        alert("Bản ghi bị lỗi ID (Chuỗi rỗng). Không thể gửi Request, vui lòng Xóa đi tạo lại!");
+        setLoading(false); return;
       }
 
       const requestPayload = {
         siteId: lease?.siteId || "Unknown",
         action: actionType, 
-        requestType: "RECURRING_COST", 
+        requestType: "RECURRING_COSTS", 
         targetId: targetId,
         data: payloadToSave
       };
@@ -218,18 +218,18 @@ export default function RecurringCostTab({ lease }) {
   };
 
   const handleBulkSubmit = async () => {
-    if (!window.confirm(`Bạn có chắc muốn gửi yêu cầu duyệt cho ${selectedIds.length} mục đã chọn?`)) return;
+    if (!window.confirm(`Bạn có chắc muốn gửi yêu cầu duyệt CẬP NHẬT cho ${selectedIds.length} mục đã chọn?`)) return;
     setLoading(true);
     try {
       for (const id of selectedIds) {
-        const item = costs.find(c => c.recurringCostId === id);
+        const item = costs.find(c => getCostId(c) === id);
         if (!item) continue;
 
         const requestPayload = {
           siteId: lease?.siteId || "Unknown",
           action: "UPDATE", 
-          requestType: "RECURRING_COST", 
-          targetId: item.recurringCostId,
+          requestType: "RECURRING_COSTS", 
+          targetId: getCostId(item),
           data: item
         };
         await axiosInstance.post("/lease/requests/submit-module", requestPayload);
@@ -241,21 +241,52 @@ export default function RecurringCostTab({ lease }) {
     finally { setLoading(false); }
   };
 
+  // ==============================================================
+  // XỬ LÝ XÓA DỮ LIỆU (ĐÃ CẬP NHẬT THEO LOGIC MỚI)
+  // ==============================================================
   const handleDelete = async () => {
-    if (!window.confirm("Bạn có chắc muốn xóa các mục đã chọn khỏi hệ thống?")) return;
+    if (!window.confirm("Bạn có chắc chắn muốn xóa các mục đã chọn?\n\n- Bản nháp (Chưa Active) sẽ bị xóa vĩnh viễn khỏi hệ thống.\n- Mục đang hiệu lực (Đã Active) sẽ được gửi Yêu cầu Duyệt Xóa vào hàng đợi.")) return;
+    
+    setLoading(true);
+    let deletedCount = 0;
+    let requestCount = 0;
+
     try {
-      setLoading(true);
       for (const id of selectedIds) {
-        await axiosInstance.delete(`/lease/leases/${leaseId}/recurring-costs/${id}`);
+        const item = costs.find(c => getCostId(c) === id);
+        if (!item) continue;
+
+        if (item.active) {
+          // Nếu đã Active -> Tạo Request yêu cầu Xóa
+          const requestPayload = {
+            siteId: lease?.siteId || "Unknown",
+            action: "DELETE", 
+            requestType: "RECURRING_COSTS", 
+            targetId: getCostId(item),
+            data: item
+          };
+          await axiosInstance.post("/lease/requests/submit-module", requestPayload).catch(e => console.warn(e));
+          requestCount++;
+        } else {
+          // Nếu chưa Active -> Cho phép xóa thẳng khỏi CSDL
+          await axiosInstance.delete(`/lease/leases/${leaseId}/recurring-costs/${id}`).catch(e => console.warn(e));
+          deletedCount++;
+        }
       }
+      alert(`Hoàn tất xử lý Xóa:\n- Xóa trực tiếp: ${deletedCount} bản nháp.\n- Đã gửi Yêu cầu Duyệt Xóa: ${requestCount} mục đang hoạt động.`);
+      setSelectedIds([]);
       fetchData();
-    } catch (error) { alert("Lỗi xóa dữ liệu"); } 
-    finally { setLoading(false); }
+    } catch (error) { 
+      alert("Có lỗi xảy ra trong quá trình xử lý xóa!"); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
-  const handleSelectAll = (e) => setSelectedIds(e.target.checked ? costs.map(c => c.recurringCostId) : []);
+  const handleSelectAll = (e) => setSelectedIds(e.target.checked ? costs.map(c => getCostId(c)).filter(id => id) : []);
   const handleSelectRow = (e, id) => {
     e.stopPropagation();
+    if (!id) return;
     setSelectedIds(prev => e.target.checked ? [...prev, id] : prev.filter(x => x !== id));
   };
 
@@ -276,32 +307,53 @@ export default function RecurringCostTab({ lease }) {
           <table className="w-full text-left text-[12px] whitespace-nowrap">
             <thead className="sticky top-0 z-10 bg-[#F39C12] text-white shadow-sm">
               <tr>
-                <th className="w-10 px-3 py-2 text-center border-b border-[#D68910]"><input type="checkbox" onChange={handleSelectAll} checked={costs.length > 0 && selectedIds.length === costs.length} className="w-3.5 h-3.5 rounded cursor-pointer" /></th>
+                <th className="w-10 px-3 py-2 text-center border-b border-[#D68910]">
+                  <input type="checkbox" onChange={handleSelectAll} checked={costs.length > 0 && selectedIds.length === costs.filter(c => getCostId(c)).length} className="w-3.5 h-3.5 rounded cursor-pointer" />
+                </th>
+                <th className="px-4 py-2 font-semibold border-b border-[#D68910]">Recurring Cost ID</th>
                 <th className="px-4 py-2 font-semibold border-b border-[#D68910]">Cost Type</th>
+                <th className="px-4 py-2 font-semibold border-b border-[#D68910] text-right">Income - Base</th>
+                <th className="px-4 py-2 font-semibold border-b border-[#D68910] text-right">Income - VAT</th>
+                <th className="px-4 py-2 font-semibold border-b border-[#D68910] text-right">Income - Total</th>
                 <th className="px-4 py-2 font-semibold border-b border-[#D68910]">VAT Country</th>
-                <th className="px-4 py-2 font-semibold border-b border-[#D68910]">Income Total</th>
-                <th className="px-4 py-2 font-semibold border-b border-[#D68910]">Expense Total</th>
                 <th className="px-4 py-2 font-semibold border-b border-[#D68910]">Period</th>
                 <th className="px-4 py-2 font-semibold border-b border-[#D68910] text-center">Active</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {costs.map((c) => {
-                const isSelected = selectedIds.includes(c.recurringCostId);
+              {costs.map((c, idx) => {
+                const costId = getCostId(c);
+                const isSelected = selectedIds.includes(costId);
                 return (
-                  <tr key={c.recurringCostId} onDoubleClick={() => { setFormData(c); setModal({ isOpen: true, mode: "EDIT" }); }} className={`cursor-pointer transition-colors ${isSelected ? "bg-blue-50" : "hover:bg-orange-50/50"}`}>
-                    <td className="px-3 py-2 text-center border-r border-gray-50"><input type="checkbox" checked={isSelected} onChange={(e) => handleSelectRow(e, c.recurringCostId)} onClick={e => e.stopPropagation()} className="w-3.5 h-3.5 rounded cursor-pointer" /></td>
-                    <td className="px-4 py-2 font-semibold text-blue-600 border-r border-gray-50">{c.costType}</td>
+                  <tr key={costId || idx} onDoubleClick={() => { 
+                      setFormData({
+                        ...c,
+                        recurringCostId: costId, 
+                        overrideVatPercent: c.overrideVat && c.currVat === 0, 
+                        overrideVatAmount: c.overrideVat && c.currVat > 0,
+                        vatAmountOverrideVal: c.currVat,
+                        exchangeRateOverrideVal: c.exchangeRate
+                      }); 
+                      setModal({ isOpen: true, mode: "EDIT" }); 
+                    }} 
+                    className={`cursor-pointer transition-colors ${isSelected ? "bg-blue-50" : "hover:bg-orange-50/50"} ${!costId ? "bg-red-50" : ""}`}
+                  >
+                    <td className="px-3 py-2 text-center border-r border-gray-50">
+                      <input type="checkbox" checked={isSelected} onChange={(e) => handleSelectRow(e, costId)} onClick={e => e.stopPropagation()} disabled={!costId} className="w-3.5 h-3.5 rounded cursor-pointer disabled:opacity-30" />
+                    </td>
+                    <td className="px-4 py-2 font-semibold text-blue-600 border-r border-gray-50">{costId || <span className="text-red-500 font-bold">LỖI ID RỖNG</span>}</td>
+                    <td className="px-4 py-2 text-gray-700 border-r border-gray-50">{c.costType}</td>
+                    <td className="px-4 py-2 text-gray-700 text-right border-r border-gray-50 font-mono">{c.amountInBase?.toLocaleString()}</td>
+                    <td className="px-4 py-2 text-gray-700 text-right border-r border-gray-50 font-mono">{c.amountInVat?.toLocaleString()}</td>
+                    <td className="px-4 py-2 text-green-700 text-right border-r border-gray-50 font-mono font-bold">{c.amountInTotal?.toLocaleString()}</td>
                     <td className="px-4 py-2 text-gray-700 border-r border-gray-50">{c.vatCountry || "-"}</td>
-                    <td className="px-4 py-2 text-green-700 border-r border-gray-50 font-mono font-bold">{c.amountInTotal?.toLocaleString()}</td>
-                    <td className="px-4 py-2 text-red-700 border-r border-gray-50 font-mono font-bold">{c.amountOutTotal?.toLocaleString()}</td>
                     <td className="px-4 py-2 text-gray-700 border-r border-gray-50">{c.period || "-"}</td>
                     <td className="px-4 py-2 text-center"><input type="checkbox" checked={c.active} readOnly className="w-3.5 h-3.5 rounded accent-blue-600" /></td>
                   </tr>
                 );
               })}
               {costs.length === 0 && !loading && (
-                <tr><td colSpan={7} className="py-12 text-center text-gray-500 font-medium">Chưa có dữ liệu Recurring Cost.</td></tr>
+                <tr><td colSpan={9} className="py-12 text-center text-gray-500 font-medium">Chưa có dữ liệu Recurring Cost.</td></tr>
               )}
             </tbody>
           </table>
@@ -321,7 +373,7 @@ export default function RecurringCostTab({ lease }) {
                 
                 {/* ---------------- CỘT 1 ---------------- */}
                 <div className="flex flex-col gap-4 bg-white p-4 rounded shadow-sm border border-gray-200">
-                  <Input label="Recurring Cost ID" required value={formData.recurringCostId} onChange={v => setFormData({...formData, recurringCostId: v})} disabled={modal.mode === "EDIT"} placeholder={modal.mode === "ADD" ? "Auto-generated" : ""} />
+                  <Input label="Recurring Cost ID" required value={formData.recurringCostId} onChange={v => setFormData({...formData, recurringCostId: v})} disabled={modal.mode === "EDIT"} placeholder={modal.mode === "ADD" ? "Để trống sẽ tự động sinh mã" : ""} />
                   
                   <Input label="Description" value={formData.description} onChange={v => setFormData({...formData, description: v})} />
                   
@@ -369,17 +421,17 @@ export default function RecurringCostTab({ lease }) {
                 <div className="flex flex-col gap-4 bg-white p-4 rounded shadow-sm border border-gray-200">
                   <Select label="Period" value={formData.period} onChange={v => setFormData({...formData, period: v})} 
                     options={[
-                      {value: 'Month', label: 'Month'}, 
-                      {value: 'Quarter', label: 'Quarter'}, 
-                      {value: 'Week', label: 'Week'}, 
-                      {value: 'Year', label: 'Year'}
+                      {value: 'DAILY', label: 'Daily'},      
+                      {value: 'WEEKLY', label: 'Weekly'}, 
+                      {value: 'MONTHLY', label: 'Monthly'}, 
+                      {value: 'QUARTERLY', label: 'Quarterly'}, 
+                      {value: 'YEARLY', label: 'Yearly'}
                     ]} 
                   />
                   
                   <Input type="number" label="Interval" value={formData.interval} onChange={v => setFormData({...formData, interval: v})} />
                   
                   <div className="bg-gray-50 border border-gray-200 p-2 rounded -mt-2 mb-2">
-                    {/* ĐÃ SỬA: LUÔN KHÓA NÚT ACTIVE (CHỈ ĐƯỢC BẬT QUA APPROVE REQUEST) */}
                     <Checkbox label="Active Status (Auto via Approval)" checked={formData.active} disabled={true} onChange={() => {}} />
                   </div>
 

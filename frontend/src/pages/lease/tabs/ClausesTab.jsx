@@ -127,8 +127,40 @@ export default function ClausesTab({ lease }) {
     finally { setLoading(false); }
   };
 
+  // --- THÊM HÀM DELETE HÀNG LOẠT ---
+  const handleDelete = async () => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa các mục đã chọn?\n\n- Bản nháp (Chưa Active) sẽ bị xóa vĩnh viễn khỏi hệ thống.\n- Mục đang hiệu lực (Đã Active) sẽ được gửi Yêu cầu Duyệt Xóa vào hàng đợi.")) return;
+    
+    setLoading(true);
+    let deletedCount = 0;
+    let requestCount = 0;
+
+    try {
+      for (const id of selectedIds) {
+        const item = clauses.find(c => c.clId === id);
+        if (!item) continue;
+
+        if (item.active) {
+          const requestPayload = {
+            siteId: lease?.siteId || "Unknown", action: "DELETE", 
+            requestType: "CONTRACT_TERMS", targetId: item.clId, data: item
+          };
+          await axiosInstance.post("/lease/requests/submit-module", requestPayload).catch(e => console.warn(e));
+          requestCount++;
+        } else {
+          await axiosInstance.delete(`/lease/leases/${leaseId}/clauses/${id}`).catch(e => console.warn(e));
+          deletedCount++;
+        }
+      }
+      alert(`Hoàn tất xử lý Xóa:\n- Xóa trực tiếp: ${deletedCount} bản nháp.\n- Đã gửi Yêu cầu Duyệt Xóa: ${requestCount} mục đang hoạt động.`);
+      setSelectedIds([]);
+      fetchData();
+    } catch (error) { alert("Có lỗi xảy ra trong quá trình xử lý xóa!"); } 
+    finally { setLoading(false); }
+  };
+
   const handleBulkSubmit = async () => {
-    if (!window.confirm(`Bạn có chắc muốn gửi yêu cầu duyệt cho ${selectedIds.length} mục đã chọn?`)) return;
+    if (!window.confirm(`Bạn có chắc muốn gửi yêu cầu duyệt CẬP NHẬT cho ${selectedIds.length} mục đã chọn?`)) return;
     setLoading(true);
     try {
       for (const id of selectedIds) {
@@ -155,7 +187,8 @@ export default function ClausesTab({ lease }) {
       <div className="flex justify-between items-center gap-2 mb-3">
         <div className="flex gap-2">
           <button onClick={() => { setFormData(initialForm); setOriginalData(null); setModalConfig({ isOpen: true, mode: "ADD" }); }} className="bg-[#DE3B40] hover:bg-[#C11C22] text-white px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors">Add Clause</button>
-          <button disabled={selectedIds.length === 0} className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${selectedIds.length > 0 ? "bg-red-50 text-[#DE3B40] border border-[#DE3B40]" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}>Delete Selected</button>
+          {/* GẮN SỰ KIỆN handleDelete */}
+          <button onClick={handleDelete} disabled={selectedIds.length === 0} className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${selectedIds.length > 0 ? "bg-red-50 text-[#DE3B40] border border-[#DE3B40]" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}>Delete Selected</button>
         </div>
         <button onClick={handleBulkSubmit} disabled={selectedIds.length === 0} className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${selectedIds.length > 0 ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}>Submit Request for Selected</button>
       </div>
