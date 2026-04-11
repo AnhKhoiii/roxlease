@@ -63,6 +63,12 @@ public class RecurringCost {
     @Field("amount_out_total")
     private BigDecimal amountOutTotal; // Fix từ 'varchar' sang 'BigDecimal'
 
+    @Field("override_vat")
+    private Boolean overrideVat; // Bổ sung theo Rule
+
+    @Field("manual_base")
+    private BigDecimal manualBase; // Dùng để lưu tạm tiền Base tự nhập nếu CostType = "Other"
+
     // --- CẤU HÌNH THỜI GIAN ---
     @Field("date_match_ls")
     private Boolean dateMatchLs;

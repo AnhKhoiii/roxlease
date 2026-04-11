@@ -22,6 +22,7 @@ import LeaseConsole from './pages/lease/LeaseConsole';
 import LeaseDetail from './pages/lease/LeaseDetail';
 import Request from './pages/lease/Request';
 import LeaseBackgroundDataLayout from './layouts/lease/LeaseBackgroundDataLayout';
+import VatCountryConsole from './pages/cost/VatCountryConsole';
 
 function App() {
   return (

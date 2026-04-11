@@ -7,6 +7,7 @@ import ClausesTab from "./tabs/ClausesTab";
 import OptionsTab from "./tabs/OptionsTab";
 import AmendmentsTab from "./tabs/AmendmentsTab";
 import LeaseSuitesTab from "./tabs/LeaseSuitesTab";
+import RecurringCostsTab from "./tabs/RecurringCostTab";
 
 export default function LeaseDetail() {
   const { id } = useParams();
@@ -157,6 +158,7 @@ export default function LeaseDetail() {
           {activeTab === "Options" && <OptionsTab lease={lease} />}
           {activeTab === "Amendments" && <AmendmentsTab lease={lease} />}
           {activeTab === "Suites" && <LeaseSuitesTab lease={lease} />}
+          {activeTab === "Recurring Costs" && <RecurringCostsTab lease={lease} />}
         </div>    
       </div>
 

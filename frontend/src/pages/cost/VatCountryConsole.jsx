@@ -3,6 +3,7 @@ import axiosInstance from "../../api/axiosInstance";
 
 export default function VatCountryConsole() {
   const [vatCountries, setVatCountries] = useState([]);
+  const [countriesList, setCountriesList] = useState([]); // THÊM STATE LƯU DANH SÁCH QUỐC GIA
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState({ isOpen: false, mode: "ADD" });
   
@@ -13,8 +14,18 @@ export default function VatCountryConsole() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await axiosInstance.get("/cost/vat-countries");
-      setVatCountries(res.data || []);
+      // 1. Lấy danh sách VAT Countries
+      const resVat = await axiosInstance.get("/cost/vat-countries");
+      setVatCountries(resVat.data || []);
+
+      // 2. Lấy danh sách Quốc gia từ module Space (Điều chỉnh đường dẫn API nếu API Country của bạn khác)
+      try {
+        const resCountries = await axiosInstance.get("/space/locations/countries"); 
+        setCountriesList(resCountries.data.content || resCountries.data || []);
+      } catch (err) {
+        console.warn("Chưa gọi được API Countries, vui lòng kiểm tra lại đường dẫn API.");
+      }
+
     } catch (error) { 
       console.error(error); 
     } finally { 
@@ -61,7 +72,7 @@ export default function VatCountryConsole() {
   };
 
   return (
-    <div className="p-6 bg-gray-50 h-full flex flex-col min-h-screen">
+    <div className="p-6 bg-gray-50 h-full flex flex-col min-h-screen animate-[fadeIn_0.2s_ease-out]">
       {/* HEADER */}
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-xl font-bold text-gray-800 uppercase tracking-tight">VAT Country Management</h1>
@@ -138,13 +149,26 @@ export default function VatCountryConsole() {
                   placeholder="Ex: VAT-VN" 
                 />
                 
+                {/* ĐÃ SỬA THÀNH DROPDOWN SELECT CHO COUNTRY NAME */}
                 <label className="text-[10px] font-bold text-gray-700 uppercase tracking-wide mb-1 mt-4">Country Name <span className="text-red-500">*</span></label>
-                <input 
-                  type="text" value={formData.countryName} 
+                <select 
+                  value={formData.countryName} 
                   onChange={e => setFormData({...formData, countryName: e.target.value})} 
-                  className="border border-gray-300 rounded px-3 py-2 text-[12px] focus:outline-none focus:border-blue-500 w-full" 
-                  placeholder="Ex: Vietnam" 
-                />
+                  className="border border-gray-300 rounded px-3 py-2 text-[12px] focus:outline-none focus:border-blue-500 w-full bg-white cursor-pointer"
+                >
+                  <option value="">-- Select Country --</option>
+                  {countriesList.map((c, idx) => {
+                    const name = c.countryName || c.name || c.id;
+                    const code = c.id || c.countryId;
+                    return (
+                      // Thuộc tính value chỉ lấy Tên (lưu vào CSDL)
+                      <option key={code || idx} value={name}>
+                        {/* Phần hiển thị (text) thì nối cả Mã và Tên cho dễ nhìn */}
+                        {code ? `${code} - ${name}` : name}
+                      </option>
+                    );
+                  })}
+                </select>
 
                 <label className="text-[10px] font-bold text-gray-700 uppercase tracking-wide mb-1 mt-4">VAT Percent (%) <span className="text-red-500">*</span></label>
                 <input 

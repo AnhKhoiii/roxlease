@@ -6,6 +6,7 @@ import com.roxlease.lease.model.Enum.RQType;
 import com.roxlease.lease.model.Clause;
 import com.roxlease.lease.model.LeaseOption;
 import com.roxlease.lease.model.LeaseSuite;
+import com.roxlease.cost.model.RecurringCost;
 import com.roxlease.lease.model.Amendment;
 import com.roxlease.lease.repository.RequestRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -133,6 +134,7 @@ public class RequestService {
             case CONTRACT_TERMS: entityClass = Clause.class; break;
             case SUITE_ASSIGNMENT: entityClass = LeaseSuite.class; break;
             case CONTRACT_AMENDMENTS: entityClass = Amendment.class; break;
+            case RECURRING_COSTS: entityClass = RecurringCost.class; break;
             default: return;
         }
 

@@ -6,6 +6,8 @@ import com.roxlease.space.model.Region;
 import com.roxlease.space.repository.CityRepository;
 import com.roxlease.space.repository.CountryRepository;
 import com.roxlease.space.repository.RegionRepository;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -73,6 +75,18 @@ public class LocationController {
     // ==========================================
     // 3. COUNTRY API
     // ==========================================
+    @Autowired
+    private CountryRepository countryRepository;
+
+    @GetMapping("/countries")
+    public ResponseEntity<?> getAllCountries() {
+        try {
+            return ResponseEntity.ok(countryRepository.findAll());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(java.util.Collections.singletonMap("error", "Lỗi lấy danh sách quốc gia"));
+        }
+    }
+
     @PostMapping("/countries")
     public ResponseEntity<?> createCountry(@RequestBody Country req) {
         if (countryRepo.existsById(req.getCountryId())) {
