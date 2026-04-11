@@ -35,7 +35,7 @@ export default function LeaseBackgroundDataLayout() {
             
             {hasAppAccess('VAT') && (
               <NavLink 
-                to="/lease/background-data/vat" 
+                to="/lease/background-data/vatcountry" 
                 className="px-4 py-2 rounded text-[14px] font-semibold text-gray-600 hover:bg-red-50 hover:text-red-500 transition-all"
               >
                 Define VAT Country

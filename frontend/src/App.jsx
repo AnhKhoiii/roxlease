@@ -17,7 +17,7 @@ import PropertyConsole from './pages/space/PropertyConsole';
 import AmenityConsole from './pages/space/AmenityConsole';
 import SpaceConsole from './pages/space/SpaceConsole';
 import LeaseLayout from './layouts/lease/LeaseLayout';
-import LeaseBackgroundData from './pages/lease/BackgroundDataConsole';
+import LeaseBackgroundData from './pages/lease/PartyConsole';
 import LeaseConsole from './pages/lease/LeaseConsole';
 import LeaseDetail from './pages/lease/LeaseDetail';
 import Request from './pages/lease/Request';
@@ -55,6 +55,7 @@ function App() {
             <Route path="request" element={<Request />} />
             <Route path="background-data" element={<LeaseBackgroundDataLayout />} >
                 <Route path="party" element={<LeaseBackgroundData type="party" />} />
+                <Route path="vatcountry" element={<VatCountryConsole />} />
             </Route>
           </Route>
 
