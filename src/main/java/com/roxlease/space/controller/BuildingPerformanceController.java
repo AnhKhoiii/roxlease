@@ -17,9 +17,9 @@ public class BuildingPerformanceController {
     @GetMapping
     public ResponseEntity<?> getPerformance(
             @RequestParam(required = false, defaultValue = "ALL") String siteId,
-            @RequestParam(required = false, defaultValue = "ALL") String buildingId) {
+            @RequestParam(required = false, defaultValue = "ALL") String blId) {  // <-- Đổi thành blId
         try {
-            return ResponseEntity.ok(service.getPerformanceMetrics(siteId, buildingId));
+            return ResponseEntity.ok(service.getPerformanceMetrics(siteId, blId));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Collections.singletonMap("error", e.getMessage()));
         }

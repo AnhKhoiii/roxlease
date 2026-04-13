@@ -21,29 +21,31 @@ public class BuildingPerformanceService {
     @Autowired
     private MongoTemplate mongoTemplate;
 
-    public PerformanceResponse getPerformanceMetrics(String siteId, String buildingId) {
+    public PerformanceResponse getPerformanceMetrics(String siteId, String blId) { // <-- Đổi tham số
         boolean isSiteAll = siteId == null || "ALL".equalsIgnoreCase(siteId);
-        boolean isBuildingAll = buildingId == null || "ALL".equalsIgnoreCase(buildingId);
+        boolean isBuildingAll = blId == null || "ALL".equalsIgnoreCase(blId);
 
         // 1. Fetch Buildings
         Query bldQuery = new Query();
         if (!isSiteAll) bldQuery.addCriteria(Criteria.where("siteId").is(siteId));
-        if (!isBuildingAll) bldQuery.addCriteria(Criteria.where("buildingId").is(buildingId));
+        if (!isBuildingAll) bldQuery.addCriteria(Criteria.where("blId").is(blId)); // <-- Query theo blId
         
         List<Building> buildings = mongoTemplate.find(bldQuery, Building.class);
+        
+        // Map Building theo blId
         Map<String, Building> buildingMap = buildings.stream().collect(Collectors.toMap(Building::getBlId, b -> b, (existing, replacement) -> existing));
         List<String> targetBuildingIds = new ArrayList<>(buildingMap.keySet());
 
         // 2. Fetch Floors
         List<Floor> floors = targetBuildingIds.isEmpty() ? Collections.emptyList() :
-                mongoTemplate.find(new Query(Criteria.where("buildingId").in(targetBuildingIds)), Floor.class);
+                mongoTemplate.find(new Query(Criteria.where("blId").in(targetBuildingIds)), Floor.class); // <-- Query theo blId
         
         Map<String, String> floorToBuildingMap = new HashMap<>();
         Map<String, String> floorToSiteMap = new HashMap<>();
         List<String> targetFloorIds = new ArrayList<>();
         
         for (Floor f : floors) {
-            String fId = f.getFlId();
+            String fId = f.getFlId(); // <-- Lấy flId
             targetFloorIds.add(fId);
             floorToBuildingMap.put(fId, f.getBlId());
             if (buildingMap.containsKey(f.getBlId())) {
@@ -53,10 +55,10 @@ public class BuildingPerformanceService {
 
         // 3. Fetch Suites & Rooms
         List<Suite> suites = targetFloorIds.isEmpty() ? Collections.emptyList() :
-                mongoTemplate.find(new Query(Criteria.where("flId").in(targetFloorIds)), Suite.class);
+                mongoTemplate.find(new Query(Criteria.where("flId").in(targetFloorIds)), Suite.class); // <-- Query theo flId
         
         List<Room> rooms = targetFloorIds.isEmpty() ? Collections.emptyList() :
-                mongoTemplate.find(new Query(Criteria.where("flId").in(targetFloorIds)), Room.class);
+                mongoTemplate.find(new Query(Criteria.where("flId").in(targetFloorIds)), Room.class); // <-- Query theo flId
 
         // 4. Fetch Active Leases
         List<String> suiteIds = suites.stream().map(Suite::getSuiteId).collect(Collectors.toList());
@@ -89,13 +91,15 @@ public class BuildingPerformanceService {
             String sId = floorToSiteMap.getOrDefault(s.getFlId(), "Unknown");
             boolean isLeased = leasedSuiteIds.contains(s.getSuiteId());
             
-            chartMap.putIfAbsent(bId, PerformanceResponse.ChartDataDTO.builder().buildingId(bId).usableArea(0.0).rentableArea(0.0).leasedArea(0.0).build());
+            // Chart Data
+            chartMap.putIfAbsent(bId, PerformanceResponse.ChartDataDTO.builder().blId(bId).usableArea(0.0).rentableArea(0.0).leasedArea(0.0).build());
             PerformanceResponse.ChartDataDTO chart = chartMap.get(bId);
             chart.setRentableArea(chart.getRentableArea() + (s.getArea() != null ? s.getArea() : 0));
             if (isLeased) chart.setLeasedArea(chart.getLeasedArea() + (s.getArea() != null ? s.getArea() : 0));
 
+            // Table Data
             suiteDTOs.add(PerformanceResponse.SuiteDetailDTO.builder()
-                    .siteId(sId).buildingId(bId).floorId(s.getFlId()).suiteId(s.getSuiteId())
+                    .siteId(sId).blId(bId).flId(s.getFlId()).suiteId(s.getSuiteId())
                     .suiteCode(s.getSuiteCode()).area(s.getArea()).isLeased(isLeased).build());
         }
 

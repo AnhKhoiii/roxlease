@@ -27,7 +27,7 @@ public class PerformanceResponse {
     @Data
     @Builder
     public static class ChartDataDTO {
-        private String buildingId;
+        private String blId;        
         private Double usableArea;
         private Double rentableArea;
         private Double leasedArea;
@@ -37,8 +37,8 @@ public class PerformanceResponse {
     @Builder
     public static class SuiteDetailDTO {
         private String siteId;
-        private String buildingId;
-        private String floorId;
+        private String blId;         
+        private String flId;         
         private String suiteId;
         private String suiteCode;
         private Double area;

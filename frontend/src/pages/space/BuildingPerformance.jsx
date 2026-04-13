@@ -19,12 +19,15 @@ const TableHeaderWithTooltip = ({ title, tooltipText, required }) => (
 
 export default function BuildingPerformance() {
   const [loading, setLoading] = useState(false);
-  const [filters, setFilters] = useState({ siteId: "ALL", buildingId: "ALL" });
+  // Đổi buildingId thành blId trong filter state
+  const [filters, setFilters] = useState({ siteId: "ALL", blId: "ALL" });
+  
   const [data, setData] = useState({
     kpis: { usableToRentableRatio: 0, rentableToUsableRatio: 0, usableArea: 0, rentableArea: 0, totalInteriorArea: null, totalExteriorArea: null, leasedArea: 0, occupancyRate: 0 },
     chartData: [],
     suites: []
   });
+  
   const [sites, setSites] = useState([]);
   const [buildings, setBuildings] = useState([]);
 
@@ -52,7 +55,8 @@ export default function BuildingPerformance() {
   const fetchPerformanceData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await axiosInstance.get(`/space/performance?siteId=${filters.siteId}&buildingId=${filters.buildingId}`);
+      // Đổi query param thành blId
+      const res = await axiosInstance.get(`/space/performance?siteId=${filters.siteId}&blId=${filters.blId}`);
       setData(res.data);
     } catch (error) { console.error("Error fetching performance data", error); }
     finally { setLoading(false); }
@@ -70,7 +74,7 @@ export default function BuildingPerformance() {
         <div className="flex gap-4 items-end">
           <div className="flex flex-col gap-1 w-52">
             <label className="text-[10px] font-bold text-gray-600 uppercase">Site ID <span className="text-red-500">*</span></label>
-            <select value={filters.siteId} onChange={e => setFilters({ siteId: e.target.value, buildingId: "ALL" })} className="border border-gray-300 rounded px-3 py-1.5 text-[12px] outline-none focus:border-blue-500 bg-white shadow-sm cursor-pointer">
+            <select value={filters.siteId} onChange={e => setFilters({ siteId: e.target.value, blId: "ALL" })} className="border border-gray-300 rounded px-3 py-1.5 text-[12px] outline-none focus:border-blue-500 bg-white shadow-sm cursor-pointer">
               <option value="ALL">ALL SITES</option>
               {sites.map((s, idx) => {
                 const sId = s.siteId || s.id || s._id;
@@ -81,12 +85,14 @@ export default function BuildingPerformance() {
           </div>
           <div className="flex flex-col gap-1 w-52">
             <label className="text-[10px] font-bold text-gray-600 uppercase">Building ID <span className="text-red-500">*</span></label>
-            <select value={filters.buildingId} onChange={e => setFilters({...filters, buildingId: e.target.value})} disabled={filters.siteId === "ALL"} className="border border-gray-300 rounded px-3 py-1.5 text-[12px] outline-none focus:border-blue-500 bg-white shadow-sm disabled:bg-gray-100 disabled:text-gray-400 cursor-pointer">
+            <select value={filters.blId} onChange={e => setFilters({...filters, blId: e.target.value})} disabled={filters.siteId === "ALL"} className="border border-gray-300 rounded px-3 py-1.5 text-[12px] outline-none focus:border-blue-500 bg-white shadow-sm disabled:bg-gray-100 disabled:text-gray-400 cursor-pointer">
               <option value="ALL">ALL BUILDINGS</option>
-              {buildings.map((b, idx) => {
-                const bId = b.buildingId || b.id || b._id;
+              {buildings.filter(Boolean).map((b, idx) => {
+                // Đọc blId chuẩn
+                const bId = b.blId || b.id || b._id || `Unknown-${idx}`;
                 const bName = b.blName || b.name || "";
-                return <option key={bId || idx} value={bId}>{bId} {bName ? `- ${bName}` : ''}</option>;
+                const displayLabel = bName && !bId.startsWith("Unknown") ? `${bId} - ${bName}` : (bName || bId);
+                return <option key={bId} value={bId}>{displayLabel}</option>;
               })}
             </select>
           </div>
@@ -129,7 +135,8 @@ export default function BuildingPerformance() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data.chartData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                <XAxis dataKey="buildingId" tick={{ fontSize: 11 }} />
+                {/* Trục X map theo trường blId mới */}
+                <XAxis dataKey="blId" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
                 <RechartsTooltip cursor={{ fill: '#F3F4F6' }} contentStyle={{ fontSize: '12px', borderRadius: '8px' }} />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: '11px' }} />
@@ -148,8 +155,8 @@ export default function BuildingPerformance() {
             <thead className="sticky top-0 z-10 bg-[#F39C12] text-white shadow-sm">
               <tr>
                 <TableHeaderWithTooltip title="Site ID" tooltipText="Site location ID." />
-                <TableHeaderWithTooltip title="Building ID" tooltipText="Building within site." />
-                <TableHeaderWithTooltip title="Floor ID" tooltipText="Floor reference (fl_id)." />
+                <TableHeaderWithTooltip title="Building ID" tooltipText="Building within site (blId)." />
+                <TableHeaderWithTooltip title="Floor ID" tooltipText="Floor reference (flId)." />
                 <TableHeaderWithTooltip title="Suite Code" tooltipText="Unique suite code." />
                 <TableHeaderWithTooltip title="Area (m²)" tooltipText="Total area." />
                 <TableHeaderWithTooltip title="Occupied" tooltipText="Lease status." />
@@ -159,9 +166,10 @@ export default function BuildingPerformance() {
               {data.suites.map((s, idx) => (
                 <tr key={idx} className="hover:bg-orange-50/60 transition-colors">
                   <td className="px-4 py-2.5 font-bold text-blue-600 border-r border-gray-50">{s.siteId}</td>
-                  <td className="px-4 py-2.5 text-gray-700 border-r border-gray-50">{s.buildingId}</td>
-                  <td className="px-4 py-2.5 text-gray-700 border-r border-gray-50">{s.floorId}</td>
-                  <td className="px-4 py-2.5 font-bold text-gray-800 border-r border-gray-50">{s.suiteCode}</td>
+                  {/* Map dữ liệu từ DTO ra blId và flId */}
+                  <td className="px-4 py-2.5 text-gray-700 border-r border-gray-50">{s.blId}</td>
+                  <td className="px-4 py-2.5 text-gray-700 border-r border-gray-50">{s.flId}</td>
+                  <td className="px-4 py-2.5 font-bold text-gray-800 border-r border-gray-50">{s.suiteCode || s.suiteId}</td>
                   <td className="px-4 py-2.5 text-gray-700 font-mono border-r border-gray-50">{s.area?.toLocaleString()}</td>
                   <td className="px-4 py-2.5 text-center"><input type="checkbox" checked={s.isLeased} readOnly className="w-4 h-4 rounded accent-green-600" /></td>
                 </tr>
