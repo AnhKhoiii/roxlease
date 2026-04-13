@@ -24,6 +24,7 @@ import Request from './pages/lease/Request';
 import LeaseBackgroundDataLayout from './layouts/lease/LeaseBackgroundDataLayout';
 import VatCountryConsole from './pages/cost/VatCountryConsole';
 import PlannedRevenue from './pages/cost/PlannedRevenue';
+import BuildingPerformance from './pages/space/BuildingPerformance';
 
 function App() {
   return (
@@ -47,7 +48,7 @@ function App() {
             
             <Route path="console" element={<SpaceConsole />} />
 
-            <Route path="building" element={<div className="p-8 font-bold text-xl">Màn hình Quản lý Tòa Nhà</div>} />
+            <Route path="building" element={<BuildingPerformance />} />
           </Route>
 
           <Route path="lease" element={<LeaseLayout />}>

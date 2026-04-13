@@ -37,7 +37,77 @@ const Select = ({ label, value, onChange, options = [], disabled, required }) =>
   </div>
 );
 
-// MẢNG TÊN CÁC THÁNG
+// 🚀 COMPONENT SEARCHABLE SELECT (Được tối ưu cho Site ID)
+const SearchableSelect = ({ label, value, onChange, options = [], disabled, placeholder, required }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [inputText, setInputText] = useState("");
+
+  useEffect(() => {
+    if (!isOpen) {
+      const selectedOpt = options.find(o => o.value === value);
+      if (selectedOpt) {
+        setInputText(selectedOpt.label !== selectedOpt.value ? `${selectedOpt.value} - ${selectedOpt.label}` : selectedOpt.value);
+      } else {
+        // Cho phép lưu giá trị gõ tay nếu không có trong list
+        setInputText(value || ""); 
+      }
+    }
+  }, [value, options, isOpen]);
+
+  const filteredOptions = options.filter(opt =>
+    (opt.label || "").toString().toLowerCase().includes(inputText.toLowerCase()) ||
+    (opt.value || "").toString().toLowerCase().includes(inputText.toLowerCase())
+  );
+
+  return (
+    <div className="flex flex-col gap-1 w-full relative">
+      <label className="font-bold text-[10px] text-gray-700 uppercase tracking-wide">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <input
+        type="text"
+        value={inputText}
+        onChange={(e) => {
+          setInputText(e.target.value);
+          onChange(e.target.value); // Cho phép lưu text gõ tự do
+          setIsOpen(true);
+        }}
+        onFocus={() => {
+          setIsOpen(true);
+          setInputText(""); 
+        }}
+        onBlur={() => setTimeout(() => setIsOpen(false), 200)}
+        disabled={disabled}
+        placeholder={placeholder || "Search or type new..."}
+        className="border border-gray-300 rounded px-3 py-1.5 text-[12px] outline-none focus:border-blue-500 bg-white shadow-sm w-full disabled:bg-gray-100 transition-colors cursor-text"
+      />
+      
+      {isOpen && !disabled && (
+        <ul className="absolute z-[999] w-full bg-white border border-gray-300 shadow-xl max-h-48 overflow-y-auto top-[100%] left-0 rounded-md mt-1 divide-y divide-gray-100">
+          {filteredOptions.length > 0 ? (
+            filteredOptions.map((opt, idx) => (
+              <li
+                key={idx}
+                className="px-3 py-2 text-[11px] hover:bg-blue-50 cursor-pointer text-gray-800 transition-colors"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+              >
+                <span className="font-semibold text-blue-700">{opt.value}</span>
+                {opt.label !== opt.value && <span className="text-gray-500 ml-1">- {opt.label}</span>}
+              </li>
+            ))
+          ) : (
+            <li className="px-3 py-2 text-[11px] text-gray-400 italic bg-gray-50">Press Enter to use "{inputText}"</li>
+          )}
+        </ul>
+      )}
+    </div>
+  );
+};
+
 const monthNames = [
   "January", "February", "March", "April", "May", "June", 
   "July", "August", "September", "October", "November", "December"
@@ -47,8 +117,8 @@ const monthNames = [
 // MAIN COMPONENT
 // ==========================================
 export default function PlannedRevenue() {
-  // STATE MANAGEMENT
   const [listData, setListData] = useState([]);
+  const [sitesList, setSitesList] = useState([]); 
   const [loading, setLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [filters, setFilters] = useState({ year: "", month: "" });
@@ -62,14 +132,13 @@ export default function PlannedRevenue() {
   };
   const [formData, setFormData] = useState(initialForm);
 
-  // DATA FETCHING
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const queryParams = new URLSearchParams();
       if (filters.year) queryParams.append("year", filters.year);
       if (filters.month) queryParams.append("month", filters.month);
-      queryParams.append("size", 100); // Pagination size for demo
+      queryParams.append("size", 100); 
 
       const res = await axiosInstance.get(`/cost/planned-revenues?${queryParams.toString()}`);
       setListData(res.data.content || []);
@@ -81,9 +150,24 @@ export default function PlannedRevenue() {
     }
   }, [filters]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  const fetchSites = async () => {
+    try {
+      const res = await axiosInstance.get("/space/properties/sites"); 
+      const items = Array.isArray(res.data) ? res.data : (res.data?.content || []);
+      setSitesList(items.filter(Boolean).map(item => ({
+        value: item.id || item.siteId || '',
+        label: item.siteName || item.name || item.id || ''
+      })));
+    } catch (error) {
+      console.warn("Could not fetch sites for autocomplete.", error);
+    }
+  };
 
-  // ACTIONS
+  useEffect(() => { 
+    fetchData(); 
+    fetchSites(); 
+  }, [fetchData]);
+
   const handleFilter = () => fetchData();
 
   const handleSave = async () => {
@@ -107,7 +191,7 @@ export default function PlannedRevenue() {
       setModalOpen(false);
       fetchData();
     } catch (error) {
-      alert("Lỗi lưu dữ liệu!");
+      alert("Error saving data!");
     } finally {
       setLoading(false);
     }
@@ -115,7 +199,7 @@ export default function PlannedRevenue() {
 
   const handleDelete = async (idToDelete) => {
     const targetId = idToDelete || formData.id;
-    if (!targetId || !window.confirm("Bạn có chắc chắn muốn xóa bản ghi này?")) return;
+    if (!targetId || !window.confirm("Are you sure you want to delete this record?")) return;
 
     try {
       setLoading(true);
@@ -123,7 +207,7 @@ export default function PlannedRevenue() {
       setModalOpen(false);
       fetchData();
     } catch (error) {
-      alert("Lỗi xóa dữ liệu!");
+      alert("Error deleting data!");
     } finally {
       setLoading(false);
     }
@@ -141,7 +225,6 @@ export default function PlannedRevenue() {
   return (
     <div className="p-6 bg-gray-50 h-full flex flex-col min-h-screen animate-[fadeIn_0.2s_ease-out]">
       
-      {/* 1. TOP ACTION BAR */}
       <div className="flex justify-between items-end gap-4 mb-4 bg-white p-4 rounded-lg shadow-sm border border-gray-200 shrink-0">
         <div className="flex gap-4 items-end">
           <div className="flex flex-col gap-1 w-32">
@@ -158,7 +241,6 @@ export default function PlannedRevenue() {
               className="border border-gray-300 rounded px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 bg-white"
             >
               <option value="">All Months</option>
-              {/* ĐÃ CẬP NHẬT: Hiển thị tên tháng trên thanh Filter */}
               {monthNames.map((name, i) => (
                 <option key={i+1} value={i+1}>{name}</option>
               ))}
@@ -177,7 +259,6 @@ export default function PlannedRevenue() {
         </button>
       </div>
 
-      {/* 2. TABLE LISTING */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 flex-1 overflow-hidden relative">
         <div className="overflow-x-auto h-full">
           <table className="w-full text-left text-[12px] whitespace-nowrap">
@@ -211,7 +292,6 @@ export default function PlannedRevenue() {
                     <td className="px-4 py-2.5 font-bold text-blue-600 border-r border-gray-50">{item.siteId}</td>
                     <td className="px-4 py-2.5 text-gray-700 border-r border-gray-50">{item.category}</td>
                     <td className="px-4 py-2.5 text-center text-gray-700 border-r border-gray-50">{item.year}</td>
-                    {/* ĐÃ CẬP NHẬT: Hiển thị tên tháng trên bảng */}
                     <td className="px-4 py-2.5 text-gray-700 border-r border-gray-50 font-medium">{monthNames[item.month - 1] || item.month}</td>
                     <td className="px-4 py-2.5 text-right font-mono font-bold text-green-600 border-r border-gray-50">{item.plannedRevenue?.toLocaleString()}</td>
                     <td className="px-4 py-2.5 text-right font-mono font-bold text-red-600">{item.plannedCost?.toLocaleString()}</td>
@@ -223,12 +303,10 @@ export default function PlannedRevenue() {
         </div>
       </div>
 
-      {/* 3 & 4. MODAL ADD / EDIT */}
       {modalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex justify-center items-center backdrop-blur-sm p-4">
           <div className="bg-white w-[800px] rounded-xl shadow-2xl flex flex-col overflow-hidden animate-[fadeIn_0.2s_ease-out]">
             
-            {/* Modal Header */}
             <div className="bg-[#EFB034] px-6 py-4 flex justify-between items-center border-b border-[#D68910]">
               <h2 className="text-sm font-bold tracking-widest text-white drop-shadow-sm uppercase">
                 &lt;&lt; Planned Revenue &gt;&gt;
@@ -238,10 +316,8 @@ export default function PlannedRevenue() {
               </button>
             </div>
             
-            {/* Modal Body - Form Layout */}
             <div className="p-8 bg-gray-50 flex flex-col gap-6">
               
-              {/* ROW 1 */}
               <div className="grid grid-cols-3 gap-6 bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
                 <Input 
                   type="number" label="Planned Revenue" required 
@@ -254,12 +330,10 @@ export default function PlannedRevenue() {
                 <Select 
                   label="Month" required 
                   value={formData.month} onChange={v => setFormData({...formData, month: v})} 
-                  // ĐÃ CẬP NHẬT: Hiển thị tên tháng trong Modal Form
                   options={monthNames.map((name, i) => ({ value: i+1, label: name }))}
                 />
               </div>
 
-              {/* ROW 2 */}
               <div className="grid grid-cols-3 gap-6 bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
                 <Select 
                   label="Category" required 
@@ -271,10 +345,15 @@ export default function PlannedRevenue() {
                     { value: "Residential", label: "Residential" }
                   ]}
                 />
-                <Input 
-                  type="text" label="Site ID" required placeholder="e.g. S-HN-001"
-                  value={formData.siteId} onChange={v => setFormData({...formData, siteId: v})} 
+                
+                {/* ĐÃ TÍCH HỢP SEARCHABLE SELECT */}
+                <SearchableSelect 
+                  label="Site ID" required 
+                  value={formData.siteId} 
+                  onChange={v => setFormData({...formData, siteId: v})} 
+                  options={sitesList}
                 />
+                
                 <Input 
                   type="number" label="Planned Cost" required 
                   value={formData.plannedCost} onChange={v => setFormData({...formData, plannedCost: v})} 
@@ -283,7 +362,6 @@ export default function PlannedRevenue() {
 
             </div>
 
-            {/* Modal Footer Actions */}
             <div className="p-5 border-t border-gray-200 flex justify-between items-center bg-white">
               <div>
                 {isEditMode && (

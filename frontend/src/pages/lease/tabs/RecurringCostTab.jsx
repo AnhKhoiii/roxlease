@@ -172,10 +172,6 @@ export default function RecurringCostTab({ lease }) {
 
       if (modal.mode === "EDIT") {
         const costId = getCostId(payload) || getCostId(formData);
-        if (!costId) {
-            alert("Bản ghi này bị lỗi ID (Chuỗi rỗng). Vui lòng tích chọn Xóa nó đi và Tạo lại bản mới!");
-            setLoading(false); return;
-        }
         await axiosInstance.put(`/lease/leases/${leaseId}/recurring-costs/${costId}`, payload);
       } else {
         await axiosInstance.post(`/lease/leases/${leaseId}/recurring-costs`, payload);
@@ -183,7 +179,7 @@ export default function RecurringCostTab({ lease }) {
       
       fetchData();
       setModal({ isOpen: false, mode: "ADD" });
-    } catch (error) { alert("Lỗi lưu bản nháp!"); } 
+    } catch (error) { alert("Error saving record!"); } 
     finally { setLoading(false); }
   };
 
@@ -197,7 +193,7 @@ export default function RecurringCostTab({ lease }) {
         const res = await axiosInstance.post(`/lease/leases/${leaseId}/recurring-costs`, payloadToSave);
         targetId = getCostId(res.data); 
       } else if (!targetId) {
-        alert("Bản ghi bị lỗi ID (Chuỗi rỗng). Không thể gửi Request, vui lòng Xóa đi tạo lại!");
+        alert("Record has an invalid ID (empty string). Cannot submit request, please delete and recreate!");
         setLoading(false); return;
       }
 
@@ -210,15 +206,15 @@ export default function RecurringCostTab({ lease }) {
       };
 
       await axiosInstance.post("/lease/requests/submit-module", requestPayload);
-      alert("Đã gửi Request duyệt thành công!");
+      alert("Request submitted successfully!");
       fetchData(); 
       setModal({ isOpen: false, mode: "ADD" });
-    } catch (error) { alert("Lỗi gửi Request duyệt!"); } 
+    } catch (error) { alert("Error submitting request!"); } 
     finally { setLoading(false); }
   };
 
   const handleBulkSubmit = async () => {
-    if (!window.confirm(`Bạn có chắc muốn gửi yêu cầu duyệt CẬP NHẬT cho ${selectedIds.length} mục đã chọn?`)) return;
+    if (!window.confirm(`Are you sure you want to submit update requests for the ${selectedIds.length} selected items?`)) return;
     setLoading(true);
     try {
       for (const id of selectedIds) {
@@ -234,10 +230,10 @@ export default function RecurringCostTab({ lease }) {
         };
         await axiosInstance.post("/lease/requests/submit-module", requestPayload);
       }
-      alert("Đã gửi yêu cầu duyệt hàng loạt thành công!");
+      alert("Request submitted successfully!");
       setSelectedIds([]);
       fetchData();
-    } catch (error) { alert("Có lỗi xảy ra khi gửi yêu cầu duyệt hàng loạt!"); } 
+    } catch (error) { alert("Error submitting request!"); } 
     finally { setLoading(false); }
   };
 
@@ -245,7 +241,7 @@ export default function RecurringCostTab({ lease }) {
   // XỬ LÝ XÓA DỮ LIỆU (ĐÃ CẬP NHẬT THEO LOGIC MỚI)
   // ==============================================================
   const handleDelete = async () => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa các mục đã chọn?\n\n- Bản nháp (Chưa Active) sẽ bị xóa vĩnh viễn khỏi hệ thống.\n- Mục đang hiệu lực (Đã Active) sẽ được gửi Yêu cầu Duyệt Xóa vào hàng đợi.")) return;
+    if (!window.confirm("Are you sure you want to delete the selected items?\n\n- Drafts (Inactive) will be permanently deleted from the system.\n- Active items will have a Delete Request submitted to the approval queue.")) return;
     
     setLoading(true);
     let deletedCount = 0;
@@ -273,11 +269,11 @@ export default function RecurringCostTab({ lease }) {
           deletedCount++;
         }
       }
-      alert(`Hoàn tất xử lý Xóa:\n- Xóa trực tiếp: ${deletedCount} bản nháp.\n- Đã gửi Yêu cầu Duyệt Xóa: ${requestCount} mục đang hoạt động.`);
+      alert(`Deletion process completed:\n- Direct delete: ${deletedCount} drafts.\n- Delete requests sent: ${requestCount} active items.`);
       setSelectedIds([]);
       fetchData();
     } catch (error) { 
-      alert("Có lỗi xảy ra trong quá trình xử lý xóa!"); 
+      alert("Error occurred while processing deletion!"); 
     } finally { 
       setLoading(false); 
     }
@@ -341,7 +337,7 @@ export default function RecurringCostTab({ lease }) {
                     <td className="px-3 py-2 text-center border-r border-gray-50">
                       <input type="checkbox" checked={isSelected} onChange={(e) => handleSelectRow(e, costId)} onClick={e => e.stopPropagation()} disabled={!costId} className="w-3.5 h-3.5 rounded cursor-pointer disabled:opacity-30" />
                     </td>
-                    <td className="px-4 py-2 font-semibold text-blue-600 border-r border-gray-50">{costId || <span className="text-red-500 font-bold">LỖI ID RỖNG</span>}</td>
+                    <td className="px-4 py-2 font-semibold text-blue-600 border-r border-gray-50">{costId || <span className="text-red-500 font-bold">Empty ID Error</span>}</td>
                     <td className="px-4 py-2 text-gray-700 border-r border-gray-50">{c.costType}</td>
                     <td className="px-4 py-2 text-gray-700 text-right border-r border-gray-50 font-mono">{c.amountInBase?.toLocaleString()}</td>
                     <td className="px-4 py-2 text-gray-700 text-right border-r border-gray-50 font-mono">{c.amountInVat?.toLocaleString()}</td>
@@ -353,7 +349,7 @@ export default function RecurringCostTab({ lease }) {
                 );
               })}
               {costs.length === 0 && !loading && (
-                <tr><td colSpan={9} className="py-12 text-center text-gray-500 font-medium">Chưa có dữ liệu Recurring Cost.</td></tr>
+                <tr><td colSpan={9} className="py-12 text-center text-gray-500 font-medium">No Recurring Cost data found.</td></tr>
               )}
             </tbody>
           </table>

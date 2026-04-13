@@ -127,7 +127,7 @@ export default function LeaseSuitesTab({ lease }) {
       if (suiteCode) {
         const checkRes = await axiosInstance.get(`/lease/requests/check-suite/${suiteCode}`);
         if (checkRes.data.hasPending) {
-          const confirm = window.confirm(`⚠️ CẢNH BÁO: Mặt bằng [${suiteCode}] đang có một Request khác chờ duyệt trong hệ thống.\n\nBạn có chắc chắn muốn tiếp tục gửi Request tranh giành này không?`);
+          const confirm = window.confirm(`⚠️ WARNING: Suite [${suiteCode}] already has a pending request.\n\nAre you sure you want to submit a competing request?`);
           if (!confirm) { setLoading(false); return; }
         }
       }
@@ -154,15 +154,15 @@ export default function LeaseSuitesTab({ lease }) {
       };
 
       await axiosInstance.post("/lease/requests/submit-module", requestPayload);
-      alert("Request đã được tạo thành công!");
+      alert("Request submitted successfully!");
       fetchData(); setModalConfig({ isOpen: false, mode: "ADD" });
-    } catch (error) { alert("Lỗi tạo Request!"); } 
+    } catch (error) { alert("Error submitting request!"); } 
     finally { setLoading(false); }
   };
 
   // --- THÊM HÀM DELETE HÀNG LOẠT ---
   const handleDelete = async () => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa các mục đã chọn?\n\n- Bản nháp (Chưa Active) sẽ bị xóa vĩnh viễn khỏi hệ thống.\n- Mục đang hiệu lực (Đã Active) sẽ được gửi Yêu cầu Duyệt Xóa vào hàng đợi.")) return;
+    if (!window.confirm("Are you sure you want to delete the selected items?\n\n- Drafts (Inactive) will be permanently deleted from the system.\n- Active items will have a Delete Request submitted to the approval queue.")) return;
     
     setLoading(true);
     let deletedCount = 0;
@@ -185,15 +185,15 @@ export default function LeaseSuitesTab({ lease }) {
           deletedCount++;
         }
       }
-      alert(`Hoàn tất xử lý Xóa:\n- Xóa trực tiếp: ${deletedCount} bản nháp.\n- Đã gửi Yêu cầu Duyệt Xóa: ${requestCount} mục đang hoạt động.`);
+      alert(`Deletion process completed:\n- Direct delete: ${deletedCount} drafts.\n- Delete requests sent: ${requestCount} active items.`);
       setSelectedIds([]);
       fetchData();
-    } catch (error) { alert("Có lỗi xảy ra trong quá trình xử lý xóa!"); } 
+    } catch (error) { alert("Error occurred while processing deletion!"); } 
     finally { setLoading(false); }
   };
 
   const handleBulkSubmit = async () => {
-    if (!window.confirm(`Bạn có chắc muốn gửi yêu cầu duyệt CẬP NHẬT cho ${selectedIds.length} mục đã chọn?`)) return;
+    if (!window.confirm(`Are you sure you want to submit update requests for the ${selectedIds.length} selected items?`)) return;
     setLoading(true);
     try {
       for (const id of selectedIds) {
@@ -204,7 +204,7 @@ export default function LeaseSuitesTab({ lease }) {
 
         const checkRes = await axiosInstance.get(`/lease/requests/check-suite/${cleanDataObj.suId}`);
         if (checkRes.data.hasPending) {
-          const confirm = window.confirm(`⚠️ CẢNH BÁO: Mặt bằng [${cleanDataObj.suId}] đang có Request chờ duyệt.\n\nBấm OK để tiếp tục gửi tranh giành, bấm CANCEL để bỏ qua mặt bằng này.`);
+          const confirm = window.confirm(`⚠️ WARNING: Suite [${cleanDataObj.suId}] already has a pending request.\n\nAre you sure you want to submit a competing request?`);
           if (!confirm) continue; 
         }
 
@@ -214,10 +214,10 @@ export default function LeaseSuitesTab({ lease }) {
         };
         await axiosInstance.post("/lease/requests/submit-module", requestPayload);
       }
-      alert("Đã gửi yêu cầu duyệt hàng loạt thành công!");
+      alert("Request submitted successfully!");
       setSelectedIds([]);
       fetchData();
-    } catch (error) { alert("Có lỗi xảy ra khi gửi yêu cầu duyệt hàng loạt!"); } 
+    } catch (error) { alert("Error submitting request!"); } 
     finally { setLoading(false); }
   };
 
