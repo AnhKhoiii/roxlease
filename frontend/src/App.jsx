@@ -23,6 +23,7 @@ import LeaseDetail from './pages/lease/LeaseDetail';
 import Request from './pages/lease/Request';
 import LeaseBackgroundDataLayout from './layouts/lease/LeaseBackgroundDataLayout';
 import VatCountryConsole from './pages/cost/VatCountryConsole';
+import PlannedRevenue from './pages/cost/PlannedRevenue';
 
 function App() {
   return (
@@ -57,10 +58,9 @@ function App() {
             <Route path="background-data" element={<LeaseBackgroundDataLayout />} >
                 <Route path="party" element={<LeaseBackgroundData type="party" />} />
                 <Route path="vatcountry" element={<VatCountryConsole />} />
+                <Route path="planned-revenue" element={<PlannedRevenue />} />
             </Route>
           </Route>
-
-          <Route path="cost" element={<div className="p-8">Cost Screen</div>} />
           
           <Route path="system" element={<SystemLayout/>}>
             <Route path="user" element={<UserManagement />} />

@@ -22,7 +22,7 @@ public class RecurringCostSchedule {
     @Id
     private String scheduleId;
 
-    @Indexed // Index để tìm nhanh các lịch thanh toán thuộc về 1 gói chi phí
+    @Indexed 
     @Field("recurring_cost_id")
     private String recurringCostId;
 

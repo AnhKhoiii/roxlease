@@ -42,9 +42,9 @@ export default function LeaseBackgroundDataLayout() {
               </NavLink>
             )}
 
-            {hasAppAccess('OCC') && (
+            {hasAppAccess('REVENUE') && (
               <NavLink 
-                to="/lease/background-data/occ-revenue" 
+                to="/lease/background-data/planned-revenue" 
                 className="px-4 py-2 rounded text-[14px] font-semibold text-gray-600 hover:bg-red-50 hover:text-red-500 transition-all"
               >
                 Planned OCC & Revenue

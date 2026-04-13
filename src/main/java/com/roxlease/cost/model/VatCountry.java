@@ -20,6 +20,4 @@ public class VatCountry {
     private String countryName;
     private Double vatPercent;
     
-    @Builder.Default
-    private boolean active = true;
 }

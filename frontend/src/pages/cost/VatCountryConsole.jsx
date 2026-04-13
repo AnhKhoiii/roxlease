@@ -3,29 +3,33 @@ import axiosInstance from "../../api/axiosInstance";
 
 export default function VatCountryConsole() {
   const [vatCountries, setVatCountries] = useState([]);
-  const [countriesList, setCountriesList] = useState([]); // THÊM STATE LƯU DANH SÁCH QUỐC GIA
+  const [countriesList, setCountriesList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState({ isOpen: false, mode: "ADD" });
   
-  const initialForm = { vatCountryId: "", countryName: "", vatPercent: "", active: true };
+  // ĐÃ BỎ BỘ LỌC ACTIVE
+  const [filters, setFilters] = useState({
+    vatCountryId: "",
+    countryName: ""
+  });
+  
+  // ĐÃ BỎ TRƯỜNG ACTIVE KHỎI FORM
+  const initialForm = { vatCountryId: "", countryName: "", vatPercent: "" };
   const [formData, setFormData] = useState(initialForm);
   const [editId, setEditId] = useState(null);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      // 1. Lấy danh sách VAT Countries
       const resVat = await axiosInstance.get("/cost/vat-countries");
       setVatCountries(resVat.data || []);
 
-      // 2. Lấy danh sách Quốc gia từ module Space (Điều chỉnh đường dẫn API nếu API Country của bạn khác)
       try {
         const resCountries = await axiosInstance.get("/space/locations/countries"); 
         setCountriesList(resCountries.data.content || resCountries.data || []);
       } catch (err) {
-        console.warn("Chưa gọi được API Countries, vui lòng kiểm tra lại đường dẫn API.");
+        console.warn("Chưa gọi được API Countries.");
       }
-
     } catch (error) { 
       console.error(error); 
     } finally { 
@@ -34,6 +38,13 @@ export default function VatCountryConsole() {
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  // LOGIC LỌC DỮ LIỆU (Đã bỏ lọc active)
+  const filteredCountries = vatCountries.filter((item) => {
+    const matchId = item.vatCountryId?.toLowerCase().includes(filters.vatCountryId.toLowerCase());
+    const matchName = item.countryName?.toLowerCase().includes(filters.countryName.toLowerCase());
+    return matchId && matchName;
+  });
 
   const handleSave = async () => {
     try {
@@ -64,8 +75,7 @@ export default function VatCountryConsole() {
     setFormData({
       vatCountryId: item.vatCountryId,
       countryName: item.countryName,
-      vatPercent: item.vatPercent,
-      active: item.active
+      vatPercent: item.vatPercent
     });
     setEditId(item.id);
     setModal({ isOpen: true, mode: "EDIT" });
@@ -74,7 +84,7 @@ export default function VatCountryConsole() {
   return (
     <div className="p-6 bg-gray-50 h-full flex flex-col min-h-screen animate-[fadeIn_0.2s_ease-out]">
       {/* HEADER */}
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-4 shrink-0">
         <h1 className="text-xl font-bold text-gray-800 uppercase tracking-tight">VAT Country Management</h1>
         <button 
           onClick={() => { setFormData(initialForm); setModal({ isOpen: true, mode: "ADD" }); }} 
@@ -82,6 +92,32 @@ export default function VatCountryConsole() {
         >
           + Add VAT Country
         </button>
+      </div>
+
+      {/* FILTER BAR */}
+      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-4 shrink-0">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-bold text-gray-600 uppercase">VAT Country ID</label>
+            <input 
+              type="text" 
+              value={filters.vatCountryId} 
+              onChange={e => setFilters({...filters, vatCountryId: e.target.value})} 
+              placeholder="Search ID..." 
+              className="border border-gray-300 rounded px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 w-full" 
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-bold text-gray-600 uppercase">Country Name</label>
+            <input 
+              type="text" 
+              value={filters.countryName} 
+              onChange={e => setFilters({...filters, countryName: e.target.value})} 
+              placeholder="Search Name..." 
+              className="border border-gray-300 rounded px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 w-full" 
+            />
+          </div>
+        </div>
       </div>
 
       {/* BẢNG DỮ LIỆU */}
@@ -93,26 +129,20 @@ export default function VatCountryConsole() {
                 <th className="px-5 py-3 font-semibold tracking-wide border-b border-[#D68910]">VAT Country ID</th>
                 <th className="px-5 py-3 font-semibold tracking-wide border-b border-[#D68910]">Country Name</th>
                 <th className="px-5 py-3 font-semibold tracking-wide border-b border-[#D68910]">VAT Percent (%)</th>
-                <th className="px-5 py-3 font-semibold tracking-wide border-b border-[#D68910] text-center">Active</th>
                 <th className="px-5 py-3 font-semibold tracking-wide border-b border-[#D68910] text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
-                <tr><td colSpan="5" className="text-center py-12 text-orange-500 font-bold">Loading data...</td></tr>
-              ) : vatCountries.length === 0 ? (
-                <tr><td colSpan="5" className="text-center py-12 text-gray-500 font-medium">No VAT Countries found.</td></tr>
+                <tr><td colSpan="4" className="text-center py-12 text-orange-500 font-bold">Loading data...</td></tr>
+              ) : filteredCountries.length === 0 ? (
+                <tr><td colSpan="4" className="text-center py-12 text-gray-500 font-medium">No VAT Countries found.</td></tr>
               ) : (
-                vatCountries.map(item => (
+                filteredCountries.map(item => (
                   <tr key={item.id} className="hover:bg-orange-50/50 transition-colors">
                     <td className="px-5 py-3 font-bold text-blue-600">{item.vatCountryId}</td>
                     <td className="px-5 py-3 text-gray-800 font-medium">{item.countryName}</td>
                     <td className="px-5 py-3 text-gray-800 font-bold">{item.vatPercent}%</td>
-                    <td className="px-5 py-3 text-center">
-                      <span className={`px-2.5 py-1 rounded text-[11px] font-bold ${item.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                        {item.active ? "YES" : "NO"}
-                      </span>
-                    </td>
                     <td className="px-5 py-3 text-center">
                       <button onClick={() => openEdit(item)} className="bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1 rounded text-xs font-bold mr-2 transition-colors">Edit</button>
                       <button onClick={() => handleDelete(item.id)} className="bg-red-50 text-red-600 hover:bg-red-100 px-3 py-1 rounded text-xs font-bold transition-colors">Delete</button>
@@ -149,7 +179,6 @@ export default function VatCountryConsole() {
                   placeholder="Ex: VAT-VN" 
                 />
                 
-                {/* ĐÃ SỬA THÀNH DROPDOWN SELECT CHO COUNTRY NAME */}
                 <label className="text-[10px] font-bold text-gray-700 uppercase tracking-wide mb-1 mt-4">Country Name <span className="text-red-500">*</span></label>
                 <select 
                   value={formData.countryName} 
@@ -161,9 +190,7 @@ export default function VatCountryConsole() {
                     const name = c.countryName || c.name || c.id;
                     const code = c.id || c.countryId;
                     return (
-                      // Thuộc tính value chỉ lấy Tên (lưu vào CSDL)
                       <option key={code || idx} value={name}>
-                        {/* Phần hiển thị (text) thì nối cả Mã và Tên cho dễ nhìn */}
                         {code ? `${code} - ${name}` : name}
                       </option>
                     );
@@ -177,15 +204,6 @@ export default function VatCountryConsole() {
                   className="border border-gray-300 rounded px-3 py-2 text-[12px] focus:outline-none focus:border-blue-500 w-full" 
                   placeholder="Ex: 8.5" 
                 />
-
-                <label className="flex items-center gap-2 mt-5 cursor-pointer w-max">
-                  <input 
-                    type="checkbox" checked={formData.active} 
-                    onChange={e => setFormData({...formData, active: e.target.checked})} 
-                    className="w-4 h-4 rounded border-gray-300 text-blue-600 accent-blue-600" 
-                  />
-                  <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wide">Active Status</span>
-                </label>
               </div>
             </div>
 

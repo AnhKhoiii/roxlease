@@ -32,7 +32,6 @@ public class VatCountryService {
         VatCountry existing = getById(id);
         existing.setCountryName(req.getCountryName());
         existing.setVatPercent(req.getVatPercent());
-        existing.setActive(req.isActive());
         return repository.save(existing);
     }
 
