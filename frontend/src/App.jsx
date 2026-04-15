@@ -25,6 +25,7 @@ import LeaseBackgroundDataLayout from './layouts/lease/LeaseBackgroundDataLayout
 import VatCountryConsole from './pages/cost/VatCountryConsole';
 import PlannedRevenue from './pages/cost/PlannedRevenue';
 import BuildingPerformance from './pages/space/BuildingPerformance';
+import CostWizard from './pages/cost/CostWizard';
 
 function App() {
   return (
@@ -56,6 +57,7 @@ function App() {
             <Route path="console" element={<LeaseConsole />} />
               <Route path="console/:id" element={<LeaseDetail />} />
             <Route path="request" element={<Request />} />
+            <Route path="cost-wizard" element={<CostWizard />} />
             <Route path="background-data" element={<LeaseBackgroundDataLayout />} >
                 <Route path="party" element={<LeaseBackgroundData type="party" />} />
                 <Route path="vatcountry" element={<VatCountryConsole />} />

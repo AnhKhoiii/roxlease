@@ -150,10 +150,11 @@ const ContactModal = ({ isOpen, onClose, onSave, onDelete, mode, initialData, le
 // ==========================================
 // MAIN TAB COMPONENT
 // ==========================================
-export default function ContactsTab({ leaseId }) {
+export default function ContactsTab({ lease }) {
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
+  const leaseId = lease?.lsId;
   
   const [modalConfig, setModalConfig] = useState({
     isOpen: false,

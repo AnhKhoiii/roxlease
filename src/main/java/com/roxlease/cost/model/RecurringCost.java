@@ -36,15 +36,14 @@ public class RecurringCost {
     @Field("curr_vat")
     private BigDecimal currVat;
 
-    // --- TIỀN THU (IN) - Đã fix các lỗi sai kiểu dữ liệu từ ERD ---
     @Field("amount_in_base")
     private BigDecimal amountInBase;
 
     @Field("amount_in_vat")
-    private BigDecimal amountInVat; // Fix từ 'date' sang 'BigDecimal'
+    private BigDecimal amountInVat; 
 
     @Field("amount_in_total")
-    private BigDecimal amountInTotal; // Fix từ 'varchar' sang 'BigDecimal'
+    private BigDecimal amountInTotal;
 
     // --- TỶ GIÁ ---
     @Field("override_exchange_rate")

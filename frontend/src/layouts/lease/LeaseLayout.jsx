@@ -69,6 +69,20 @@ export default function LeaseLayout() {
             </NavLink>
           )}
 
+          {/* Cost Wizard */ }
+          {hasAppAccess('COST_WIZARD') && (
+            <NavLink 
+              to="/lease/cost-wizard" 
+              className={`px-4 py-3 rounded text-[15px] font-semibold transition-all ${
+                isMenuActive('/lease/cost-wizard') 
+                  ? 'bg-white text-red-500 border-l-4 border-red-500 shadow-sm' 
+                  : 'text-gray-700 hover:text-red-500 hover:bg-gray-200 border-l-4 border-transparent'
+              }`}
+            >
+              Cost Wizard
+            </NavLink>
+          )}
+
           {/* Background Data */}
           {hasAppAccess('DATA') && (
             <NavLink 
