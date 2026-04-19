@@ -178,9 +178,27 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData 
     setFormData(prev => ({ ...prev, ...updates }));
   };
 
-  const handleSaveAction = () => {
-    if (!formData.lsId) { alert("Lease Code (lsId) is required!"); return; }
-    onSave(formData);
+ const handleSaveAction = () => {
+    if (!formData.lsId) { 
+      alert("Lease Code (lsId) is required!"); 
+      return; 
+    }
+
+    const payload = { ...formData };
+
+    Object.keys(payload).forEach(key => {
+      const value = payload[key];
+      
+      if (value === "") {
+        payload[key] = null;
+      }
+      
+      if (typeof value === "number" && Number.isNaN(value)) {
+        payload[key] = null;
+      }
+    });
+
+    onSave(payload);
   };
 
   return (
@@ -206,8 +224,8 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData 
               <Input label="Handover Date" type="date" value={formData.handoverDate} onChange={v => handleChange('handoverDate', v)} />
               <Input label="Start Date" type="date" value={formData.startDate} onChange={v => handleChange('startDate', v)} />
               <Input label="End Date" type="date" value={formData.endDate} onChange={v => handleChange('endDate', v)} />
-              <Select label="Lease Type" value={formData.lsType} onChange={v => handleChange('lsType', v)} options={['COMMERCIAL', 'RESIDENTIAL', 'INDUSTRIAL']} />
-              <Select label="Space Use" value={formData.spaceUse} onChange={v => handleChange('spaceUse', v)} options={['OFFICE', 'RETAIL', 'STORAGE']} />
+              <Select label="Lease Type" value={formData.lsType} onChange={v => handleChange('lsType', v)} options={['EXTERNAL', 'INTERNAL', 'MSB']} />
+              <Select label="Space Use" value={formData.spaceUse} onChange={v => handleChange('spaceUse', v)} options={['RETAIL','RESIDENTIAL','MANUFACTURING','OFFICE','MIXED_USE','N_A']} />
             </div>
 
             {/* CỘT 2 (CHẠY SEARCHABLE SELECT MỚI) */}
@@ -216,7 +234,7 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData 
               <SearchableSelect label="Site ID" value={formData.siteId} onChange={v => handleChange('siteId', v)} options={sites} />
               <SearchableSelect label="Building ID" value={formData.buildingId} onChange={v => handleChange('buildingId', v)} options={buildings} disabled={!formData.siteId} placeholder={!formData.siteId ? "Select Site first..." : "Search..."} />
               <Input label="Amenity ID" value={formData.amenityId} onChange={v => handleChange('amenityId', v)} />
-              <Select label="Lease / Sublease" value={formData.leaseSublease} onChange={v => handleChange('leaseSublease', v)} options={['MAIN_LEASE', 'SUBLEASE']} />
+              <Select label="Lease / Sublease" value={formData.leaseSublease} onChange={v => handleChange('leaseSublease', v)} options={['LEASE', 'SUBLEASE']} />
             </div>
 
             {/* CỘT 3 */}
@@ -227,7 +245,7 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData 
               <Input label="Service Unit Cost" type="number" value={formData.serviceUnitCost} onChange={v => handleChange('serviceUnitCost', v)} />
               <Input label="Currency" value={formData.currency} onChange={v => handleChange('currency', v)} />
               <Input label="Base Exchange Rate" type="number" value={formData.baseExchangeRate} onChange={v => handleChange('baseExchangeRate', v)} />
-              <Select label="Rent Type" value={formData.rentType} onChange={v => handleChange('rentType', v)} options={['FIXED', 'REVENUE_SHARE']} />
+              <Select label="Rent Type" value={formData.rentType} onChange={v => handleChange('rentType', v)} options={['GROSS_RENT','NET_RENT','REVENUE_SHARING','TRIPLE_NET']} />
               <div className="flex flex-col gap-2 mt-1 bg-gray-50 p-2.5 rounded border border-gray-200/60">
                 <Checkbox label="VAT Excluded?" checked={formData.vatExcluded} onChange={v => handleChange('vatExcluded', v)} />
                 <Checkbox label="Lease Signed?" checked={formData.isSign} onChange={v => handleChange('isSign', v)} />
