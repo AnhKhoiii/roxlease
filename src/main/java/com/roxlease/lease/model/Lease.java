@@ -8,6 +8,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
+import org.springframework.data.mongodb.core.mapping.FieldType;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -79,17 +80,17 @@ public class Lease {
 
     private String pic; 
 
-    // --- DỮ LIỆU TÀI CHÍNH ---
-    @Field("amount_deposit")
+    // --- FIX LỖI BIGDECIMAL MONGODB ---
+    @Field(value = "amount_deposit", targetType = FieldType.DECIMAL128)
     private BigDecimal amountDeposit;
 
-    @Field("rent_unit_cost")
+    @Field(value = "rent_unit_cost", targetType = FieldType.DECIMAL128)
     private BigDecimal rentUnitCost;
 
-    @Field("service_unit_cost")
+    @Field(value = "service_unit_cost", targetType = FieldType.DECIMAL128)
     private BigDecimal serviceUnitCost;
 
-    @Field("base_exchange_rate")
+    @Field(value = "base_exchange_rate", targetType = FieldType.DECIMAL128)
     private BigDecimal baseExchangeRate;
 
     // --- DIỆN TÍCH ---
@@ -114,7 +115,6 @@ public class Lease {
 
     private Boolean active;
 
-    // --- THỜI GIAN LOGGING ---
     @CreatedDate
     @Field("created_at")
     private LocalDateTime createdAt;

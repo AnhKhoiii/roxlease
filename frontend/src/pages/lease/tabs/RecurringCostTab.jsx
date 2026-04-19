@@ -375,11 +375,9 @@ export default function RecurringCostTab({ lease }) {
                   
                   <Select label="Cost Type" required value={formData.costType} onChange={v => setFormData({...formData, costType: v})} 
                     options={[
-                      {value: 'Early Termination', label: 'Early Termination'}, 
-                      {value: 'Expansion', label: 'Expansion'}, 
-                      {value: 'Extension', label: 'Extension'}, 
-                      {value: 'Lease End', label: 'Lease End'}, 
-                      {value: 'Increase Rent', label: 'Increase Rent'}
+                      {value: 'BASERENT', label: 'Base Rent'}, 
+                      {value: 'BASESERVICE', label: 'Base Service'}, 
+                      {value: 'OTHER', label: 'Other'}
                     ]} 
                   />
                   

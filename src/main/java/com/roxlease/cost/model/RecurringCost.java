@@ -1,6 +1,7 @@
 package com.roxlease.cost.model;
 
 import com.roxlease.cost.model.Enum.Period;
+import com.roxlease.cost.model.Enum.CostType;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
@@ -28,7 +29,7 @@ public class RecurringCost {
     private String lsId;
 
     @Field("cost_type")
-    private String costType;
+    private CostType costType;
 
     @Field("vat_country")
     private String vatCountry;

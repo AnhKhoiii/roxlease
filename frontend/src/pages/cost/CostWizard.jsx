@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import axiosInstance from "../../api/axiosInstance";
 
 // ==========================================
-// 1. REUSABLE MODAL COMPONENT (View, Approve, Reject, Pay)
+// 1. REUSABLE MODAL COMPONENT
 // ==========================================
 const CostModal = ({ isOpen, onClose, data, mode, onAction }) => {
   const [reason, setReason] = useState("");
@@ -10,6 +10,9 @@ const CostModal = ({ isOpen, onClose, data, mode, onAction }) => {
 
   const isRejectMode = mode === "REJECT";
   const isPayMode = mode === "PAY";
+  
+  // Lấy ID an toàn
+  const safeId = data.recurringCostId || data.id || data._id;
 
   return (
     <div className="fixed inset-0 bg-black/50 z-[100] flex justify-center items-center backdrop-blur-sm p-4 animate-[fadeIn_0.2s_ease-out]">
@@ -75,7 +78,7 @@ const CostModal = ({ isOpen, onClose, data, mode, onAction }) => {
           <button onClick={onClose} className="px-5 py-2 bg-gray-100 text-gray-700 rounded text-xs font-bold hover:bg-gray-200 transition-colors">Cancel</button>
           {mode !== "VIEW" && (
             <button 
-              onClick={() => onAction(data.id, reason)} 
+              onClick={() => onAction(safeId, reason)} 
               disabled={isRejectMode && !reason.trim()}
               className={`px-6 py-2 text-white rounded text-xs font-bold shadow-sm transition-colors disabled:opacity-50 ${isRejectMode ? 'bg-red-600 hover:bg-red-700' : isPayMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-green-600 hover:bg-green-700'}`}
             >
@@ -106,9 +109,16 @@ const ScheduleCostTab = () => {
   useEffect(() => { fetchData(); }, []);
 
   const handleGenerate = async (id) => {
+    // 💡 TRƯỜNG HỢP 2: ÉP KIỂU SANG STRING AN TOÀN
+    const safeStringId = String(id);
+    if (!safeStringId || safeStringId === "undefined" || safeStringId === "null") {
+      alert("Error: Cannot find ID for this record!");
+      return;
+    }
+    
     try {
       setLoading(true);
-      await axiosInstance.post(`/cost/wizard/generate-schedule/${id}`);
+      await axiosInstance.post(`/cost/wizard/generate-schedule/${safeStringId}`);
       alert("Schedules generated successfully!");
       fetchData();
     } catch (err) { alert(err.response?.data?.error || "Error generating schedule"); }
@@ -134,20 +144,24 @@ const ScheduleCostTab = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {data.map((row, idx) => (
-                <tr key={idx} className="hover:bg-orange-50/50">
-                  <td className="px-4 py-2.5 font-bold text-blue-600">{row.id}</td>
-                  <td className="px-4 py-2.5 text-gray-700">{row.costType}</td>
-                  <td className="px-4 py-2.5 text-gray-700">{row.vatCountry}</td>
-                  <td className="px-4 py-2.5 text-right font-mono font-bold text-green-600">{row.amountInTotal?.toLocaleString()}</td>
-                  <td className="px-4 py-2.5 text-right font-mono font-bold text-red-600">{row.amountOutTotal?.toLocaleString()}</td>
-                  <td className="px-4 py-2.5 text-center">
-                    <button onClick={() => handleGenerate(row.id)} className="bg-[#DE3B40] hover:bg-[#C11C22] text-white px-3 py-1 rounded text-[11px] font-bold shadow-sm transition-colors">
-                      Generate Schedule
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {data.map((row, idx) => {
+                const itemId = row.recurringCostId || row.id || row._id;
+                
+                return (
+                  <tr key={idx} className="hover:bg-orange-50/50">
+                    <td className="px-4 py-2.5 font-bold text-blue-600">{itemId || "N/A"}</td>
+                    <td className="px-4 py-2.5 text-gray-700">{row.costType}</td>
+                    <td className="px-4 py-2.5 text-gray-700">{row.vatCountry}</td>
+                    <td className="px-4 py-2.5 text-right font-mono font-bold text-green-600">{row.amountInTotal?.toLocaleString()}</td>
+                    <td className="px-4 py-2.5 text-right font-mono font-bold text-red-600">{row.amountOutTotal?.toLocaleString()}</td>
+                    <td className="px-4 py-2.5 text-center">
+                      <button onClick={() => handleGenerate(itemId)} disabled={loading} className="bg-[#DE3B40] hover:bg-[#C11C22] disabled:opacity-50 text-white px-3 py-1 rounded text-[11px] font-bold shadow-sm transition-colors">
+                        {loading ? "Generating..." : "Generate Schedule"}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -172,13 +186,25 @@ const ApprovalCostTab = () => {
   useEffect(() => { fetchData(); }, []);
 
   const handleAction = async (id, reason) => {
+    // 💡 TRƯỜNG HỢP 2: ÉP KIỂU SANG STRING AN TOÀN
+    const safeStringId = String(id);
+    if (!safeStringId || safeStringId === "undefined" || safeStringId === "null") {
+      alert("Error: Invalid Schedule ID!");
+      return;
+    }
+
     try {
-      if (modal.mode === "APPROVE") await axiosInstance.post(`/cost/wizard/approve/${id}`);
-      else await axiosInstance.post(`/cost/wizard/reject/${id}`, { reason });
+      if (modal.mode === "APPROVE") {
+        await axiosInstance.post(`/cost/wizard/approve/${safeStringId}`);
+      } else {
+        await axiosInstance.post(`/cost/wizard/reject/${safeStringId}`, { reason });
+      }
       alert(`Schedule ${modal.mode.toLowerCase()}d successfully!`);
       setModal({ isOpen: false });
       fetchData();
-    } catch (err) { alert(err.response?.data?.error || "Error processing request"); }
+    } catch (err) { 
+      alert(err.response?.data?.error || "Error processing request"); 
+    }
   };
 
   return (
@@ -199,20 +225,24 @@ const ApprovalCostTab = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {data.map((row, idx) => (
-                <tr key={idx} className="hover:bg-orange-50/50 cursor-pointer" onDoubleClick={() => setModal({ isOpen: true, data: row, mode: "VIEW" })}>
-                  <td className="px-4 py-2.5 font-bold text-blue-600">{row.id}</td>
-                  <td className="px-4 py-2.5 text-gray-700">{row.periodSrc}</td>
-                  <td className="px-4 py-2.5 text-gray-700">{row.costType}</td>
-                  <td className="px-4 py-2.5 text-right font-mono font-bold text-green-600">{row.amountInTotal?.toLocaleString()}</td>
-                  <td className="px-4 py-2.5 text-right font-mono font-bold text-red-600">{row.amountOutTotal?.toLocaleString()}</td>
-                  <td className="px-4 py-2.5 text-center"><span className="bg-orange-100 text-orange-700 px-2 py-1 rounded text-[10px] font-bold">PENDING</span></td>
-                  <td className="px-4 py-2.5 text-center flex justify-center gap-2">
-                    <button onClick={() => setModal({ isOpen: true, data: row, mode: "APPROVE" })} className="bg-green-50 text-green-600 hover:bg-green-100 px-3 py-1 rounded text-[11px] font-bold transition-colors">Approve</button>
-                    <button onClick={() => setModal({ isOpen: true, data: row, mode: "REJECT" })} className="bg-red-50 text-red-600 hover:bg-red-100 px-3 py-1 rounded text-[11px] font-bold transition-colors">Reject</button>
-                  </td>
-                </tr>
-              ))}
+              {data.map((row, idx) => {
+                const itemId = row.recurringCostId || row.id || row._id;
+
+                return (
+                  <tr key={idx} className="hover:bg-orange-50/50 cursor-pointer" onDoubleClick={() => setModal({ isOpen: true, data: row, mode: "VIEW" })}>
+                    <td className="px-4 py-2.5 font-bold text-blue-600">{itemId || "N/A"}</td>
+                    <td className="px-4 py-2.5 text-gray-700">{row.periodSrc}</td>
+                    <td className="px-4 py-2.5 text-gray-700">{row.costType}</td>
+                    <td className="px-4 py-2.5 text-right font-mono font-bold text-green-600">{row.amountInTotal?.toLocaleString()}</td>
+                    <td className="px-4 py-2.5 text-right font-mono font-bold text-red-600">{row.amountOutTotal?.toLocaleString()}</td>
+                    <td className="px-4 py-2.5 text-center"><span className="bg-orange-100 text-orange-700 px-2 py-1 rounded text-[10px] font-bold">PENDING</span></td>
+                    <td className="px-4 py-2.5 text-center flex justify-center gap-2">
+                      <button onClick={(e) => { e.stopPropagation(); setModal({ isOpen: true, data: row, mode: "APPROVE" }); }} className="bg-green-50 text-green-600 hover:bg-green-100 px-3 py-1 rounded text-[11px] font-bold transition-colors">Approve</button>
+                      <button onClick={(e) => { e.stopPropagation(); setModal({ isOpen: true, data: row, mode: "REJECT" }); }} className="bg-red-50 text-red-600 hover:bg-red-100 px-3 py-1 rounded text-[11px] font-bold transition-colors">Reject</button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -237,12 +267,21 @@ const ReviewCostTab = () => {
   useEffect(() => { fetchData(); }, []);
 
   const handleAction = async (id) => {
+    // 💡 TRƯỜNG HỢP 2: ÉP KIỂU SANG STRING AN TOÀN
+    const safeStringId = String(id);
+    if (!safeStringId || safeStringId === "undefined" || safeStringId === "null") {
+      alert("Error: Invalid Schedule ID!");
+      return;
+    }
+
     try {
-      await axiosInstance.post(`/cost/wizard/pay/${id}`);
+      await axiosInstance.post(`/cost/wizard/pay/${safeStringId}`);
       alert("Payment processed successfully!");
       setModal({ isOpen: false });
       fetchData();
-    } catch (err) { alert(err.response?.data?.error || "Error processing payment"); }
+    } catch (err) { 
+      alert(err.response?.data?.error || "Error processing payment"); 
+    }
   };
 
   return (
@@ -262,27 +301,31 @@ const ReviewCostTab = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {data.map((row, idx) => (
-                <tr key={idx} className="hover:bg-orange-50/50 cursor-pointer" onDoubleClick={() => setModal({ isOpen: true, data: row, mode: "VIEW" })}>
-                  <td className="px-4 py-2.5 font-bold text-blue-600">{row.id}</td>
-                  <td className="px-4 py-2.5 text-gray-700">{row.periodSrc}</td>
-                  <td className="px-4 py-2.5 text-right font-mono font-bold text-green-600">{row.amountInTotal?.toLocaleString()}</td>
-                  <td className="px-4 py-2.5 text-right font-mono font-bold text-red-600">{row.amountOutTotal?.toLocaleString()}</td>
-                  <td className="px-4 py-2.5 text-center">
-                    <span className={`px-2 py-1 rounded text-[10px] font-bold ${row.paymentStatus === 'PAID' ? 'bg-green-100 text-green-700' : row.paymentStatus === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
-                      {row.paymentStatus}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5 text-center">
-                    {row.paymentStatus === 'APPROVED' && (
-                      <button onClick={() => setModal({ isOpen: true, data: row, mode: "PAY" })} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-[11px] font-bold shadow-sm transition-colors">
-                        Mark PAID
-                      </button>
-                    )}
-                    {row.paymentStatus === 'PAID' && <span className="text-[11px] font-semibold text-gray-500">Paid on: {new Date(row.datePaid).toLocaleDateString()}</span>}
-                  </td>
-                </tr>
-              ))}
+              {data.map((row, idx) => {
+                const itemId = row.recurringCostId || row.id || row._id;
+
+                return (
+                  <tr key={idx} className="hover:bg-orange-50/50 cursor-pointer" onDoubleClick={() => setModal({ isOpen: true, data: row, mode: "VIEW" })}>
+                    <td className="px-4 py-2.5 font-bold text-blue-600">{itemId || "N/A"}</td>
+                    <td className="px-4 py-2.5 text-gray-700">{row.periodSrc}</td>
+                    <td className="px-4 py-2.5 text-right font-mono font-bold text-green-600">{row.amountInTotal?.toLocaleString()}</td>
+                    <td className="px-4 py-2.5 text-right font-mono font-bold text-red-600">{row.amountOutTotal?.toLocaleString()}</td>
+                    <td className="px-4 py-2.5 text-center">
+                      <span className={`px-2 py-1 rounded text-[10px] font-bold ${row.paymentStatus === 'PAID' ? 'bg-green-100 text-green-700' : row.paymentStatus === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
+                        {row.paymentStatus}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5 text-center">
+                      {row.paymentStatus === 'APPROVED' && (
+                        <button onClick={(e) => { e.stopPropagation(); setModal({ isOpen: true, data: row, mode: "PAY" }); }} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-[11px] font-bold shadow-sm transition-colors">
+                          Mark PAID
+                        </button>
+                      )}
+                      {row.paymentStatus === 'PAID' && <span className="text-[11px] font-semibold text-gray-500">Paid on: {row.datePaid ? new Date(row.datePaid).toLocaleDateString() : "N/A"}</span>}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -292,7 +335,7 @@ const ReviewCostTab = () => {
 };
 
 // ==========================================
-// 5. MAIN COMPONENT: COST WIZARD (Container)
+// 5. MAIN COMPONENT: COST WIZARD
 // ==========================================
 export default function CostWizard() {
   const [activeTab, setActiveTab] = useState("SCHEDULE");
@@ -306,7 +349,6 @@ export default function CostWizard() {
         </div>
       </div>
 
-      {/* Tabs Navigation */}
       <div className="flex border-b border-gray-200 mb-4 shrink-0">
         {["SCHEDULE", "APPROVAL", "REVIEW"].map(tab => (
           <button
@@ -321,7 +363,6 @@ export default function CostWizard() {
         ))}
       </div>
 
-      {/* Tab Content */}
       <div className="flex-1 overflow-hidden">
         {activeTab === "SCHEDULE" && <ScheduleCostTab />}
         {activeTab === "APPROVAL" && <ApprovalCostTab />}

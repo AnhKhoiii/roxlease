@@ -3,6 +3,7 @@ package com.roxlease.cost.service;
 import com.roxlease.cost.model.RecurringCost;
 import com.roxlease.cost.model.RecurringCostSchedule;
 import com.roxlease.cost.model.Enum.PaymentStatus;
+import com.roxlease.cost.model.Enum.CostType;
 import com.roxlease.cost.repository.RecurringCostRepository;
 import com.roxlease.cost.repository.RecurringCostScheduleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,7 +43,7 @@ public class CostWizardService {
 
             RecurringCostSchedule schedule = RecurringCostSchedule.builder()
                     .recurringCostId(cost.getRecurringCostId())
-                    .leaseId("L-" + cost.getLsId()) // Fallback mockup
+                    .leaseId("L-" + cost.getLsId()) 
                     .costType(cost.getCostType())
                     .vatCountry(cost.getVatCountry())
                     .amountInBase(cost.getAmountInBase())

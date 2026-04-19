@@ -32,10 +32,14 @@ public class LeaseController {
 
     @PostMapping
     public ResponseEntity<?> createLease(@RequestBody Lease lease) {
-        if (lease.getLsId() != null && leaseRepository.existsById(lease.getLsId())) {
-            return ResponseEntity.badRequest().body(Collections.singletonMap("error", "Lease ID already exists!"));
+        if (lease.getLsId() != null && lease.getLsId().trim().isEmpty()) {
+            lease.setLsId(null); 
         }
-        
+
+        if (lease.getLsId() != null && leaseRepository.existsById(lease.getLsId())) {
+            return ResponseEntity.badRequest().body(Collections.singletonMap("error", "Lease ID can`t be empty"));
+        }
+
         lease.setCreatedAt(LocalDateTime.now());
         lease.setUpdatedAt(LocalDateTime.now());
         return ResponseEntity.ok(leaseRepository.save(lease));

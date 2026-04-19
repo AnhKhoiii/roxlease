@@ -1,6 +1,7 @@
 package com.roxlease.cost.model;
 
 import com.roxlease.cost.model.Enum.PaymentStatus;
+import com.roxlease.cost.model.Enum.CostType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,7 +23,7 @@ public class RecurringCostSchedule {
     private String id;
     private String recurringCostId;
     private String leaseId;
-    private String costType;
+    private CostType costType;
     private String vatCountry;
     private String currency;
     
