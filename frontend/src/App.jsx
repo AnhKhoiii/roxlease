@@ -26,6 +26,7 @@ import VatCountryConsole from './pages/cost/VatCountryConsole';
 import PlannedRevenue from './pages/cost/PlannedRevenue';
 import BuildingPerformance from './pages/space/BuildingPerformance';
 import CostWizard from './pages/cost/CostWizard';
+import LeaseDashBoard from './pages/lease/DashboardComponents';
 
 function App() {
   return (
@@ -53,7 +54,7 @@ function App() {
           </Route>
 
           <Route path="lease" element={<LeaseLayout />}>
-            <Route path="dashboard" element={<div className="p-8">Lease Dashboard</div>} />
+            <Route path="dashboard" element={<LeaseDashBoard />} />
             <Route path="console" element={<LeaseConsole />} />
               <Route path="console/:id" element={<LeaseDetail />} />
             <Route path="request" element={<Request />} />
