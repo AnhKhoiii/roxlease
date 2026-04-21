@@ -20,6 +20,19 @@ const Input = ({ label, value, onChange, type = "text", disabled, placeholder })
   </div>
 );
 
+const Checkbox = ({ label, checked, onChange, disabled }) => (
+  <label className={`flex items-center gap-1.5 cursor-pointer w-max ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}>
+    <input
+      type="checkbox"
+      checked={checked || false}
+      onChange={e => !disabled && onChange(e.target.checked)}
+      disabled={disabled}
+      className={`w-3 h-3 text-blue-600 rounded border-gray-300 focus:ring-blue-500 ${disabled ? 'bg-gray-200' : 'accent-blue-600'}`}
+    />
+    <span className="text-[11px] font-semibold text-gray-700">{label}</span>
+  </label>
+);
+
 const Select = ({ label, value, onChange, options = [], disabled }) => (
   <div className="flex flex-col gap-0.5 w-full">
     <label className="font-bold text-[10px] text-gray-700 uppercase tracking-wide">{label}</label>
@@ -37,39 +50,12 @@ const Select = ({ label, value, onChange, options = [], disabled }) => (
   </div>
 );
 
-const Checkbox = ({ label, checked, onChange, disabled }) => (
-  <label className={`flex items-center gap-1.5 cursor-pointer w-max ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}>
-    <input
-      type="checkbox"
-      checked={checked || false}
-      onChange={e => !disabled && onChange(e.target.checked)}
-      disabled={disabled}
-      className={`w-3 h-3 text-blue-600 rounded border-gray-300 focus:ring-blue-500 ${disabled ? 'bg-gray-200' : 'accent-blue-600'}`}
-    />
-    <span className="text-[11px] font-semibold text-gray-700">{label}</span>
-  </label>
-);
-
-// 🚀 COMPONENT SEARCHABLE SELECT FIX LỖI TÌM KIẾM
-const SearchableSelect = ({ label, value, onChange, options = [], disabled, placeholder }) => {
+const AutocompleteInput = ({ label, value, onChange, options = [], disabled, placeholder }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [inputText, setInputText] = useState("");
-
-  // Đồng bộ Text hiển thị với Value khi không mở box
-  useEffect(() => {
-    if (!isOpen) {
-      const selectedOpt = options.find(o => o.value === value);
-      if (selectedOpt) {
-        setInputText(selectedOpt.label !== selectedOpt.value ? `${selectedOpt.value} - ${selectedOpt.label}` : selectedOpt.value);
-      } else {
-        setInputText("");
-      }
-    }
-  }, [value, options, isOpen]);
 
   const filteredOptions = options.filter(opt =>
-    (opt.label || "").toString().toLowerCase().includes(inputText.toLowerCase()) ||
-    (opt.value || "").toString().toLowerCase().includes(inputText.toLowerCase())
+    (opt.label || "").toString().toLowerCase().includes((value || "").toString().toLowerCase()) ||
+    (opt.value || "").toString().toLowerCase().includes((value || "").toString().toLowerCase())
   );
 
   return (
@@ -77,19 +63,17 @@ const SearchableSelect = ({ label, value, onChange, options = [], disabled, plac
       <label className="font-bold text-[10px] text-gray-700 uppercase tracking-wide">{label}</label>
       <input
         type="text"
-        value={inputText}
+        value={value || ''}
         onChange={(e) => {
-          setInputText(e.target.value);
+          onChange(e.target.value); 
           setIsOpen(true);
         }}
-        onFocus={() => {
-          setIsOpen(true);
-          setInputText(""); // Mẹo: Click vào thì xóa text để show toàn bộ list gốc
-        }}
-        onBlur={() => setTimeout(() => setIsOpen(false), 200)}
+        onFocus={() => setIsOpen(true)}
+        onBlur={() => setTimeout(() => setIsOpen(false), 200)} 
         disabled={disabled}
-        placeholder={placeholder || "Search or select..."}
-        className="border border-gray-300 rounded px-2 py-1 text-[11px] outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500 bg-white transition-shadow cursor-pointer"
+        placeholder={placeholder || "Type to search..."}
+        className="border border-gray-300 rounded px-2 py-1 text-[11px] outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500 bg-white transition-shadow"
+        autoComplete="off"
       />
       
       {isOpen && !disabled && (
@@ -100,8 +84,8 @@ const SearchableSelect = ({ label, value, onChange, options = [], disabled, plac
                 key={idx}
                 className="px-2.5 py-1.5 text-[11px] hover:bg-blue-50 cursor-pointer text-gray-800 transition-colors"
                 onMouseDown={(e) => {
-                  e.preventDefault();
-                  onChange(opt.value);
+                  e.preventDefault(); 
+                  onChange(opt.value); 
                   setIsOpen(false);
                 }}
               >
@@ -110,13 +94,14 @@ const SearchableSelect = ({ label, value, onChange, options = [], disabled, plac
               </li>
             ))
           ) : (
-            <li className="px-2.5 py-1.5 text-[11px] text-gray-400 italic">No data found...</li>
+            <li className="px-2.5 py-1.5 text-[11px] text-gray-400 italic">No matches...</li>
           )}
         </ul>
       )}
     </div>
   );
 };
+
 
 // ==========================================
 // MODAL CHÍNH (4 CỘT)
@@ -125,24 +110,28 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData 
   const [formData, setFormData] = useState({});
   const [sites, setSites] = useState([]);
   const [buildings, setBuildings] = useState([]);
+  
+  const [amenities, setAmenities] = useState([]);
+  const [parties, setParties] = useState([]);
 
   useEffect(() => {
     if (isOpen) {
       setFormData(initialData || {});
       fetchSites();
+      fetchAmenities();
+      fetchParties();
     }
   }, [isOpen, initialData]);
 
-  // ================= MAPPING DATA CHUẨN 100% THEO FILE JAVA =================
   const fetchSites = async () => {
     try {
       const res = await axiosInstance.get('/space/properties/sites');
       const items = Array.isArray(res.data) ? res.data : (res.data?.content || []);
       setSites(items.filter(Boolean).map(item => ({
-        value: item.id || item.siteId || '',
-        label: item.siteName || item.name || item.id || '' // Dùng siteName
+        value: item.siteId || item.id || '',
+        label: item.siteName || item.name || item.siteId || item.id || ''
       })));
-    } catch { setSites([]); }
+    } catch (err) { setSites([]); }
   };
 
   const fetchBuildings = async (siteId) => {
@@ -150,18 +139,36 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData 
     try {
       const res = await axiosInstance.get(`/space/properties/buildings`);
       const items = Array.isArray(res.data) ? res.data : (res.data?.content || []);
-      
-      // Foreign Key: siteId (từ Java)
       const filtered = items.filter(item => item && item.siteId === siteId);
-      
       setBuildings(filtered.map(item => ({
-        value: item.id || item.blId || '',
-        label: item.blName || item.name || item.id || '' // Dùng blName
+        value: item.blId || item.id || '',
+        label: item.blName || item.name || item.blId || item.id || ''
       })));
     } catch { setBuildings([]); }
   };
 
-  // Kích hoạt fetch Cascading
+  const fetchAmenities = async () => {
+    try {
+      const res = await axiosInstance.get('/space/amenities');
+      const items = Array.isArray(res.data) ? res.data : (res.data?.content || []);
+      setAmenities(items.filter(Boolean).map(item => ({
+        value: item.amenityId || item.id || '',
+        label: item.amenityName || item.name || item.amenityId || item.id || ''
+      })));
+    } catch (err) { setAmenities([]); }
+  };
+
+  const fetchParties = async () => {
+    try {
+      const res = await axiosInstance.get('/lease/parties');
+      const items = Array.isArray(res.data) ? res.data : (res.data?.content || []);
+      setParties(items.filter(Boolean).map(item => ({
+        value: item.partyId || item.id || '',
+        label: item.partyName || item.name || item.partyId || item.id || ''
+      })));
+    } catch (err) { setParties([]); }
+  };
+
   useEffect(() => { if (formData.siteId) fetchBuildings(formData.siteId); else setBuildings([]); }, [formData.siteId]);
 
   if (!isOpen) return null;
@@ -172,33 +179,23 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData 
       updates[field] = value === '' ? null : Number(value);
     }
     
-    // Reset ô con khi ô cha thay đổi
     if (field === 'siteId') { updates.buildingId = ''; }
     
     setFormData(prev => ({ ...prev, ...updates }));
   };
 
- const handleSaveAction = () => {
-    if (!formData.lsId) { 
-      alert("Lease Code (lsId) is required!"); 
-      return; 
-    }
-
+  // 🚀 CẬP NHẬT: NHẬN THÊM CỜ isSendRequest
+  const handleSaveAction = (isSendRequest = false) => {
+    if (!formData.lsId) { alert("Lease Code (lsId) is required!"); return; }
     const payload = { ...formData };
-
     Object.keys(payload).forEach(key => {
       const value = payload[key];
-      
-      if (value === "") {
-        payload[key] = null;
-      }
-      
-      if (typeof value === "number" && Number.isNaN(value)) {
-        payload[key] = null;
-      }
+      if (value === "") payload[key] = null;
+      if (typeof value === "number" && Number.isNaN(value)) payload[key] = null;
     });
-
-    onSave(payload);
+    
+    // GỬI KÈM TRẠNG THÁI LÊN COMPONENT CHA
+    onSave(payload, isSendRequest);
   };
 
   return (
@@ -206,9 +203,23 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData 
       <div className="bg-white w-[1200px] rounded-xl shadow-2xl flex flex-col overflow-hidden animate-[fadeIn_0.2s_ease-out] max-h-[95vh]">
         <div className="bg-[#EFB034] px-5 py-3 flex justify-between items-center shrink-0">
           <h2 className="text-base font-bold uppercase tracking-tight text-white drop-shadow-sm">{mode === "ADD" ? "Add New Lease" : "Edit Lease"}</h2>
+          
+          {/* 🚀 HIỂN THỊ CÁC NÚT BẤM (DRAFT HOẶC REQUEST) TÙY THEO TRẠNG THÁI */}
           <div className="flex gap-2 items-center">
-            <button onClick={handleSaveAction} className="bg-[#DE3B40] hover:bg-[#C11C22] text-white px-5 py-1.5 rounded text-xs font-bold shadow-sm transition-colors">Save</button>
-            <button onClick={onClose} className="text-white hover:text-red-100 ml-1 transition-colors"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
+            {mode === "ADD" ? (
+              <>
+                <button onClick={() => handleSaveAction(false)} className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors">Save Draft</button>
+                <button onClick={() => handleSaveAction(true)} className="bg-[#DE3B40] hover:bg-[#C11C22] text-white px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors">Save & Send Request</button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => handleSaveAction(false)} className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors">Save Changes</button>
+                {!formData.active && (
+                  <button onClick={() => handleSaveAction(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors">Update & Send Request</button>
+                )}
+              </>
+            )}
+            <button onClick={onClose} className="text-white hover:text-red-100 ml-2 transition-colors"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
           </div>
         </div>
         
@@ -225,27 +236,27 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData 
               <Input label="Start Date" type="date" value={formData.startDate} onChange={v => handleChange('startDate', v)} />
               <Input label="End Date" type="date" value={formData.endDate} onChange={v => handleChange('endDate', v)} />
               <Select label="Lease Type" value={formData.lsType} onChange={v => handleChange('lsType', v)} options={['EXTERNAL', 'INTERNAL', 'MSB']} />
-              <Select label="Space Use" value={formData.spaceUse} onChange={v => handleChange('spaceUse', v)} options={['RETAIL','RESIDENTIAL','MANUFACTURING','OFFICE','MIXED_USE','N_A']} />
+              <Select label="Space Use" value={formData.spaceUse} onChange={v => handleChange('spaceUse', v)} options={['OFFICE', 'RETAIL', 'STORAGE', 'MANUFACTURING', 'MIXED_USE', 'N_A']} />
             </div>
 
-            {/* CỘT 2 (CHẠY SEARCHABLE SELECT MỚI) */}
+            {/* CỘT 2 */}
             <div className="flex flex-col gap-3">
               <div className="pb-0.5 border-b border-gray-100"><span className="font-bold text-blue-800 text-[9px] uppercase tracking-wider">Location & Structure</span></div>
-              <SearchableSelect label="Site ID" value={formData.siteId} onChange={v => handleChange('siteId', v)} options={sites} />
-              <SearchableSelect label="Building ID" value={formData.buildingId} onChange={v => handleChange('buildingId', v)} options={buildings} disabled={!formData.siteId} placeholder={!formData.siteId ? "Select Site first..." : "Search..."} />
-              <Input label="Amenity ID" value={formData.amenityId} onChange={v => handleChange('amenityId', v)} />
+              <AutocompleteInput label="Site ID" value={formData.siteId} onChange={v => handleChange('siteId', v)} options={sites} placeholder="Search Site ID..." />
+              <AutocompleteInput label="Building ID" value={formData.buildingId} onChange={v => handleChange('buildingId', v)} options={buildings} disabled={!formData.siteId} placeholder={!formData.siteId ? "Select Site first..." : "Search Building ID..."} />
+              <AutocompleteInput label="Amenity ID" value={formData.amenityId} onChange={v => handleChange('amenityId', v)} options={amenities} placeholder="Search Amenity ID..." />
               <Select label="Lease / Sublease" value={formData.leaseSublease} onChange={v => handleChange('leaseSublease', v)} options={['LEASE', 'SUBLEASE']} />
             </div>
 
             {/* CỘT 3 */}
-            <div className="flex flex-col gap-3"> 
+            <div className="flex flex-col gap-3">
               <div className="pb-0.5 border-b border-gray-100"><span className="font-bold text-blue-800 text-[9px] uppercase tracking-wider">Financial & Status</span></div>
               <Input label="Deposit" type="number" value={formData.amountDeposit} onChange={v => handleChange('amountDeposit', v)} />
               <Input label="Rent Unit Cost" type="number" value={formData.rentUnitCost} onChange={v => handleChange('rentUnitCost', v)} />
               <Input label="Service Unit Cost" type="number" value={formData.serviceUnitCost} onChange={v => handleChange('serviceUnitCost', v)} />
               <Input label="Currency" value={formData.currency} onChange={v => handleChange('currency', v)} />
               <Input label="Base Exchange Rate" type="number" value={formData.baseExchangeRate} onChange={v => handleChange('baseExchangeRate', v)} />
-              <Select label="Rent Type" value={formData.rentType} onChange={v => handleChange('rentType', v)} options={['GROSS_RENT','NET_RENT','REVENUE_SHARING','TRIPLE_NET']} />
+              <Select label="Rent Type" value={formData.rentType} onChange={v => handleChange('rentType', v)} options={['GROSS_RENT', 'NET_RENT', 'REVENUE_SHARING', 'TRIPLE_NET']} />
               <div className="flex flex-col gap-2 mt-1 bg-gray-50 p-2.5 rounded border border-gray-200/60">
                 <Checkbox label="VAT Excluded?" checked={formData.vatExcluded} onChange={v => handleChange('vatExcluded', v)} />
                 <Checkbox label="Lease Signed?" checked={formData.isSign} onChange={v => handleChange('isSign', v)} />
@@ -261,7 +272,9 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData 
               <Input label="Corridor Area (sqm)" type="number" value={formData.areaCorridor} onChange={v => handleChange('areaCorridor', v)} />
               <Input label="Parent Lease" value={formData.parentLsId} onChange={v => handleChange('parentLsId', v)} />
               <div className="flex items-end gap-2 mt-0.5">
-                <div className="flex-1"><Input label="Party Name" value={formData.partyName} onChange={v => handleChange('partyName', v)} /></div>
+                <div className="flex-1">
+                  <AutocompleteInput label="Party ID / Name" value={formData.partyId} onChange={v => handleChange('partyId', v)} options={parties} placeholder="Search Party..." />
+                </div>
                 <div className="pb-1.5"><Checkbox label="Is Landlord?" checked={formData.isLandlord} onChange={v => handleChange('isLandlord', v)} /></div>
               </div>
               <Input label="Person In charge (PIC)" value={formData.pic} onChange={v => handleChange('pic', v)} />

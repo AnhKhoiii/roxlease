@@ -3,8 +3,10 @@ package com.roxlease.lease.controller;
 import com.roxlease.lease.model.Request;
 import com.roxlease.lease.model.Enum.RQStatus;
 import com.roxlease.lease.model.Enum.RQType;
+import com.roxlease.lease.model.Lease;
 import com.roxlease.lease.service.RequestService;
 import com.roxlease.lease.repository.RequestRepository;
+import com.roxlease.lease.repository.LeaseRepository; // 🚀 IMPORT THÊM
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -27,10 +29,13 @@ public class RequestController {
 
     private final RequestService service;
     private final RequestRepository requestRepository; 
+    private final LeaseRepository leaseRepository; // 🚀 KHAI BÁO THÊM REPO LEASE
 
-    public RequestController(RequestService service, RequestRepository requestRepository) {
+    // 🚀 TIÊM LEASE REPOSITORY VÀO CONSTRUCTOR
+    public RequestController(RequestService service, RequestRepository requestRepository, LeaseRepository leaseRepository) {
         this.service = service;
         this.requestRepository = requestRepository;
+        this.leaseRepository = leaseRepository;
     }
 
     @GetMapping("/pending")
@@ -51,12 +56,34 @@ public class RequestController {
 
     @PostMapping
     public ResponseEntity<Request> createRequest(@RequestBody Request request) {
+        // Nếu Frontend quên gửi Status thì mặc định là PENDING
+        if (request.getStatus() == null) {
+            request.setStatus(RQStatus.PENDING);
+        }
         return ResponseEntity.ok(service.createRequest(request));
     }
 
+    // ==============================================================
+    // 🚀 HÀM DUYỆT REQUEST: CHECK THEO LEASE_DETAILS
+    // ==============================================================
     @PutMapping("/{id}/approve")
     public ResponseEntity<Request> approveRequest(@PathVariable String id, @RequestParam(defaultValue = "Admin") String user) {
-        return ResponseEntity.ok(service.approveRequest(id, user));
+        Request approvedReq = service.approveRequest(id, user);
+
+        // 🚀 ĐỔI ĐIỀU KIỆN SANG RQType.LEASE_DETAILS
+        if (approvedReq != null && approvedReq.getRequestType() == RQType.LEASE_DETAILS) {
+            
+            String leaseId = approvedReq.getTargetId();
+            
+            if (leaseId != null) {
+                leaseRepository.findById(leaseId).ifPresent(lease -> {
+                    lease.setActive(true);
+                    leaseRepository.save(lease);
+                });
+            }
+        }
+
+        return ResponseEntity.ok(approvedReq);
     }
 
     @PutMapping("/{id}/reject")
