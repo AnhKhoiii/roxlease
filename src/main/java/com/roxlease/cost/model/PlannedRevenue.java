@@ -9,6 +9,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -25,9 +26,9 @@ public class PlannedRevenue {
     private Integer year;
     private Integer month;
     
-    private Double plannedRevenue;
-    private Double plannedOcc;
-    private Double plannedCost;
+    private BigDecimal plannedRevenue;
+    private BigDecimal plannedOcc;
+    private BigDecimal plannedCost;
 
     @CreatedDate
     private LocalDateTime createdAt;
