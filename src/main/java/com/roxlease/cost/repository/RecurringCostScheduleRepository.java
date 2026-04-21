@@ -6,6 +6,7 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import java.util.List;
 
 public interface RecurringCostScheduleRepository extends MongoRepository<RecurringCostSchedule, String> {
-    List<RecurringCostSchedule> findByPaymentStatusIn(List<PaymentStatus> statuses);
+    List<RecurringCostSchedule> findByPaymentStatus(PaymentStatus pending);
     boolean existsByRecurringCostId(String recurringCostId);
+    List<RecurringCostSchedule> findByLeaseId(String leaseId);
 }

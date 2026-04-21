@@ -1,0 +1,21 @@
+﻿Field Name,New Value
+recurringCostId,COST01
+description,test
+costType,BASERENT
+vatCountry,Viet Nam
+dateMatchLs,true
+overrideExchangeRate,false
+active,false
+startDate,null
+endDate,null
+period,MONTHLY
+interval,1
+amountInBase,100
+amountOutBase,100
+amountInVat,10
+amountInTotal,110
+amountOutVat,10
+amountOutTotal,110
+exchangeRate,1
+currVat,0
+overrideVat,false

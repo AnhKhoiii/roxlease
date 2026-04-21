@@ -1,102 +1,199 @@
 package com.roxlease.cost.service;
 
+import com.roxlease.cost.model.Enum.PaymentStatus;
+import com.roxlease.cost.model.Enum.Period;
 import com.roxlease.cost.model.RecurringCost;
 import com.roxlease.cost.model.RecurringCostSchedule;
-import com.roxlease.cost.model.Enum.PaymentStatus;
-import com.roxlease.cost.model.Enum.CostType;
 import com.roxlease.cost.repository.RecurringCostRepository;
 import com.roxlease.cost.repository.RecurringCostScheduleRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.roxlease.lease.model.LeaseOption;
+import com.roxlease.lease.model.Enum.OptionType;
+import com.roxlease.lease.repository.LeaseOptionRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class CostWizardService {
 
-    @Autowired
-    private RecurringCostRepository recurringCostRepo;
+    private final RecurringCostRepository recurringCostRepo;
+    private final RecurringCostScheduleRepository scheduleRepo;
+    private final LeaseOptionRepository optionRepo; // 🚀 Tiêm thêm Option Repo để tính effectiveEndDate
 
-    @Autowired
-    private RecurringCostScheduleRepository scheduleRepo;
+    public CostWizardService(RecurringCostRepository recurringCostRepo, 
+                             RecurringCostScheduleRepository scheduleRepo,
+                             LeaseOptionRepository optionRepo) {
+        this.recurringCostRepo = recurringCostRepo;
+        this.scheduleRepo = scheduleRepo;
+        this.optionRepo = optionRepo;
+    }
 
-    // TAB 1: Tạo Lịch tự động (Generate Schedule)
-    public List<RecurringCostSchedule> generateSchedule(String recurringCostId) {
-        if (scheduleRepo.existsByRecurringCostId(recurringCostId)) {
-            throw new RuntimeException("Schedule already generated for this cost!");
+    // ==============================================================================
+    // UC-RC-01: HIỂN THỊ DANH SÁCH CHƯA LẬP LỊCH (Tab 1)
+    // Lọc: active = true, schedule_status = NONE, end_date >= sysdate
+    // ==============================================================================
+    public List<RecurringCost> getPendingBaseCosts() {
+        LocalDate today = LocalDate.now();
+        return recurringCostRepo.findByActiveTrue().stream()
+                .filter(cost -> "NONE".equals(cost.getScheduleStatus()))
+                .filter(cost -> cost.getEndDate() == null || !cost.getEndDate().isBefore(today))
+                .collect(Collectors.toList());
+    }
+
+    // ==============================================================================
+    // UC-RC-01: LẬP LỊCH CHI PHÍ ĐỊNH KỲ (Generate Schedule)
+    // ==============================================================================
+    public int generateSchedule(String costId) { // 🚀 Đổi từ void sang int để trả về số lượng
+        RecurringCost cost = recurringCostRepo.findById(costId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy chi phí định kỳ!"));
+
+        if (!Boolean.TRUE.equals(cost.getActive()) || !"NONE".equals(cost.getScheduleStatus())) {
+            throw new RuntimeException("Chi phí này chưa được Active hoặc đã được lập lịch!");
         }
 
-        RecurringCost cost = recurringCostRepo.findById(recurringCostId)
-                .orElseThrow(() -> new RuntimeException("Recurring Cost not found"));
-
-        List<RecurringCostSchedule> schedules = new ArrayList<>();
-        LocalDate currentSrc = cost.getStartDate() != null ? cost.getStartDate() : LocalDate.now();
-        LocalDate end = cost.getEndDate() != null ? cost.getEndDate() : currentSrc.plusYears(1);
-        int interval = cost.getInterval() != null && cost.getInterval() > 0 ? cost.getInterval() : 1;
-
-        while (!currentSrc.isAfter(end)) {
-            LocalDate currentEnd = currentSrc.plusMonths(interval).minusDays(1);
-            if (currentEnd.isAfter(end)) currentEnd = end;
-
-            RecurringCostSchedule schedule = RecurringCostSchedule.builder()
-                    .recurringCostId(cost.getRecurringCostId())
-                    .leaseId("L-" + cost.getLsId()) 
-                    .costType(cost.getCostType())
-                    .vatCountry(cost.getVatCountry())
-                    .amountInBase(cost.getAmountInBase())
-                    .amountInVat(cost.getAmountInVat())
-                    .amountInTotal(cost.getAmountInTotal())
-                    .amountOutBase(cost.getAmountOutBase())
-                    .amountOutVat(cost.getAmountOutVat())
-                    .amountOutTotal(cost.getAmountOutTotal())
-                    .periodSrc(currentSrc)
-                    .periodEnd(currentEnd)
-                    .dueDate(currentEnd.plusDays(5))
-                    .paymentStatus(PaymentStatus.PENDING)
-                    .build();
-
-            schedules.add(schedule);
-            currentSrc = currentSrc.plusMonths(interval);
+        if (cost.getStartDate() == null || cost.getPeriod() == null) {
+            throw new RuntimeException("Lỗi: Start Date và Period không được để trống!");
         }
-        return scheduleRepo.saveAll(schedules);
+
+        LocalDate effectiveEndDate = cost.getEndDate();
+        List<LeaseOption> options = optionRepo.findByLsIdAndActiveTrue(cost.getLsId());
+        
+        if (options != null && !options.isEmpty()) {
+            LocalDate maxExtension = options.stream()
+                    .filter(o -> o.getOpType() == OptionType.EXTENSION || o.getOpType() == OptionType.RENEWAL)
+                    .map(LeaseOption::getEndDate)
+                    .max(LocalDate::compareTo)
+                    .orElse(null);
+
+            LocalDate minTermination = options.stream()
+                    .filter(o -> o.getOpType() == OptionType.EARLY_TERMINATION)
+                    .map(LeaseOption::getStartDate) 
+                    .min(LocalDate::compareTo)
+                    .orElse(null);
+
+            if (maxExtension != null && (effectiveEndDate == null || maxExtension.isAfter(effectiveEndDate))) {
+                effectiveEndDate = maxExtension;
+            }
+            if (minTermination != null && (effectiveEndDate == null || minTermination.isBefore(effectiveEndDate))) {
+                effectiveEndDate = minTermination;
+            }
+        }
+
+        // 🚀 BẢO VỆ 1: Nếu không có ngày kết thúc, mặc định lập lịch trong 1 năm
+        if (effectiveEndDate == null) {
+            effectiveEndDate = cost.getStartDate().plusYears(1);
+        }
+
+        LocalDate currentDue = cost.getStartDate();
+        int interval = (cost.getInterval() != null && cost.getInterval() > 0) ? cost.getInterval() : 1;
+        Period period = cost.getPeriod();
+        int generatedCount = 0; // Đếm số bản ghi
+
+        // Vòng lặp sinh lịch
+        while (currentDue != null && !currentDue.isAfter(effectiveEndDate)) {
+            RecurringCostSchedule schedule = new RecurringCostSchedule();
+            schedule.setRecurringCostId(cost.getRecurringCostId());
+            schedule.setLeaseId(cost.getLsId());
+            schedule.setDueDate(currentDue);
+            schedule.setPaymentStatus(PaymentStatus.PENDING); // ⚠️ Nếu Enum của bạn là NO, hãy đổi PENDING thành NO
+            
+            schedule.setAmountInBase(cost.getAmountInBase());
+            schedule.setAmountInVat(cost.getAmountInVat());
+            schedule.setAmountInTotal(cost.getAmountInTotal());
+            schedule.setAmountOutBase(cost.getAmountOutBase());
+            schedule.setAmountOutVat(cost.getAmountOutVat());
+            schedule.setAmountOutTotal(cost.getAmountOutTotal());
+
+            scheduleRepo.save(schedule);
+            generatedCount++;
+
+            // 🚀 BẢO VỆ 2: Giới hạn tối đa 120 kỳ (10 năm) để chống treo Database
+            if (generatedCount >= 120) break;
+
+            // Tịnh tiến ngày chuẩn xác theo Enum Period
+            if (period == Period.DAILY) currentDue = currentDue.plusDays(interval);
+            else if (period == Period.WEEKLY) currentDue = currentDue.plusWeeks(interval);
+            else if (period == Period.MONTHLY) currentDue = currentDue.plusMonths(interval);
+            else if (period == Period.QUARTERLY) currentDue = currentDue.plusMonths(interval * 3L);
+            else if (period == Period.YEARLY) currentDue = currentDue.plusYears(interval);
+            else break; 
+        }
+
+        // 🚀 BẢO VỆ 3: Nếu không sinh được kỳ nào, ném lỗi thẳng ra màn hình
+        if (generatedCount == 0) {
+            throw new RuntimeException("Không thể sinh lịch! Start Date (" + cost.getStartDate() + ") đang lớn hơn End Date (" + effectiveEndDate + ").");
+        }
+
+        cost.setScheduleStatus("SCHEDULED");
+        recurringCostRepo.save(cost);
+
+        return generatedCount; // Trả về con số thực tế
     }
 
-    // TAB 2: Lấy danh sách chờ duyệt
-    public List<RecurringCostSchedule> getPendingApprovals() {
-        return scheduleRepo.findByPaymentStatusIn(List.of(PaymentStatus.PENDING));
+    // ==============================================================================
+    // UC-RC-02: HIỂN THỊ DANH SÁCH CHI PHÍ ĐẾN HẠN (Tab Approve)
+    // Lọc: payment_status = PENDING (NO), due_date <= sysdate + 45
+    // ==============================================================================
+    public List<RecurringCostSchedule> getPendingSchedules() {
+        LocalDate cutoffDate = LocalDate.now().plusDays(45); // Tương lai 45 ngày
+        
+        return scheduleRepo.findByPaymentStatus(PaymentStatus.PENDING).stream()
+                .filter(s -> s.getDueDate() != null && !s.getDueDate().isAfter(cutoffDate))
+                .sorted(Comparator.comparing(RecurringCostSchedule::getDueDate)) // Sắp xếp tăng dần
+                .collect(Collectors.toList());
     }
 
-    public RecurringCostSchedule approveCost(String id) {
-        RecurringCostSchedule schedule = scheduleRepo.findById(id).orElseThrow();
-        schedule.setPaymentStatus(PaymentStatus.APPROVED);
-        schedule.setApprovalDate(LocalDateTime.now());
-        return scheduleRepo.save(schedule);
+    // ==============================================================================
+    // UC-RC-03: DUYỆT KỲ CHI PHÍ
+    // ==============================================================================
+    public void approveSchedule(String id, LocalDate userPaymentDate) {
+        RecurringCostSchedule schedule = scheduleRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy kỳ chi phí!"));
+
+        if (schedule.getPaymentStatus() != PaymentStatus.PENDING) {
+            throw new RuntimeException("Chỉ được duyệt kỳ chi phí đang ở trạng thái Chờ (PENDING)!");
+        }
+
+        schedule.setPaymentStatus(PaymentStatus.PAID); // Đổi thành YES/APPROVED
+        schedule.setApprovalDate(LocalDateTime.now());     // Ngày hệ thống duyệt
+        schedule.setPaymentDate(userPaymentDate != null ? userPaymentDate : LocalDate.now()); // Ngày Kế toán nhập
+        
+        scheduleRepo.save(schedule);
     }
 
-    public RecurringCostSchedule rejectCost(String id, String reason) {
-        RecurringCostSchedule schedule = scheduleRepo.findById(id).orElseThrow();
-        if (reason == null || reason.trim().isEmpty()) throw new RuntimeException("Cancel reason is required");
+    // ==============================================================================
+    // UC-RC-04: HỦY KỲ CHI PHÍ
+    // ==============================================================================
+    public void cancelSchedule(String id, String reason) {
+        if (reason == null || reason.trim().isEmpty()) {
+            throw new RuntimeException("Lý do hủy là bắt buộc!");
+        }
+
+        RecurringCostSchedule schedule = scheduleRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy kỳ chi phí!"));
+
+        if (schedule.getPaymentStatus() != PaymentStatus.PENDING) {
+            throw new RuntimeException("Chỉ được hủy kỳ chi phí đang ở trạng thái Chờ (PENDING)!");
+        }
+
         schedule.setPaymentStatus(PaymentStatus.REJECTED);
-        schedule.setCancelReason(reason);
         schedule.setApprovalDate(LocalDateTime.now());
-        return scheduleRepo.save(schedule);
+        schedule.setCancelReason(reason);
+
+        scheduleRepo.save(schedule);
     }
 
-    // TAB 3: Lấy danh sách Review & Thanh toán
-    public List<RecurringCostSchedule> getReviewCosts() {
-        return scheduleRepo.findByPaymentStatusIn(List.of(PaymentStatus.APPROVED, PaymentStatus.PAID, PaymentStatus.REJECTED));
-    }
-
-    public RecurringCostSchedule markAsPaid(String id) {
-        RecurringCostSchedule schedule = scheduleRepo.findById(id).orElseThrow();
-        if (schedule.getPaymentStatus() != PaymentStatus.APPROVED) {
-            throw new RuntimeException("Only APPROVED costs can be paid!");
-        }
-        schedule.setPaymentStatus(PaymentStatus.PAID);
-        schedule.setDatePaid(LocalDateTime.now());
-        return scheduleRepo.save(schedule);
+    // ==============================================================================
+    // UC-RC-05: TRA CỨU LỊCH SỬ (Tab Review)
+    // ==============================================================================
+    public List<RecurringCostSchedule> getScheduleHistory() {
+        return scheduleRepo.findAll().stream()
+                .filter(s -> s.getPaymentStatus() == PaymentStatus.PAID || s.getPaymentStatus() == PaymentStatus.REJECTED)
+                .sorted(Comparator.comparing(RecurringCostSchedule::getDueDate, Comparator.nullsLast(Comparator.reverseOrder())))
+                .collect(Collectors.toList());
     }
 }

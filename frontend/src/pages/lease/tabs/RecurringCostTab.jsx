@@ -133,6 +133,12 @@ export default function RecurringCostTab({ lease }) {
   const formatPayload = (dataObj) => {
     let payload = { ...dataObj };
 
+    // 🚀 FIX LỖI 1: NẾU TÍCH DATE MATCH LEASE, ÉP LẤY NGÀY TỪ LEASE GÁN VÀO PAYLOAD TRƯỚC KHI GỬI
+    if (payload.dateMatchLs) {
+      payload.startDate = lease?.startDate || null;
+      payload.endDate = lease?.endDate || null;
+    }
+
     payload.amountInVat = computed.amountInVat;
     payload.amountInTotal = computed.amountInTotal;
     payload.amountOutVat = computed.amountOutVat;
@@ -237,9 +243,6 @@ export default function RecurringCostTab({ lease }) {
     finally { setLoading(false); }
   };
 
-  // ==============================================================
-  // XỬ LÝ XÓA DỮ LIỆU (ĐÃ CẬP NHẬT THEO LOGIC MỚI)
-  // ==============================================================
   const handleDelete = async () => {
     if (!window.confirm("Are you sure you want to delete the selected items?\n\n- Drafts (Inactive) will be permanently deleted from the system.\n- Active items will have a Delete Request submitted to the approval queue.")) return;
     
@@ -253,7 +256,6 @@ export default function RecurringCostTab({ lease }) {
         if (!item) continue;
 
         if (item.active) {
-          // Nếu đã Active -> Tạo Request yêu cầu Xóa
           const requestPayload = {
             siteId: lease?.siteId || "Unknown",
             action: "DELETE", 
@@ -264,7 +266,6 @@ export default function RecurringCostTab({ lease }) {
           await axiosInstance.post("/lease/requests/submit-module", requestPayload).catch(e => console.warn(e));
           requestCount++;
         } else {
-          // Nếu chưa Active -> Cho phép xóa thẳng khỏi CSDL
           await axiosInstance.delete(`/lease/leases/${leaseId}/recurring-costs/${id}`).catch(e => console.warn(e));
           deletedCount++;
         }
@@ -392,10 +393,23 @@ export default function RecurringCostTab({ lease }) {
 
                 {/* ---------------- CỘT 2 ---------------- */}
                 <div className="flex flex-col gap-4 bg-white p-4 rounded shadow-sm border border-gray-200">
-                  <Input type="date" label="Start Date" disabled={formData.dateMatchLs} value={formData.dateMatchLs ? lease?.startDate : formData.startDate} onChange={v => setFormData({...formData, startDate: v})} />
-                  <Input type="date" label="End Date" disabled={formData.dateMatchLs} value={formData.dateMatchLs ? lease?.endDate : formData.endDate} onChange={v => setFormData({...formData, endDate: v})} />
+                  {/* 🚀 FIX LỖI 2: ĐÃ ĐỔI THÀNH formData.startDate VÀ formData.endDate CHUẨN */}
+                  <Input type="date" label="Start Date" disabled={formData.dateMatchLs} value={formData.dateMatchLs ? (lease?.startDate || "") : formData.startDate} onChange={v => setFormData({...formData, startDate: v})} />
+                  <Input type="date" label="End Date" disabled={formData.dateMatchLs} value={formData.dateMatchLs ? (lease?.endDate || "") : formData.endDate} onChange={v => setFormData({...formData, endDate: v})} />
                   
-                  <div className="bg-gray-50 border border-gray-200 p-2 rounded -mt-2"><Checkbox label="Date match lease?" checked={formData.dateMatchLs} onChange={v => setFormData({...formData, dateMatchLs: v})} /></div>
+                  <div className="bg-gray-50 border border-gray-200 p-2 rounded -mt-2">
+                    {/* 🚀 FIX LỖI 3: KHI TÍCH VÀO CHECKBOX SẼ CẬP NHẬT THẲNG VÀO STATE MÀ KHÔNG BỊ RỖNG NGẦM */}
+                    <Checkbox 
+                      label="Date match lease?" 
+                      checked={formData.dateMatchLs} 
+                      onChange={v => setFormData({
+                        ...formData, 
+                        dateMatchLs: v,
+                        startDate: v ? (lease?.startDate || "") : formData.startDate,
+                        endDate: v ? (lease?.endDate || "") : formData.endDate
+                      })} 
+                    />
+                  </div>
 
                   <div className="border-t border-gray-200 pt-3 mt-1">
                     <h3 className="text-[11px] font-bold text-green-600 mb-2 uppercase">Income Flow</h3>

@@ -5,8 +5,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
+import java.util.List;
 
 @Repository
 public interface LeaseOptionRepository extends MongoRepository<LeaseOption, String> {
     Page<LeaseOption> findByLsId(String lsId, Pageable pageable);
+    List<LeaseOption> findByLsIdAndActiveTrue(String lsId);
 }

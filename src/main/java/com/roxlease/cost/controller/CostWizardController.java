@@ -1,12 +1,11 @@
 package com.roxlease.cost.controller;
 
-import com.roxlease.cost.model.RecurringCost;
-import com.roxlease.cost.repository.RecurringCostRepository;
+import com.roxlease.cost.model.RecurringCostSchedule;
 import com.roxlease.cost.service.CostWizardService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.Map;
 
@@ -14,58 +13,71 @@ import java.util.Map;
 @RequestMapping("/api/cost/wizard")
 public class CostWizardController {
 
-    @Autowired
-    private CostWizardService service;
-    @Autowired
-    private RecurringCostRepository recurringCostRepo;
+    private final CostWizardService service;
 
-    // TAB 1
+    public CostWizardController(CostWizardService service) {
+        this.service = service;
+    }
+
+    // =======================================================
+    // TAB 1: COST SCHEDULE (UC-RC-01)
+    // =======================================================
     @GetMapping("/recurring-costs")
     public ResponseEntity<?> getBaseCosts() {
-        return ResponseEntity.ok(recurringCostRepo.findAll());
+        return ResponseEntity.ok(service.getPendingBaseCosts());
     }
 
-    @PostMapping("/generate-schedule/{id}")
+    @PostMapping("/recurring-costs/{id}/generate")
     public ResponseEntity<?> generateSchedule(@PathVariable String id) {
         try {
-            return ResponseEntity.ok(service.generateSchedule(id));
+            int count = service.generateSchedule(id);
+            // 🚀 Báo cáo chính xác số lượng kỳ đã được tạo
+            return ResponseEntity.ok(Collections.singletonMap("message", "Thành công! Đã tạo ra " + count + " kỳ chi phí."));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("error", e.getMessage()));
         }
     }
 
-    // TAB 2
-    @GetMapping("/approvals")
-    public ResponseEntity<?> getApprovals() {
-        return ResponseEntity.ok(service.getPendingApprovals());
+    // =======================================================
+    // TAB 2: APPROVE SCHEDULES (UC-RC-02, UC-RC-03, UC-RC-04)
+    // =======================================================
+    @GetMapping("/schedules/pending")
+    public ResponseEntity<?> getPendingSchedules() {
+        return ResponseEntity.ok(service.getPendingSchedules());
     }
 
-    @PostMapping("/approve/{id}")
-    public ResponseEntity<?> approveCost(@PathVariable String id) {
-        return ResponseEntity.ok(service.approveCost(id));
-    }
-
-    @PostMapping("/reject/{id}")
-    public ResponseEntity<?> rejectCost(@PathVariable String id, @RequestBody Map<String, String> payload) {
+    @PutMapping("/schedules/{id}/approve")
+    public ResponseEntity<?> approveSchedule(
+            @PathVariable String id, 
+            @RequestBody(required = false) Map<String, String> payload) {
         try {
-            return ResponseEntity.ok(service.rejectCost(id, payload.get("reason")));
+            LocalDate paymentDate = null;
+            if (payload != null && payload.containsKey("paymentDate") && !payload.get("paymentDate").isEmpty()) {
+                paymentDate = LocalDate.parse(payload.get("paymentDate"));
+            }
+            service.approveSchedule(id, paymentDate);
+            return ResponseEntity.ok(Collections.singletonMap("message", "Duyệt và ghi nhận thanh toán thành công!"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("error", e.getMessage()));
         }
     }
 
-    // TAB 3
-    @GetMapping("/reviews")
-    public ResponseEntity<?> getReviews() {
-        return ResponseEntity.ok(service.getReviewCosts());
-    }
-
-    @PostMapping("/pay/{id}")
-    public ResponseEntity<?> markPaid(@PathVariable String id) {
+    @PutMapping("/schedules/{id}/cancel")
+    public ResponseEntity<?> cancelSchedule(@PathVariable String id, @RequestBody Map<String, String> payload) {
         try {
-            return ResponseEntity.ok(service.markAsPaid(id));
+            String reason = payload.get("reason");
+            service.cancelSchedule(id, reason);
+            return ResponseEntity.ok(Collections.singletonMap("message", "Hủy kỳ chi phí thành công!"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("error", e.getMessage()));
         }
+    }
+
+    // =======================================================
+    // TAB 3: REVIEW HISTORY (UC-RC-05)
+    // =======================================================
+    @GetMapping("/schedules/history")
+    public ResponseEntity<?> getScheduleHistory() {
+        return ResponseEntity.ok(service.getScheduleHistory());
     }
 }

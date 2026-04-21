@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface RecurringCostRepository extends MongoRepository<RecurringCost, String> {
     List<RecurringCost> findByLsId(String lsId);
+    List<RecurringCost> findByActiveTrue();
 }

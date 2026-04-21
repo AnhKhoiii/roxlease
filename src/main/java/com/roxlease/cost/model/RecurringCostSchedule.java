@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -39,8 +40,11 @@ public class RecurringCostSchedule {
     private LocalDate dueDate;
     
     private LocalDateTime approvalDate;
+    @Field("payment_date")
+    private LocalDate paymentDate;
     private String cancelReason;
     private LocalDateTime datePaid;
+
     
     private PaymentStatus paymentStatus;
     private String description;
