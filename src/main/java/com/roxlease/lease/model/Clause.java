@@ -8,6 +8,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.mapping.Document;
+import com.roxlease.lease.model.Enum.ClauseType;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -26,6 +27,7 @@ public class Clause {
     private String clauseId;
     
     private String leaseId;
+    private ClauseType clauseType;
     
     private LocalDate startDate;
     private LocalDate endDate;

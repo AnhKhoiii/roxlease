@@ -4,5 +4,6 @@ public enum ClauseType {
     SPECIAL,
     DEPOSIT,
     TERMS_OF_HANDOVER,
-    PENALTY
+    PENALTY,
+    RENT_ESCALATION
 }

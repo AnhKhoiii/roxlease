@@ -2,6 +2,8 @@ package com.roxlease.lease.service;
 
 import com.roxlease.cost.model.Enum.CostType;
 import com.roxlease.cost.model.Enum.PaymentStatus;
+import com.roxlease.lease.model.Enum.ClauseType;
+import com.roxlease.cost.model.Enum.ScheduleStatus;
 import com.roxlease.cost.model.PlannedRevenue;
 import com.roxlease.cost.model.RecurringCost;
 import com.roxlease.cost.model.RecurringCostSchedule;
@@ -10,6 +12,7 @@ import com.roxlease.lease.model.*;
 import com.roxlease.lease.model.Enum.OptionType;
 import com.roxlease.space.model.Amenity;
 import com.roxlease.space.model.Building;
+import com.roxlease.space.model.Enum.AmenityType;
 import com.roxlease.space.model.Room;
 import com.roxlease.space.model.Suite;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -34,26 +37,24 @@ public class LeaseDashboardService {
     }
 
     public DashboardResponse getDashboardData(LocalDate fromDate, LocalDate toDate, String division, String siteId, String buildingId) {
-        // Mặc định toDate bằng sysdate nếu không truyền
         LocalDate finalToDate = (toDate != null) ? toDate : LocalDate.now();
         LocalDate finalFromDate = (fromDate != null) ? fromDate : finalToDate.minusYears(1);
 
-        // Bộ lọc chung
-        Query query = new Query();
-        if (siteId != null && !siteId.isEmpty()) query.addCriteria(Criteria.where("siteId").is(siteId));
-        if (buildingId != null && !buildingId.isEmpty()) query.addCriteria(Criteria.where("buildingId").is(buildingId));
+        Query spaceQuery = new Query();
+        if (siteId != null && !siteId.isEmpty()) spaceQuery.addCriteria(Criteria.where("siteId").is(siteId));
+        if (buildingId != null && !buildingId.isEmpty()) spaceQuery.addCriteria(Criteria.where("buildingId").is(buildingId));
 
         return DashboardResponse.builder()
-                .overview(buildOverview(query))
-                .amenity(buildAmenity(query))
-                .leaseAlerts(buildLeaseAlerts(query, finalFromDate, finalToDate))
-                .charts(buildCharts(query, finalToDate))
-                .revenue(buildRevenueMetrics(query, finalFromDate, finalToDate))
+                .overview(buildOverview(spaceQuery))
+                .amenity(buildAmenity(spaceQuery))
+                .leaseAlerts(buildLeaseAlerts(finalFromDate, finalToDate))
+                .charts(buildCharts(finalToDate))
+                .revenue(buildRevenueMetrics(finalFromDate, finalToDate, spaceQuery))
                 .build();
     }
 
     // =========================================================
-    // 1. OVERVIEW: TÍNH TOÁN DIỆN TÍCH (GFA, NFA, Leased, Other)
+    // OVERVIEW
     // =========================================================
     private DashboardResponse.Overview buildOverview(Query query) {
         List<Building> buildings = mongoTemplate.find(query, Building.class);
@@ -63,30 +64,25 @@ public class LeaseDashboardService {
 
         long totalSites = buildings.stream().map(Building::getSiteId).filter(Objects::nonNull).distinct().count();
 
-        // GFA = SUM(area_gross_int) của building
         BigDecimal gfa = buildings.stream()
                 .map(b -> b.getAreaGrossInt() != null ? BigDecimal.valueOf(b.getAreaGrossInt()) : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // NFA = SUM(area) của ROOM
         BigDecimal nfa = rooms.stream()
                 .map(r -> r.getArea() != null ? BigDecimal.valueOf(r.getArea()) : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Leased NFA = SUM(area) của SUITE được gắn Lease
         Set<String> leasedSuiteIds = leaseSuites.stream().map(LeaseSuite::getSuId).collect(Collectors.toSet());
         BigDecimal leasedNfa = suites.stream()
                 .filter(s -> leasedSuiteIds.contains(s.getSuiteId()))
                 .map(s -> s.getArea() != null ? BigDecimal.valueOf(s.getArea()) : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Available NFA = NFA - Leased NFA (hoặc tổng suite chưa gắn lease)
         BigDecimal availableNfa = suites.stream()
                 .filter(s -> !leasedSuiteIds.contains(s.getSuiteId()))
                 .map(s -> s.getArea() != null ? BigDecimal.valueOf(s.getArea()) : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Other = GFA - Leased NFA - Available NFA
         BigDecimal otherArea = gfa.subtract(leasedNfa).subtract(availableNfa);
         if (otherArea.compareTo(BigDecimal.ZERO) < 0) otherArea = BigDecimal.ZERO;
 
@@ -97,7 +93,7 @@ public class LeaseDashboardService {
     }
 
     // =========================================================
-    // 2. AMENITIES
+    // AMENITIES
     // =========================================================
     private DashboardResponse.AmenityMetrics buildAmenity(Query query) {
         List<Amenity> amenities = mongoTemplate.find(query, Amenity.class);
@@ -106,80 +102,64 @@ public class LeaseDashboardService {
         long totalAmenities = amenities.size();
         Set<String> leasedAmenityIds = leaseAmenities.stream().map(LeaseAmenity::getAmenityId).collect(Collectors.toSet());
         
-        long leasedAmenities = amenities.stream()
+        long leasedCount = amenities.stream()
                 .filter(a -> leasedAmenityIds.contains(a.getAmenityId()))
                 .count();
 
         return DashboardResponse.AmenityMetrics.builder()
                 .totalAmenities(totalAmenities)
-                .leasedAmenities(leasedAmenities)
-                .availableAmenities(totalAmenities - leasedAmenities)
+                .leasedAmenities(leasedCount)
+                .availableAmenities(totalAmenities - leasedCount)
                 .build();
     }
 
     // =========================================================
-    // 3. LEASE ALERTS & STATUS
+    // LEASE ALERTS
     // =========================================================
-    private DashboardResponse.LeaseAlerts buildLeaseAlerts(Query query, LocalDate fromDate, LocalDate toDate) {
-        List<Lease> leases = mongoTemplate.find(query, Lease.class);
-        List<LeaseOption> allOptions = mongoTemplate.findAll(LeaseOption.class);
+    private DashboardResponse.LeaseAlerts buildLeaseAlerts(LocalDate fromDate, LocalDate toDate) {
+        List<Lease> leases = mongoTemplate.findAll(Lease.class);
+        List<LeaseOption> options = mongoTemplate.findAll(LeaseOption.class);
 
-        long totalActive = 0;
-        long newLeases = 0;
-        long leaseEndCount = 0;
-        long extendedCount = 0;
+        long totalActive = 0, newLeases = 0, leaseEndCount = 0, extendedCount = 0;
 
-        for (Lease lease : leases) {
-            if (!Boolean.TRUE.equals(lease.getActive())) continue;
-            totalActive++;
+        for (Lease ls : leases) {
+            if (!Boolean.TRUE.equals(ls.getActive())) continue;
+            totalActive++; 
 
-            if (lease.getStartDate() != null && !lease.getStartDate().isBefore(fromDate)) {
+            if (ls.getStartDate() != null && !ls.getStartDate().isBefore(fromDate)) {
                 newLeases++;
             }
 
-            // Lọc options của lease này
-            List<LeaseOption> options = allOptions.stream()
-                    .filter(o -> o.getLsId().equals(lease.getLsId()) && Boolean.TRUE.equals(o.getActive()))
+            List<LeaseOption> lsOps = options.stream()
+                    .filter(o -> o.getLsId().equals(ls.getLsId()) && Boolean.TRUE.equals(o.getActive()))
                     .collect(Collectors.toList());
 
-            LocalDate effectiveEnd = lease.getEndDate();
-            boolean hasExtension = false;
-            LocalDate lastExtStart = null;
-            LocalDate lastExtEnd = null;
+            LeaseOption lastExtension = lsOps.stream()
+                    .filter(o -> o.getOpType() == OptionType.EXTENSION)
+                    .max(Comparator.comparing(LeaseOption::getEndDate, Comparator.nullsFirst(Comparator.naturalOrder())))
+                    .orElse(null);
 
-            if (!options.isEmpty()) {
-                // Extension cuối cùng
-                Optional<LeaseOption> maxExtOpt = options.stream()
-                        .filter(o -> o.getOpType() == OptionType.EXTENSION || o.getOpType() == OptionType.RENEWAL)
-                        .max(Comparator.comparing(LeaseOption::getEndDate, Comparator.nullsFirst(Comparator.naturalOrder())));
-                
-                if (maxExtOpt.isPresent()) {
-                    lastExtStart = maxExtOpt.get().getStartDate();
-                    lastExtEnd = maxExtOpt.get().getEndDate();
-                    hasExtension = true;
-                    if (effectiveEnd == null || lastExtEnd.isAfter(effectiveEnd)) effectiveEnd = lastExtEnd;
-                }
+            LeaseOption lastEarlyTerm = lsOps.stream()
+                    .filter(o -> o.getOpType() == OptionType.EARLY_TERMINATION)
+                    .max(Comparator.comparing(LeaseOption::getEndDate, Comparator.nullsFirst(Comparator.naturalOrder())))
+                    .orElse(null);
 
-                // Early Termination
-                Optional<LeaseOption> earlyTermOpt = options.stream()
-                        .filter(o -> o.getOpType() == OptionType.EARLY_TERMINATION)
-                        .min(Comparator.comparing(LeaseOption::getStartDate, Comparator.nullsLast(Comparator.naturalOrder())));
-
-                if (earlyTermOpt.isPresent()) {
-                    LocalDate termDate = earlyTermOpt.get().getStartDate();
-                    if (effectiveEnd == null || termDate.isBefore(effectiveEnd)) effectiveEnd = termDate;
-                }
+            boolean hasExtOrTerm = (lastExtension != null || lastEarlyTerm != null);
+            if (!hasExtOrTerm) {
+                if (ls.getEndDate() != null && ls.getEndDate().isBefore(toDate)) leaseEndCount++;
+            } else {
+                boolean extEndBefore = (lastExtension != null && lastExtension.getEndDate() != null && lastExtension.getEndDate().isBefore(toDate));
+                boolean termEndBefore = (lastEarlyTerm != null && lastEarlyTerm.getEndDate() != null && lastEarlyTerm.getEndDate().isBefore(toDate));
+                if (extEndBefore || termEndBefore) leaseEndCount++;
             }
 
-            // Check Lease End
-            if (effectiveEnd != null && !effectiveEnd.isAfter(toDate)) {
-                leaseEndCount++;
-            }
-
-            // Check Extended (Start_date > from_date AND End_date > to_date)
-            if (hasExtension && lastExtStart != null && lastExtEnd != null) {
-                if (lastExtStart.isAfter(fromDate) && lastExtEnd.isAfter(toDate)) {
-                    extendedCount++;
+            if (lastExtension != null && lastExtension.getStartDate() != null && lastExtension.getEndDate() != null) {
+                if (lastExtension.getStartDate().isAfter(fromDate)) {
+                    boolean extEndAfter = lastExtension.getEndDate().isAfter(toDate);
+                    boolean termEndAfter = (lastEarlyTerm != null && lastEarlyTerm.getEndDate() != null && lastEarlyTerm.getEndDate().isAfter(toDate));
+                    if (extEndAfter || termEndAfter) {
+                        extendedCount++;
+                    }
                 }
             }
         }
@@ -191,152 +171,285 @@ public class LeaseDashboardService {
     }
 
     // =========================================================
-    // 4. CHARTS (Expiration, Overdue, Adjustment)
+    // CHARTS
     // =========================================================
-    private DashboardResponse.Charts buildCharts(Query query, LocalDate toDate) {
-        List<Lease> leases = mongoTemplate.find(query, Lease.class);
+    private DashboardResponse.Charts buildCharts(LocalDate toDate) {
+        List<Lease> leases = mongoTemplate.findAll(Lease.class);
+        List<LeaseOption> options = mongoTemplate.findAll(LeaseOption.class);
         List<RecurringCostSchedule> schedules = mongoTemplate.findAll(RecurringCostSchedule.class);
+        List<Clause> clauses = mongoTemplate.findAll(Clause.class);
+        List<RecurringCost> recurringCosts = mongoTemplate.findAll(RecurringCost.class);
         
-        // --- 4.1 Contract Expiration ---
-        long exp1Month = 0, exp3Months = 0, exp6Months = 0, expOverdue = 0;
-        for (Lease lease : leases) {
-            if (!Boolean.TRUE.equals(lease.getActive()) || lease.getEndDate() == null) continue;
-            long daysLeft = ChronoUnit.DAYS.between(toDate, lease.getEndDate());
+        long exp1M = 0, exp3M = 0, exp6M = 0, expOverdue = 0;
+        for (Lease ls : leases) {
+            if (!Boolean.TRUE.equals(ls.getActive())) continue;
             
-            if (daysLeft < 0) expOverdue++;
-            else if (daysLeft <= 30) exp1Month++;
-            else if (daysLeft <= 90) exp3Months++;
-            else if (daysLeft <= 180) exp6Months++;
+            List<LeaseOption> lsOps = options.stream().filter(o -> o.getLsId().equals(ls.getLsId()) && Boolean.TRUE.equals(o.getActive())).collect(Collectors.toList());
+            if (lsOps.stream().anyMatch(o -> o.getOpType() == OptionType.LEASE_END)) continue; 
+
+            LocalDate effectiveEnd = ls.getEndDate();
+            LeaseOption lastExtOrTerm = lsOps.stream()
+                    .filter(o -> o.getOpType() == OptionType.EXTENSION || o.getOpType() == OptionType.EARLY_TERMINATION)
+                    .max(Comparator.comparing(LeaseOption::getEndDate, Comparator.nullsFirst(Comparator.naturalOrder())))
+                    .orElse(null);
+
+            if (lastExtOrTerm != null && lastExtOrTerm.getEndDate() != null) {
+                effectiveEnd = lastExtOrTerm.getEndDate();
+            }
+
+            if (effectiveEnd != null) {
+                long daysLeft = ChronoUnit.DAYS.between(LocalDate.now(), effectiveEnd); 
+                if (daysLeft < 0) expOverdue++;
+                else if (daysLeft <= 30) exp1M++;
+                else if (daysLeft <= 90) exp3M++;
+                else if (daysLeft <= 180) exp6M++;
+            }
         }
 
-        List<DashboardResponse.ChartData> expiration = Arrays.asList(
-                DashboardResponse.ChartData.builder().name("< 1 Month").value(exp1Month).build(),
-                DashboardResponse.ChartData.builder().name("1-3 Months").value(exp3Months).build(),
-                DashboardResponse.ChartData.builder().name("3-6 Months").value(exp6Months).build(),
-                DashboardResponse.ChartData.builder().name("Overdue").value(expOverdue).build()
-        );
-
-        // --- 4.2 Overdue Payment ---
-        long overdueLess270 = 0, overdueMore270 = 0, paidLate = 0;
+        long overdue270 = 0, overdueMore270 = 0, paidLate = 0;
         for (RecurringCostSchedule sch : schedules) {
+            if (sch.getScheduleStatus() != ScheduleStatus.SCHEDULED && sch.getScheduleStatus() != ScheduleStatus.APPROVED) continue;
             if (sch.getDueDate() == null) continue;
             
-            // Nhóm 3: Đã thanh toán muộn (Paid but DatePaid > DueDate)
-            if (sch.getPaymentStatus() == PaymentStatus.PAID) {
-                if (sch.getPaymentDate() != null && sch.getPaymentDate().isAfter(sch.getDueDate())) {
+            if (sch.getPaymentStatus() == PaymentStatus.PENDING || sch.getPaymentStatus() == null) { 
+                long delay = ChronoUnit.DAYS.between(sch.getDueDate(), LocalDate.now()); 
+                if (delay > 0) {
+                    if (delay < 270) overdue270++;
+                    else overdueMore270++;
+                }
+            } else if (sch.getPaymentStatus() == PaymentStatus.PAID) { 
+                if (sch.getPaymentDate() != null && sch.getDueDate().isBefore(sch.getPaymentDate())) {
                     paidLate++;
                 }
-                continue;
-            }
-            
-            // Lọc chưa thanh toán (PENDING)
-            if (sch.getPaymentStatus() == PaymentStatus.PENDING && sch.getDueDate().isBefore(toDate)) {
-                long delayDays = ChronoUnit.DAYS.between(sch.getDueDate(), toDate);
-                if (delayDays <= 270) overdueLess270++;
-                else overdueMore270++;
             }
         }
 
-        List<DashboardResponse.ChartData> overdue = Arrays.asList(
-                DashboardResponse.ChartData.builder().name("< 270 Days").value(overdueLess270).build(),
-                DashboardResponse.ChartData.builder().name("> 270 Days").value(overdueMore270).build(),
-                DashboardResponse.ChartData.builder().name("Paid Late").value(paidLate).build()
-        );
+        long adj1M = 0, adj3M = 0, adj6M = 0, adjOverdue = 0;
+        for (Clause clause : clauses) {
+            if (!Boolean.TRUE.equals(clause.getIsActive()) || clause.getClauseType() != ClauseType.RENT_ESCALATION) continue;
+            
+            boolean hasMatchingCost = recurringCosts.stream().anyMatch(rc -> 
+                rc.getLsId().equals(clause.getLeaseId()) &&
+                Objects.equals(rc.getStartDate(), clause.getStartDate()) &&
+                Objects.equals(rc.getEndDate(), clause.getEndDate())
+            );
 
-        // --- 4.3 Price Adjustment (Chờ ghép nối Clause -> RecurringCost) ---
-        // Tạm để rỗng nếu data ClauseRentEscalation chưa hoàn thiện
-        List<DashboardResponse.ChartData> priceAdj = new ArrayList<>();
+            if (!hasMatchingCost && clause.getStartDate() != null) {
+                long days = ChronoUnit.DAYS.between(toDate, clause.getStartDate()); 
+                if (days < 0) adjOverdue++;
+                else if (days <= 30) adj1M++;
+                else if (days <= 90) adj3M++;
+                else if (days <= 180) adj6M++;
+            }
+        }
 
         return DashboardResponse.Charts.builder()
-                .contractExpiration(expiration)
-                .overduePayment(overdue)
-                .priceAdjustment(priceAdj)
+                .contractExpiration(Arrays.asList(
+                        DashboardResponse.ChartData.builder().name("< 1 Month").value(exp1M).build(),
+                        DashboardResponse.ChartData.builder().name("1-3 Months").value(exp3M).build(),
+                        DashboardResponse.ChartData.builder().name("3-6 Months").value(exp6M).build(),
+                        DashboardResponse.ChartData.builder().name("Overdue").value(expOverdue).build()))
+                .overduePayment(Arrays.asList(
+                        DashboardResponse.ChartData.builder().name("< 270 Days").value(overdue270).build(),
+                        DashboardResponse.ChartData.builder().name("> 270 Days").value(overdueMore270).build(),
+                        DashboardResponse.ChartData.builder().name("Paid Late").value(paidLate).build()))
+                .priceAdjustment(Arrays.asList(
+                        DashboardResponse.ChartData.builder().name("< 1 Month").value(adj1M).build(),
+                        DashboardResponse.ChartData.builder().name("1-3 Months").value(adj3M).build(),
+                        DashboardResponse.ChartData.builder().name("3-6 Months").value(adj6M).build(),
+                        DashboardResponse.ChartData.builder().name("Overdue").value(adjOverdue).build()))
                 .build();
     }
 
     // =========================================================
-    // 5. REVENUE & OCC KPIs
+    // 5. REVENUE & OCC KPIs VÀ DỮ LIỆU BIỂU ĐỒ 12 THÁNG
     // =========================================================
-    private DashboardResponse.RevenueMetrics buildRevenueMetrics(Query query, LocalDate fromDate, LocalDate toDate) {
+    private DashboardResponse.RevenueMetrics buildRevenueMetrics(LocalDate fromDate, LocalDate toDate, Query spaceQuery) {
+        List<Lease> allLeases = mongoTemplate.findAll(Lease.class);
+        List<LeaseAmenity> leaseAmenities = mongoTemplate.findAll(LeaseAmenity.class);
         List<RecurringCostSchedule> schedules = mongoTemplate.findAll(RecurringCostSchedule.class);
-        List<PlannedRevenue> plannedRevenues = mongoTemplate.findAll(PlannedRevenue.class);
-        
-        // Tính tổng NFA làm mẫu số cho OCC
-        BigDecimal nfa = mongoTemplate.findAll(Room.class).stream()
-                .map(r -> r.getArea() != null ? BigDecimal.valueOf(r.getArea()) : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        List<PlannedRevenue> allPlans = mongoTemplate.findAll(PlannedRevenue.class);
 
-        // Lọc Schedule theo năm của toDate
+        List<Room> rooms = mongoTemplate.find(spaceQuery, Room.class);
+        BigDecimal nfa = rooms.stream().map(r -> r.getArea() != null ? BigDecimal.valueOf(r.getArea()) : BigDecimal.ZERO).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal safeNfa = nfa.compareTo(BigDecimal.ZERO) == 0 ? BigDecimal.ONE : nfa;
+
+        Set<String> leasesWithAmenity = leaseAmenities.stream().map(LeaseAmenity::getLsId).collect(Collectors.toSet());
+        List<Lease> nonAmenityLeases = allLeases.stream().filter(l -> !leasesWithAmenity.contains(l.getLsId())).collect(Collectors.toList());
+
+        // 🚀 Bóc tách Planned Revenue DỰA THEO CATEGORY (Không dùng LeaseId)
+        List<PlannedRevenue> contractPlans = allPlans.stream().filter(p -> CostType.BASERENT.name().equalsIgnoreCase(p.getCategory())).collect(Collectors.toList());
+        List<PlannedRevenue> servicePlans = allPlans.stream().filter(p -> CostType.BASESERVICE.name().equalsIgnoreCase(p.getCategory())).collect(Collectors.toList());
+        List<PlannedRevenue> amenityPlans = allPlans.stream().filter(p -> p.getCategory() != null && !CostType.BASERENT.name().equalsIgnoreCase(p.getCategory()) && !CostType.BASESERVICE.name().equalsIgnoreCase(p.getCategory())).collect(Collectors.toList());
+
+        // Lấy KPI Cards
+        DashboardResponse.KPICards contractKpi = calculateRevenueKPI(schedules.stream().filter(s -> !leasesWithAmenity.contains(s.getLeaseId()) && s.getCostType() == CostType.BASERENT).collect(Collectors.toList()), contractPlans, toDate, 0, 0);
+
         int currentYear = toDate.getYear();
-
-        // ------- CONTRACT REVENUE (BASERENT) -------
-        DashboardResponse.KPICards contractKpi = calculateKPI(
-                schedules.stream().filter(s -> s.getCostType() == CostType.BASERENT).collect(Collectors.toList()),
-                plannedRevenues, currentYear, toDate, nfa
-        );
-
-        // ------- SERVICE FEE REVENUE (BASESERVICE) -------
-        DashboardResponse.KPICards serviceKpi = calculateKPI(
-                schedules.stream().filter(s -> s.getCostType() == CostType.BASESERVICE).collect(Collectors.toList()),
-                plannedRevenues, currentYear, toDate, nfa
-        );
+        List<DashboardResponse.MonthlyRevenue> contractChart = buildMonthlyChart(schedules, contractPlans, CostType.BASERENT, currentYear, nonAmenityLeases, safeNfa);
+        List<DashboardResponse.MonthlyRevenue> serviceChart = buildMonthlyChart(schedules, servicePlans, CostType.BASESERVICE, currentYear, nonAmenityLeases, safeNfa);
+        List<DashboardResponse.AmenityRevenueData> amenityChart = buildAmenityChart(schedules, amenityPlans, currentYear, leasesWithAmenity);
 
         return DashboardResponse.RevenueMetrics.builder()
-                .contract(DashboardResponse.RevenueDetail.builder().build()) // Dành cho chart nếu cần mảng 12 tháng
-                .serviceFee(DashboardResponse.RevenueDetail.builder().build())
+                .contract(contractChart)
+                .serviceFee(serviceChart)
+                .amenity(amenityChart)
                 .kpi(contractKpi) 
                 .build();
     }
 
-    // HÀM TÍNH TOÁN KPI CHUNG CHO CẢ DOANH THU HỢP ĐỒNG & DỊCH VỤ
-    private DashboardResponse.KPICards calculateKPI(List<RecurringCostSchedule> schedules, List<PlannedRevenue> plans, int currentYear, LocalDate toDate, BigDecimal totalNFA) {
+    private List<DashboardResponse.MonthlyRevenue> buildMonthlyChart(List<RecurringCostSchedule> allSchedules, List<PlannedRevenue> plans, CostType costType, int year, List<Lease> leases, BigDecimal safeNfa) {
+        List<DashboardResponse.MonthlyRevenue> monthlyData = new ArrayList<>();
         
-        // 1. Actual to Date (Doanh thu thực tế tích lũy năm nay)
+        for (int m = 1; m <= 12; m++) {
+            final int month = m;
+            
+            BigDecimal actual = allSchedules.stream()
+                .filter(s -> s.getCostType() == costType && s.getPaymentStatus() == PaymentStatus.PAID && s.getDueDate() != null && s.getDueDate().getYear() == year && s.getDueDate().getMonthValue() == month)
+                .map(s -> s.getAmountInBase() != null ? s.getAmountInBase() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal forecast = allSchedules.stream()
+                .filter(s -> s.getCostType() == costType && (ScheduleStatus.SCHEDULED!=s.getScheduleStatus()) && s.getDueDate() != null && s.getDueDate().getYear() == year && s.getDueDate().getMonthValue() == month)
+                .map(s -> s.getAmountInBase() != null ? s.getAmountInBase() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal planned = plans.stream()
+                .filter(p -> p.getYear() != null && p.getYear() == year && p.getMonth() != null && p.getMonth() == month)
+                .map(p -> p.getPlannedCost() != null ? p.getPlannedCost() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            // 🚀 Lấy Planned OCC Nhập tay từ DB
+            double plannedOcc = plans.stream()
+                .filter(p -> p.getYear() != null && p.getYear() == year && p.getMonth() != null && p.getMonth() == month && p.getPlannedOcc() != null)
+                .mapToDouble(p -> p.getPlannedOcc().doubleValue())
+                .findFirst().orElse(0.0);
+
+            double actualOcc = 0;
+            if (costType == CostType.BASERENT) {
+                BigDecimal occSum = leases.stream().filter(l -> Boolean.TRUE.equals(l.getActive()))
+                        .map(l -> l.getAreaNegotiated() != null ? BigDecimal.valueOf(l.getAreaNegotiated()) : BigDecimal.ZERO)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                actualOcc = occSum.divide(safeNfa, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100")).doubleValue();
+            }
+
+            monthlyData.add(DashboardResponse.MonthlyRevenue.builder()
+                .month("T" + month)
+                .actual(actual).planned(planned).forecast(forecast)
+                .actualOcc(actualOcc).plannedOcc(plannedOcc).forecastOcc(actualOcc + 2)
+                .build());
+        }
+        return monthlyData;
+    }
+
+    // 🚀 HÀM PHÂN LOẠI CATEGORY CHO AMENITY DÙNG PLAN THEO CATEGORY
+    private List<DashboardResponse.AmenityRevenueData> buildAmenityChart(List<RecurringCostSchedule> schedules, List<PlannedRevenue> plans, int year, Set<String> amenityLeaseIds) {
+        List<Amenity> allAmenities = mongoTemplate.findAll(Amenity.class);
+        List<LeaseAmenity> allLeaseAmenities = mongoTemplate.findAll(LeaseAmenity.class);
+
+        Map<String, AmenityType> amenityTypeMap = allAmenities.stream()
+                .filter(a -> a.getAmenityId() != null && a.getAmenityType() != null)
+                .collect(Collectors.toMap(Amenity::getAmenityId, Amenity::getAmenityType, (e, r) -> e));
+
+        Map<String, List<AmenityType>> leaseToAmenityTypes = new HashMap<>();
+        for (LeaseAmenity la : allLeaseAmenities) {
+            if (la.getLsId() != null && la.getAmenityId() != null) {
+                AmenityType type = amenityTypeMap.get(la.getAmenityId());
+                if (type != null) leaseToAmenityTypes.computeIfAbsent(la.getLsId(), k -> new ArrayList<>()).add(type);
+            }
+        }
+
+        String[] categories = {"Parking Area", "Billboard", "Pool", "Event Hall", "Other"};
+        Map<String, BigDecimal> actualMap = new HashMap<>();
+        Map<String, BigDecimal> plannedMap = new HashMap<>();
+        for (String cat : categories) {
+            actualMap.put(cat, BigDecimal.ZERO);
+            plannedMap.put(cat, BigDecimal.ZERO);
+        }
+
+        java.util.function.Function<AmenityType, String> mapTypeToStr = (type) -> {
+            if (type == AmenityType.PARKING_AREA) return "Parking Area";
+            if (type == AmenityType.BILLBOARD) return "Billboard";
+            if (type == AmenityType.POOL) return "Pool";
+            if (type == AmenityType.EVENT_HALL) return "Event Hall";
+            return "Other";
+        };
+
+        // Actual Revenue (Từ Schedule chứa LeaseId)
+        for (RecurringCostSchedule s : schedules) {
+            if (amenityLeaseIds.contains(s.getLeaseId()) && s.getPaymentStatus() == PaymentStatus.PAID && s.getDueDate() != null && s.getDueDate().getYear() == year) {
+                BigDecimal amount = s.getAmountInBase() != null ? s.getAmountInBase() : BigDecimal.ZERO;
+                List<AmenityType> types = leaseToAmenityTypes.get(s.getLeaseId());
+                if (types != null && !types.isEmpty()) {
+                    BigDecimal splitAmount = amount.divide(new BigDecimal(types.size()), 2, RoundingMode.HALF_UP);
+                    for (AmenityType type : types) {
+                        String cat = mapTypeToStr.apply(type);
+                        actualMap.put(cat, actualMap.get(cat).add(splitAmount));
+                    }
+                }
+            }
+        }
+
+        // 🚀 Planned Revenue (Ánh xạ trực tiếp từ Category của file PlannedRevenue KHÔNG qua LeaseId)
+        for (PlannedRevenue p : plans) {
+            if (p.getYear() != null && p.getYear() == year && p.getPlannedCost() != null) {
+                String catName = p.getCategory() != null ? p.getCategory() : "Other";
+                boolean matched = false;
+                for (String c : categories) {
+                    if (c.equalsIgnoreCase(catName) || catName.toUpperCase().contains(c.toUpperCase().replace(" ", "_"))) {
+                        plannedMap.put(c, plannedMap.get(c).add(p.getPlannedCost()));
+                        matched = true;
+                        break;
+                    }
+                }
+                if (!matched) plannedMap.put("Other", plannedMap.get("Other").add(p.getPlannedCost()));
+            }
+        }
+
+        List<DashboardResponse.AmenityRevenueData> list = new ArrayList<>();
+        for (String cat : categories) {
+            list.add(DashboardResponse.AmenityRevenueData.builder()
+                .category(cat).actual(actualMap.get(cat)).planned(plannedMap.get(cat)).build());
+        }
+        return list;
+    }
+
+    private DashboardResponse.KPICards calculateRevenueKPI(List<RecurringCostSchedule> schedules, List<PlannedRevenue> plans, LocalDate toDate, double actualOcc, double forecastOcc) {
+        int currentYear = toDate.getYear();
+        int currentMonth = toDate.getMonthValue();
+
         BigDecimal actualToDate = schedules.stream()
-                .filter(s -> s.getPaymentStatus() == PaymentStatus.PAID 
-                        && s.getDueDate() != null && s.getDueDate().getYear() == currentYear
-                        && !s.getDueDate().isAfter(toDate))
+                .filter(s -> s.getPaymentStatus() == PaymentStatus.PAID && s.getDueDate() != null && s.getDueDate().getYear() == currentYear && !s.getDueDate().isAfter(toDate))
                 .map(s -> s.getAmountInBase() != null ? s.getAmountInBase() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // 2. Annual Forecast (Dự báo năm nay)
         BigDecimal annualForecast = schedules.stream()
-                .filter(s -> s.getPaymentStatus() != PaymentStatus.REJECTED
-                        && s.getDueDate() != null && s.getDueDate().getYear() == currentYear)
+                .filter(s -> (ScheduleStatus.SCHEDULED == s.getScheduleStatus() || ScheduleStatus.APPROVED == s.getScheduleStatus()) && s.getDueDate() != null && s.getDueDate().getYear() == currentYear)
                 .map(s -> s.getAmountInBase() != null ? s.getAmountInBase() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // 3. Annual Plan & Plan To Date
         BigDecimal annualPlan = BigDecimal.ZERO;
         BigDecimal planToDate = BigDecimal.ZERO;
         for (PlannedRevenue p : plans) {
-            if (p.getYear() == currentYear && p.getPlannedCost() != null) {
+            if (p.getYear() != null && p.getYear() == currentYear && p.getPlannedCost() != null) {
                 annualPlan = annualPlan.add(p.getPlannedCost());
-                if (p.getMonth() <= toDate.getMonthValue()) {
+                if (p.getMonth() != null && p.getMonth() <= currentMonth) {
                     planToDate = planToDate.add(p.getPlannedCost());
                 }
             }
         }
 
-        // Tránh chia cho 0
         BigDecimal safeAnnualPlan = annualPlan.compareTo(BigDecimal.ZERO) == 0 ? BigDecimal.ONE : annualPlan;
         BigDecimal safePlanToDate = planToDate.compareTo(BigDecimal.ZERO) == 0 ? BigDecimal.ONE : planToDate;
 
-        // Tỷ lệ hoàn thành (Achievements)
         double planAchievement = actualToDate.divide(safeAnnualPlan, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100")).doubleValue();
         double forecastAchievement = annualForecast.divide(safeAnnualPlan, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100")).doubleValue();
         double ytdAchievement = actualToDate.divide(safePlanToDate, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100")).doubleValue();
 
         return DashboardResponse.KPICards.builder()
-                .annualPlan(annualPlan)
-                .planToDate(planToDate)
-                .actualToDate(actualToDate)
-                .annualForecast(annualForecast)
-                .planAchievement(planAchievement)
-                .forecastAchievement(forecastAchievement)
-                .ytdAchievement(ytdAchievement)
-                .actualOcc(85.5) 
-                .forecastOcc(90.2)
+                .annualPlan(annualPlan).planToDate(planToDate).actualToDate(actualToDate).annualForecast(annualForecast)
+                .planAchievement(planAchievement).forecastAchievement(forecastAchievement).ytdAchievement(ytdAchievement)
+                .actualOcc(actualOcc).forecastOcc(forecastOcc)
                 .build();
     }
 }

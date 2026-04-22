@@ -5,7 +5,6 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 
 @Data
 @Builder
@@ -50,15 +49,25 @@ public class DashboardResponse {
     }
 
     @Data @Builder public static class RevenueMetrics {
-        private RevenueDetail contract;
-        private RevenueDetail serviceFee;
-        private Map<String, RevenueDetail> amenity; // Key: Parking, Pool, etc.
+        private List<MonthlyRevenue> contract;    
+        private List<MonthlyRevenue> serviceFee;   
+        private List<AmenityRevenueData> amenity;  
         private KPICards kpi;
     }
 
-    @Data @Builder public static class RevenueDetail {
+    @Data @Builder public static class MonthlyRevenue {
+        private String month;
         private BigDecimal actual;
+        private BigDecimal planned;
         private BigDecimal forecast;
+        private double actualOcc;
+        private double plannedOcc;
+        private double forecastOcc;
+    }
+
+    @Data @Builder public static class AmenityRevenueData {
+        private String category;
+        private BigDecimal actual;
         private BigDecimal planned;
     }
 

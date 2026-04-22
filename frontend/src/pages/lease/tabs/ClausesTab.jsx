@@ -45,9 +45,9 @@ export default function ClausesTab({ lease }) {
   
   const [modalConfig, setModalConfig] = useState({ isOpen: false, mode: "ADD" });
   
-  // Ánh xạ chính xác với Clause.java
+  // 🚀 ĐÃ BỔ SUNG clauseType VÀO INITIAL FORM
   const initialForm = { 
-    clauseId: "", description: "", 
+    clauseId: "", clauseType: "", description: "", 
     startDate: "", endDate: "", dateMatchLs: false, 
     responsibleParty: "", exercisedBy: "", 
     documentUrl: "", isActive: false 
@@ -60,7 +60,7 @@ export default function ClausesTab({ lease }) {
     setLoading(true);
     try {
       const res = await axiosInstance.get(`/lease/leases/${leaseId}/clauses?page=0&size=100`);
-      setClauses(res.data.content || []);
+      setClauses(res.data.content || res.data || []);
     } catch (error) { console.error("Failed to fetch data", error); } 
     finally { setLoading(false); setSelectedIds([]); }
   }, [leaseId]);
@@ -189,10 +189,17 @@ export default function ClausesTab({ lease }) {
     finally { setLoading(false); }
   };
 
-  const isFormValid = formData.description?.trim() !== "";
+  // 🚀 RÀNG BUỘC PHẢI NHẬP TYPE MỚI CHO LƯU
+  const isFormValid = formData.clauseType !== "" && formData.description?.trim() !== "";
 
   return (
     <div className="flex flex-col h-full animate-[fadeIn_0.2s_ease-out]">
+      
+      {!isActive && (
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-2.5 mb-3 rounded shadow-sm">
+          <span className="text-yellow-800 text-[11.5px] font-medium">💡 Hợp đồng đang <span className="font-bold text-red-600">Pending</span>. Bạn có thể lưu nháp, nhưng chưa thể Gửi Yêu Cầu Phê Duyệt.</span>
+        </div>
+      )}
 
       <div className="flex justify-between items-center gap-2 mb-3">
         <div className="flex gap-2">
@@ -209,43 +216,48 @@ export default function ClausesTab({ lease }) {
         </button>
       </div>
 
-      {/* BẢNG DỮ LIỆU CHUẨN */}
       <div className="border border-gray-200 rounded-sm overflow-hidden shadow-sm flex-1 bg-white relative">
-        <table className="w-full text-left text-[12px] whitespace-nowrap">
-          <thead className="sticky top-0 z-10 bg-[#F39C12] text-white shadow-sm">
-            <tr>
-              <th className="w-10 px-3 py-2 text-center border-b border-[#D68910]"><input type="checkbox" onChange={handleSelectAll} className="w-3.5 h-3.5 rounded" /></th>
-              <th className="px-4 py-2 font-semibold border-b border-[#D68910]">Clause ID</th>
-              <th className="px-4 py-2 font-semibold border-b border-[#D68910]">Start Date</th>
-              <th className="px-4 py-2 font-semibold border-b border-[#D68910]">End Date</th>
-              <th className="px-4 py-2 font-semibold border-b border-[#D68910]">Responsible Party</th>
-              <th className="px-4 py-2 font-semibold border-b border-[#D68910]">Description</th>
-              <th className="px-4 py-2 font-semibold border-b border-[#D68910] text-center">Doc</th>
-              <th className="px-4 py-2 font-semibold border-b border-[#D68910] text-center">Active</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {clauses.map((c) => {
-              const isSelected = selectedIds.includes(c.clauseId);
-              return (
-                <tr key={c.clauseId} onDoubleClick={() => { setFormData({...c}); setOriginalData({...c}); setModalConfig({ isOpen: true, mode: "EDIT" }); }} className={`cursor-pointer transition-colors ${isSelected ? "bg-blue-50" : "hover:bg-orange-50/50"}`}>
-                  <td className="px-3 py-2 text-center border-r border-gray-50"><input type="checkbox" checked={isSelected} onChange={(e) => handleSelectRow(e, c.clauseId)} onClick={e => e.stopPropagation()} className="w-3.5 h-3.5 rounded" /></td>
-                  <td className="px-4 py-2 font-bold text-gray-800 border-r border-gray-50">{c.clauseId}</td>
-                  <td className="px-4 py-2 text-gray-700 border-r border-gray-50">{c.startDate || "-"}</td>
-                  <td className="px-4 py-2 text-gray-700 border-r border-gray-50">{c.endDate || "-"}</td>
-                  <td className="px-4 py-2 font-semibold text-blue-600 border-r border-gray-50">{c.responsibleParty || "-"}</td>
-                  <td className="px-4 py-2 text-gray-700 border-r border-gray-50 truncate max-w-[200px]">{c.description}</td>
-                  <td className="px-4 py-2 text-center border-r border-gray-50">{c.documentUrl ? <a href={`http://localhost:8080${c.documentUrl}`} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="text-blue-500 underline font-semibold">View</a> : "-"}</td>
-                  <td className="px-4 py-2 text-center"><input type="checkbox" checked={c.isActive} readOnly className="w-3.5 h-3.5 rounded accent-blue-600" /></td>
-                </tr>
-              );
-            })}
-            {clauses.length === 0 && !loading && <tr><td colSpan="8" className="text-center py-8 text-gray-500">No data found.</td></tr>}
-          </tbody>
-        </table>
+        <div className="overflow-x-auto h-full">
+          <table className="w-full text-left text-[12px] whitespace-nowrap">
+            <thead className="sticky top-0 z-10 bg-[#F39C12] text-white shadow-sm">
+              <tr>
+                <th className="w-10 px-3 py-2 text-center border-b border-[#D68910]"><input type="checkbox" onChange={handleSelectAll} className="w-3.5 h-3.5 rounded accent-blue-600" /></th>
+                <th className="px-4 py-2 font-semibold border-b border-[#D68910]">Clause ID</th>
+                <th className="px-4 py-2 font-semibold border-b border-[#D68910]">Clause Type</th> {/* 🚀 THÊM CỘT NÀY */}
+                <th className="px-4 py-2 font-semibold border-b border-[#D68910]">Start Date</th>
+                <th className="px-4 py-2 font-semibold border-b border-[#D68910]">End Date</th>
+                <th className="px-4 py-2 font-semibold border-b border-[#D68910]">Responsible Party</th>
+                <th className="px-4 py-2 font-semibold border-b border-[#D68910]">Description</th>
+                <th className="px-4 py-2 font-semibold border-b border-[#D68910] text-center">Doc</th>
+                <th className="px-4 py-2 font-semibold border-b border-[#D68910] text-center">Active</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {clauses.map((c) => {
+                const isSelected = selectedIds.includes(c.clauseId);
+                return (
+                  <tr key={c.clauseId} onDoubleClick={() => { setFormData({...c}); setOriginalData({...c}); setModalConfig({ isOpen: true, mode: "EDIT" }); }} className={`cursor-pointer transition-colors ${isSelected ? "bg-blue-50/60" : "hover:bg-orange-50/50"}`}>
+                    <td className="px-3 py-2 text-center border-r border-gray-50"><input type="checkbox" checked={isSelected} onChange={(e) => handleSelectRow(e, c.clauseId)} onClick={e => e.stopPropagation()} className="w-3.5 h-3.5 rounded accent-blue-600 cursor-pointer" /></td>
+                    <td className="px-4 py-2 font-bold text-gray-800 border-r border-gray-50">{c.clauseId}</td>
+                    
+                    {/* 🚀 HIỂN THỊ VALUE Ở BẢNG */}
+                    <td className="px-4 py-2 font-semibold text-blue-600 border-r border-gray-50">{c.clauseType || "-"}</td> 
+                    
+                    <td className="px-4 py-2 text-gray-700 border-r border-gray-50">{c.startDate || "-"}</td>
+                    <td className="px-4 py-2 text-gray-700 border-r border-gray-50">{c.endDate || "-"}</td>
+                    <td className="px-4 py-2 font-semibold text-gray-600 border-r border-gray-50">{c.responsibleParty || "-"}</td>
+                    <td className="px-4 py-2 text-gray-700 border-r border-gray-50 truncate max-w-[200px]">{c.description}</td>
+                    <td className="px-4 py-2 text-center border-r border-gray-50">{c.documentUrl ? <a href={`http://localhost:8080${c.documentUrl}`} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="text-blue-500 underline font-semibold">View</a> : "-"}</td>
+                    <td className="px-4 py-2 text-center"><input type="checkbox" checked={c.isActive} readOnly className="w-3.5 h-3.5 rounded accent-blue-600" /></td>
+                  </tr>
+                );
+              })}
+              {clauses.length === 0 && !loading && <tr><td colSpan="9" className="text-center py-8 text-gray-500">No data found.</td></tr>}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* MODAL 3 CỘT */}
       {modalConfig.isOpen && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex justify-center items-center backdrop-blur-sm p-4">
           <div className="bg-white w-[1000px] rounded-xl shadow-2xl flex flex-col overflow-hidden animate-[fadeIn_0.2s_ease-out]">
@@ -259,6 +271,18 @@ export default function ClausesTab({ lease }) {
                 <div className="flex flex-col gap-4">
                   <div className="pb-1 border-b border-gray-200"><span className="font-bold text-[10px] uppercase text-gray-500 tracking-wider">General</span></div>
                   <Input label="Clause ID" value={formData.clauseId} onChange={v => setFormData({...formData, clauseId: v})} disabled={modalConfig.mode === "EDIT"} placeholder="Auto-generated if empty" />
+                  
+                  {/* 🚀 THÊM SELECT BOX CHỌN ENUM TYPE */}
+                  <Select label="Clause Type" required value={formData.clauseType} onChange={v => setFormData({...formData, clauseType: v})} 
+                    options={[
+                      {value: 'SPECIAL', label: 'Special'},
+                      {value: 'DEPOSIT', label: 'Deposit'},
+                      {value: 'TERMS_OF_HANDOVER', label: 'Terms of Handover'},
+                      {value: 'PENALTY', label: 'Penalty'},
+                      {value: 'RENT_ESCALATION', label: 'Rent Escalation'}
+                    ]} 
+                  />
+
                   <Textarea label="Description" required value={formData.description} onChange={v => setFormData({...formData, description: v})} />
                 </div>
 
