@@ -29,7 +29,8 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) 
             .authorizeHttpRequests(auth -> auth
                 //.requestMatchers("/api/auth/login", "/api/auth/register", "/error", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/files/download/**").permitAll() 
-                .requestMatchers("/api/auth/**", "/api/files/download/**", "/api/floors/**").permitAll()
+                .requestMatchers("/api/auth/**", "/api/files/download/**").permitAll()
+                .requestMatchers("/api/floors/**").permitAll()
                 .anyRequest().authenticated() 
             )
             .addFilterBefore(opaqueTokenFilter, UsernamePasswordAuthenticationFilter.class);
