@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import axiosInstance from '../../api/axiosInstance';
 
 import backgroundImage from '../../assets/login_bg.png'; 
 import logoImage from '../../assets/login_logo.png'; 
@@ -25,7 +25,8 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:8080/api/auth/login', {
+      //const response = await axios.post('http://localhost:8080/api/auth/login', {
+      const response = await axiosInstance.post('/auth/login', {
         username,
         password
       });

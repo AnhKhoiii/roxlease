@@ -3,7 +3,8 @@ import axios from 'axios';
 // Khởi tạo một instance của axios với các cấu hình mặc định
 const axiosInstance = axios.create({
   // Địa chỉ gốc của backend Spring Boot
-  baseURL: 'http://localhost:8080/api', 
+  //baseURL: 'http://localhost:8080/api', 
+  baseURL: 'https://f769n618-8080.asse.devtunnels.ms/api',
   timeout: 10000, // Thời gian chờ tối đa (10 giây)
   headers: {
     'Content-Type': 'application/json',

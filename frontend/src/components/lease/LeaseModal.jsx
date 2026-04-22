@@ -184,9 +184,10 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData 
     setFormData(prev => ({ ...prev, ...updates }));
   };
 
-  // 🚀 CẬP NHẬT: NHẬN THÊM CỜ isSendRequest
   const handleSaveAction = (isSendRequest = false) => {
     if (!formData.lsId) { alert("Lease Code (lsId) is required!"); return; }
+    formData.signedDate = formData.signedDate ? new Date(formData.signedDate).toISOString() : null;
+    formData.action = (mode === "ADD" ? "CREATE" : "UPDATE");
     const payload = { ...formData };
     Object.keys(payload).forEach(key => {
       const value = payload[key];
