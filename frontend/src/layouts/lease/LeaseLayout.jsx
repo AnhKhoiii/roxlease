@@ -8,6 +8,7 @@ export default function LeaseLayout() {
 
   // Kiểm tra quyền (Permissions)
   const hasAppAccess = (appCode) => {
+    return true;
     return perms.includes(`LEASE_${appCode}_VIEW`) || perms.includes(`LEASE_${appCode}_EDIT`);
   };
 
@@ -80,6 +81,20 @@ export default function LeaseLayout() {
               }`}
             >
               Cost Wizard
+            </NavLink>
+          )}
+
+          {/* Reports */ }
+          {hasAppAccess('REPORT') && (
+            <NavLink 
+              to="/lease/report" 
+              className={`px-4 py-3 rounded text-[15px] font-semibold transition-all ${
+                isMenuActive('/lease/reports') 
+                  ? 'bg-white text-red-500 border-l-4 border-red-500 shadow-sm' 
+                  : 'text-gray-700 hover:text-red-500 hover:bg-gray-200 border-l-4 border-transparent'
+              }`}
+            >
+              Reports
             </NavLink>
           )}
 

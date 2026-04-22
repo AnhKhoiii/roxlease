@@ -27,6 +27,7 @@ import PlannedRevenue from './pages/cost/PlannedRevenue';
 import BuildingPerformance from './pages/space/BuildingPerformance';
 import CostWizard from './pages/cost/CostWizard';
 import LeaseDashBoard from './pages/lease/DashboardComponents';
+import Repost from './pages/lease/Repost';
 
 function App() {
   return (
@@ -59,6 +60,7 @@ function App() {
               <Route path="console/:id" element={<LeaseDetail />} />
             <Route path="request" element={<Request />} />
             <Route path="cost-wizard" element={<CostWizard />} />
+            <Route path="report" element={<Repost />} />
             <Route path="background-data" element={<LeaseBackgroundDataLayout />} >
                 <Route path="party" element={<LeaseBackgroundData type="party" />} />
                 <Route path="vatcountry" element={<VatCountryConsole />} />
