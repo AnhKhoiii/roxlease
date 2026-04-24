@@ -38,14 +38,39 @@ export default function LeaseDetail() {
     }
   };
 
-  // Hàm xử lý lưu khi sửa từ Modal
-  const handleSaveModal = async (formData) => {
+  // 🚀 ĐÃ SỬA: ĐỒNG BỘ LOGIC BÓC TÁCH DỮ LIỆU & GỬI REQUEST GIỐNG BÊN CONSOLE
+  const handleSaveModal = async (incomingData, isSendRequest) => {
     try {
-      await axiosInstance.put(`/lease/leases/${formData.lsId}`, formData);
+      // 1. Trích xuất dữ liệu Lease thực sự
+      const actualLeaseData = isSendRequest ? incomingData.requestData : incomingData;
+
+      // 2. Cập nhật Hợp đồng
+      await axiosInstance.put(`/lease/leases/${actualLeaseData.lsId}`, actualLeaseData);
+
+      // 3. Xử lý gửi Request (nếu người dùng bấm nút Send Request)
+      if (isSendRequest) {
+        const finalRequestPayload = {
+          siteId: actualLeaseData.siteId || "N/A",
+          action: "UPDATE",
+          requestType: "LEASE_DETAILS",
+          targetId: actualLeaseData.lsId,
+          data: actualLeaseData
+        };
+        await axiosInstance.post("/lease/requests/submit-module", finalRequestPayload);
+        alert("Lưu và gửi yêu cầu phê duyệt thành công!");
+      } else {
+        alert("Lưu thay đổi thành công!");
+      }
+
       setIsModalOpen(false);
       fetchLeaseDetail(); // Load lại dữ liệu mới nhất sau khi sửa
     } catch (error) {
-      alert("Lỗi lưu dữ liệu! Vui lòng kiểm tra lại.");
+      console.error(error);
+      if (error.response && error.response.status === 403) {
+          alert("LỖI 403: Phiên đăng nhập đã hết hạn hoặc bạn không có quyền. Vui lòng thử lại!");
+      } else {
+          alert("Lỗi lưu dữ liệu! Vui lòng kiểm tra lại.");
+      }
     }
   };
 
@@ -86,7 +111,7 @@ export default function LeaseDetail() {
         </div>
       </div>
 
-      {/* 2. GENERAL LEASE INFORMATION (ĐÃ ĐƯỢC THU NHỎ LẠI) */}
+      {/* 2. GENERAL LEASE INFORMATION */}
       <div className="bg-white rounded-md shadow-sm border border-gray-200 mb-3 p-3.5">
         <div className="flex justify-between items-center border-b border-gray-100 pb-2 mb-3">
           <h2 className="text-[13px] font-bold uppercase tracking-wide text-gray-800">General Lease Information</h2>
@@ -100,7 +125,6 @@ export default function LeaseDetail() {
           </div>
         </div>
 
-        {/* Chỉnh lại Grid 3 Cột, giảm Gap để giao diện khít hơn */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-y-3 gap-x-6">
           
           {/* Cột 1 */}
@@ -162,16 +186,14 @@ export default function LeaseDetail() {
         </div>    
       </div>
 
-      {/* COMPONENT MODAL (Được gọi khi bấm nút Edit) */}
-      {isModalOpen && (
-        <LeaseModal 
-          isOpen={isModalOpen} 
-          onClose={() => setIsModalOpen(false)} 
-          onSave={handleSaveModal} 
-          mode="EDIT" 
-          initialData={lease} 
-        />
-      )}
+      {/* 🚀 ĐÃ SỬA: LUÔN RENDER COMPONENT VÀ ĐIỀU KHIỂN BẰNG PROP ISOPEN */}
+      <LeaseModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onSave={handleSaveModal} 
+        mode="EDIT" 
+        initialData={lease} 
+      />
 
     </div>
   );

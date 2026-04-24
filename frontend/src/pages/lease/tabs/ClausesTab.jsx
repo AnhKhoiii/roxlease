@@ -194,12 +194,6 @@ export default function ClausesTab({ lease }) {
 
   return (
     <div className="flex flex-col h-full animate-[fadeIn_0.2s_ease-out]">
-      
-      {!isActive && (
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-2.5 mb-3 rounded shadow-sm">
-          <span className="text-yellow-800 text-[11.5px] font-medium">💡 Hợp đồng đang <span className="font-bold text-red-600">Pending</span>. Bạn có thể lưu nháp, nhưng chưa thể Gửi Yêu Cầu Phê Duyệt.</span>
-        </div>
-      )}
 
       <div className="flex justify-between items-center gap-2 mb-3">
         <div className="flex gap-2">

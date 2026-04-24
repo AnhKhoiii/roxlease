@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import axiosInstance from "../../api/axiosInstance";
 import { useNavigate } from "react-router-dom";
-// NHÚNG COMPONENT MODAL
 import LeaseModal from "../../components/lease/LeaseModal"; 
 
 export default function LeaseConsole() {
@@ -110,41 +109,49 @@ export default function LeaseConsole() {
   };
   const handleRowDoubleClick = (item) => { setModalMode("EDIT"); setSelectedData(item); setIsModalOpen(true); };
 
-  // 🚀 NHẬN CỜ isSendRequest TỪ MODAL ĐỂ GỌI API REQUEST KÉP
-  const handleSaveModal = async (formData, isSendRequest) => {
+  const handleSaveModal = async (incomingData, isSendRequest) => {
     try {
+      // 1. Lấy dữ liệu hợp đồng thực sự (nằm trong requestData nếu là Send Request)
+      const actualLeaseData = isSendRequest ? incomingData.requestData : incomingData;
+
       let savedLease;
+      // 2. Xử lý lưu/cập nhật hợp đồng trước (Draft)
       if (modalMode === "EDIT") {
-        const res = await axiosInstance.put(`/lease/leases/${formData.lsId}`, formData);
+        const res = await axiosInstance.put(`/lease/leases/${actualLeaseData.lsId}`, actualLeaseData);
         savedLease = res.data;
       } else {
-        const res = await axiosInstance.post('/lease/leases', formData);
+        const res = await axiosInstance.post('/lease/leases', actualLeaseData);
         savedLease = res.data;
       }
 
-      // XỬ LÝ GỬI REQUEST DUYỆT TỚI BACKEND
+      // 3. XỬ LÝ GỬI REQUEST DUYỆT QUA API SUBMIT-MODULE
       if (isSendRequest) {
-        const requestPayload = {
-          targetId: savedLease.lsId,
-          requestCode: `RQ-${savedLease.lsId}-${Date.now().toString().slice(-4)}`,
-          
-          type: "LEASE_DETAILS",        
-          requestType: "LEASE_DETAILS", 
-          
-          status: "PENDING",
-          reason: "Request for Lease Approval"
+        const targetId = savedLease?.lsId || actualLeaseData.lsId;
+        
+        // Gói data đúng chuẩn theo yêu cầu của API @PostMapping("/submit-module")
+        const finalRequestPayload = {
+          siteId: actualLeaseData.siteId || "N/A",
+          action: modalMode === "ADD" ? "CREATE" : "UPDATE",
+          requestType: "LEASE_DETAILS", // Map đúng với enum RQType.LEASE_DETAILS
+          targetId: targetId,
+          data: actualLeaseData // ⚠️ Chú ý: Backend submit-module dùng key "data"
         };
-        await axiosInstance.post("/lease/requests", requestPayload);
-        alert("Save draft and send approval request successfully!");
+        
+        await axiosInstance.post("/lease/requests/submit-module", finalRequestPayload);
+        alert("Lưu và gửi yêu cầu phê duyệt thành công!");
       } else {
-        alert("Draft saved successfully!");
+        alert("Lưu nháp hợp đồng thành công!");
       }
 
       setIsModalOpen(false);
       fetchLeases(); 
     } catch (error) { 
-      alert("Lỗi hệ thống! Vui lòng kiểm tra lại thông tin cung cấp."); 
-      console.error(error);
+      console.error("Chi tiết lỗi:", error);
+      if (error.response && error.response.status === 403) {
+          alert("LỖI 403 FORBIDDEN: Phiên đăng nhập đã hết hạn hoặc tài khoản không có quyền Gửi Phê Duyệt. Vui lòng F5 trang hoặc Đăng nhập lại!");
+      } else {
+          alert("Lỗi hệ thống! Vui lòng kiểm tra Console (F12)."); 
+      }
     }
   };
 

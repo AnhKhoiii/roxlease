@@ -13,7 +13,7 @@ const Input = ({ label, value, onChange, type = "text", disabled, placeholder })
       onChange={e => onChange(e.target.value)}
       disabled={disabled}
       placeholder={placeholder}
-      className={`border border-gray-300 rounded px-2 py-1 text-[11px] outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500 bg-white transition-shadow ${
+      className={`border border-gray-300 rounded px-2 py-1.5 text-[11px] outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500 bg-white transition-shadow ${
         type === 'number' ? '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none' : ''
       }`}
     />
@@ -40,7 +40,7 @@ const Select = ({ label, value, onChange, options = [], disabled }) => (
       value={value || ''}
       onChange={e => onChange(e.target.value)}
       disabled={disabled}
-      className="border border-gray-300 rounded px-2 py-1 text-[11px] outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500 bg-white transition-shadow"
+      className="border border-gray-300 rounded px-2 py-1.5 text-[11px] outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500 bg-white transition-shadow"
     >
       <option value="">-- Select --</option>
       {options.map((opt, idx) => (
@@ -72,7 +72,7 @@ const AutocompleteInput = ({ label, value, onChange, options = [], disabled, pla
         onBlur={() => setTimeout(() => setIsOpen(false), 200)} 
         disabled={disabled}
         placeholder={placeholder || "Type to search..."}
-        className="border border-gray-300 rounded px-2 py-1 text-[11px] outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500 bg-white transition-shadow"
+        className="border border-gray-300 rounded px-2 py-1.5 text-[11px] outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500 bg-white transition-shadow"
         autoComplete="off"
       />
       
@@ -104,13 +104,12 @@ const AutocompleteInput = ({ label, value, onChange, options = [], disabled, pla
 
 
 // ==========================================
-// MODAL CHÍNH (4 CỘT)
+// MODAL CHÍNH
 // ==========================================
 export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData }) {
   const [formData, setFormData] = useState({});
   const [sites, setSites] = useState([]);
   const [buildings, setBuildings] = useState([]);
-  
   const [amenities, setAmenities] = useState([]);
   const [parties, setParties] = useState([]);
 
@@ -178,25 +177,45 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData 
     if (['amountDeposit', 'rentUnitCost', 'serviceUnitCost', 'baseExchangeRate', 'areaNegotiated', 'areaCorridor'].includes(field)) {
       updates[field] = value === '' ? null : Number(value);
     }
-    
     if (field === 'siteId') { updates.buildingId = ''; }
-    
     setFormData(prev => ({ ...prev, ...updates }));
   };
 
   const handleSaveAction = (isSendRequest = false) => {
     if (!formData.lsId) { alert("Lease Code (lsId) is required!"); return; }
-    formData.signedDate = formData.signedDate ? new Date(formData.signedDate).toISOString() : null;
-    formData.action = (mode === "ADD" ? "CREATE" : "UPDATE");
+
     const payload = { ...formData };
+    payload.signedDate = payload.signedDate ? new Date(payload.signedDate).toISOString() : null;
     Object.keys(payload).forEach(key => {
       const value = payload[key];
       if (value === "") payload[key] = null;
       if (typeof value === "number" && Number.isNaN(value)) payload[key] = null;
     });
-    
-    // GỬI KÈM TRẠNG THÁI LÊN COMPONENT CHA
-    onSave(payload, isSendRequest);
+
+    const actionType = mode === "ADD" ? "CREATE" : "UPDATE";
+    payload.action = actionType;
+
+    // 🚀 BỌC DATA VÀO ĐÚNG CẤU TRÚC REQUEST MODEL VÀ TỰ ĐỘNG SINH COMMENT
+    if (isSendRequest) {
+      const autoComment = mode === "ADD" 
+          ? `Request to create new Lease: ${payload.lsId}` 
+          : `Request to update Lease: ${payload.lsId}`;
+
+      const requestPayload = {
+        requestType: "LEASE", 
+        siteId: payload.siteId,
+        targetId: payload.lsId,
+        action: actionType,
+        comment: autoComment, // <-- Tự động sinh comment
+        document: null,       // <-- Để trống document
+        requestData: payload  // Data lease thực tế
+      };
+      
+      onSave(requestPayload, true);
+    } else {
+      // Lưu Draft bình thường
+      onSave(payload, false);
+    }
   };
 
   return (
@@ -205,7 +224,6 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData 
         <div className="bg-[#EFB034] px-5 py-3 flex justify-between items-center shrink-0">
           <h2 className="text-base font-bold uppercase tracking-tight text-white drop-shadow-sm">{mode === "ADD" ? "Add New Lease" : "Edit Lease"}</h2>
           
-          {/* 🚀 HIỂN THỊ CÁC NÚT BẤM (DRAFT HOẶC REQUEST) TÙY THEO TRẠNG THÁI */}
           <div className="flex gap-2 items-center">
             {mode === "ADD" ? (
               <>
