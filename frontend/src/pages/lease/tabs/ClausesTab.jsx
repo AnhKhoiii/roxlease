@@ -127,7 +127,7 @@ export default function ClausesTab({ lease }) {
 
       const requestPayload = {
         siteId: lease?.siteId || "Unknown", action: actionType, 
-        requestType: "CONTRACT_CLAUSE", targetId: targetId, data: changedData
+        requestType: "CONTRACT_CLAUSES", targetId: targetId, data: changedData
       };
 
       await axiosInstance.post("/lease/requests/submit-module", requestPayload);
@@ -147,12 +147,11 @@ export default function ClausesTab({ lease }) {
     try {
       for (const id of selectedIds) {
         const item = clauses.find(c => c.clauseId === id);
-        if (!item) continue;
 
         if (item.isActive) {
           const requestPayload = {
             siteId: lease?.siteId || "Unknown", action: "DELETE", 
-            requestType: "CONTRACT_CLAUSE", targetId: item.clauseId, data: item
+            requestType: "CONTRACT_CLAUSES", targetId: item.clauseId, data: item
           };
           await axiosInstance.post("/lease/requests/submit-module", requestPayload).catch(e => console.warn(e));
           requestCount++;
@@ -178,7 +177,7 @@ export default function ClausesTab({ lease }) {
         const cleanDataObj = sanitizePayload(item);
         const requestPayload = {
           siteId: lease?.siteId || "Unknown", action: "UPDATE", 
-          requestType: "CONTRACT_CLAUSE", targetId: item.clauseId, data: cleanDataObj
+          requestType: "CONTRACT_CLAUSES", targetId: item.clauseId, data: cleanDataObj
         };
         await axiosInstance.post("/lease/requests/submit-module", requestPayload);
       }
