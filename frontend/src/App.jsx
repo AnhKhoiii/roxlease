@@ -9,7 +9,6 @@ import RoleManagement from './pages/system/RoleManagement';
 import PermissionManagement from './pages/system/PermissionManagement';
 import AssignPermission from './pages/system/AssignPermission';
 import ForgotPassword from './pages/auth/ForgotPassword';
-import ResetPassword from './pages/auth/ResetPassword';
 import SpaceLayout from './layouts/space/SpaceLayout';
 import GeoLocation from './pages/space/GeoLocation'
 import BackgroundDataLayout from './layouts/space/BackgroundDataLayout';
@@ -35,11 +34,10 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
 
         <Route path="/" element={<DashboardLayout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<div className="p-8">Home Dashboard</div>} />
+          <Route path="dashboard" element={<LeaseDashBoard />} />
 
           <Route path="space" element={<SpaceLayout />}>
             

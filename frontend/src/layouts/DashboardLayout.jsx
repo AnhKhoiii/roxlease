@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import axiosInstance from '../api/axiosInstance'; 
 import logo from '../assets/login_logo.png';
+import miniLogo from '../assets/mini_logo.png';
 
 const DashboardLayout = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -75,7 +76,7 @@ const DashboardLayout = () => {
       <div className={`${isCollapsed ? 'w-[72px]' : 'w-[240px]'} transition-all duration-300 bg-[#F8F9FA] flex flex-col relative z-20 border-r border-gray-200`}>
         <div className="h-[90px] flex items-center justify-center px-4 overflow-hidden">
           <img
-            src={logo}
+            src={isCollapsed ? miniLogo : logo}
             alt="ROX Lease"
             className={`transition-all duration-300 ${
               isCollapsed ? "w-8 h-8" : "h-10 object-contain"

@@ -44,6 +44,33 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/profile")
+    public ResponseEntity<?> getUserProfile(Authentication authentication) {
+        try {
+            String username = authentication.getName();
+            com.roxlease.system.model.User user = authService.getUserProfile(username);
+            
+            Map<String, Object> profile = new HashMap<>();
+            profile.put("username", user.getUsername());
+            profile.put("email", user.getEmail());
+            profile.put("fullname", user.getFullname());
+            profile.put("roleName", user.getRoleName());
+            profile.put("company", user.getCompany());
+            profile.put("department", user.getDepartment());
+            profile.put("phone", user.getPhone());
+            profile.put("employeeTitle", user.getEmployeeTitle());
+            profile.put("birthday", user.getBirthday());
+            profile.put("manager", user.getManager());
+            profile.put("gender", user.getGender());
+            profile.put("vpasite", user.getVpasite());
+            
+            return ResponseEntity.ok(profile);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
     // --- LOGIN ---
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest, HttpServletRequest request) {

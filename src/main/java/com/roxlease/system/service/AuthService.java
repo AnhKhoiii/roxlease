@@ -14,6 +14,7 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import com.roxlease.system.model.PasswordResetToken;
 import com.roxlease.system.repository.PasswordResetTokenRepository;
+import com.roxlease.core.utils.JwtUtils;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -30,6 +31,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JavaMailSender mailSender;
     private final PasswordResetTokenRepository tokenRepository;
+    private final JwtUtils jwtUtils;
 
     // Inject các Repository và BCryptPasswordEncoder
     public AuthService(ActiveSessionRepository sessionRepository, 
@@ -37,13 +39,15 @@ public class AuthService {
                        LoginHistoryRepository loginHistoryRepository, 
                        PasswordEncoder passwordEncoder
                        , JavaMailSender mailSender,
-                       PasswordResetTokenRepository tokenRepository) {
+                       PasswordResetTokenRepository tokenRepository,
+                       JwtUtils jwtUtils) {
         this.sessionRepository = sessionRepository;
         this.userRepository = userRepository;
         this.loginHistoryRepository = loginHistoryRepository;
         this.passwordEncoder = passwordEncoder;
         this.mailSender = mailSender;
         this.tokenRepository = tokenRepository;
+        this.jwtUtils = jwtUtils;
     }
 
     // --- REGISTER ---
@@ -86,7 +90,7 @@ public class AuthService {
         }
         
         // 4. Xử lý tạo Token
-        String token = UUID.randomUUID().toString();
+        String token = jwtUtils.generateToken(username);
         Date expirationTime = rememberMe 
                 ? Date.from(Instant.now().plus(30, ChronoUnit.DAYS)) 
                 : Date.from(Instant.now().plus(24, ChronoUnit.HOURS));
@@ -109,6 +113,12 @@ public class AuthService {
         loginHistoryRepository.save(history);
 
         return savedSession;
+    }
+
+    // --- GET USER PROFILE ---
+    public User getUserProfile(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("USER_NOT_FOUND"));
     }
 
     // --- LOGOUT ---
