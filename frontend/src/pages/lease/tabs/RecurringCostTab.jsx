@@ -46,14 +46,16 @@ const Checkbox = ({ label, checked, onChange, disabled }) => (
   </label>
 );
 
-// HÀM HELPER BẮT CHẶT ID
-const getCostId = (c) => c?.recurringCostId || c?.id || c?._id;
+const getMongoId = (c) => c?.id || c?._id || c?.recurringCostId;
+
+const getDisplayId = (c) => c?.recurringCostId || c?.id || c?._id;
 
 // ==========================================
 // MAIN COMPONENT
 // ==========================================
 export default function RecurringCostTab({ lease }) {
   const leaseId = lease?.lsId; 
+  const isActive = lease?.active === true;
   const [costs, setCosts] = useState([]);
   const [vatCountries, setVatCountries] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -177,7 +179,7 @@ export default function RecurringCostTab({ lease }) {
       const payload = formatPayload(formData);
 
       if (modal.mode === "EDIT") {
-        const costId = getCostId(payload) || getCostId(formData);
+        const costId = getMongoId(payload) || getMongoId(formData);
         await axiosInstance.put(`/lease/leases/${leaseId}/recurring-costs/${costId}`, payload);
       } else {
         await axiosInstance.post(`/lease/leases/${leaseId}/recurring-costs`, payload);
@@ -193,11 +195,11 @@ export default function RecurringCostTab({ lease }) {
     try {
       setLoading(true);
       const payloadToSave = formatPayload(dataObj);
-      let targetId = getCostId(payloadToSave); 
+      let targetId = getMongoId(payloadToSave); 
 
       if (actionType === "CREATE") {
         const res = await axiosInstance.post(`/lease/leases/${leaseId}/recurring-costs`, payloadToSave);
-        targetId = getCostId(res.data); 
+        targetId = getMongoId(res.data); 
       } else if (!targetId) {
         alert("Record has an invalid ID (empty string). Cannot submit request, please delete and recreate!");
         setLoading(false); return;
@@ -224,14 +226,14 @@ export default function RecurringCostTab({ lease }) {
     setLoading(true);
     try {
       for (const id of selectedIds) {
-        const item = costs.find(c => getCostId(c) === id);
+        const item = costs.find(c => getMongoId(c) === id);
         if (!item) continue;
 
         const requestPayload = {
           siteId: lease?.siteId || "Unknown",
           action: "UPDATE", 
           requestType: "RECURRING_COSTS", 
-          targetId: getCostId(item),
+          targetId: getMongoId(item),
           data: item
         };
         await axiosInstance.post("/lease/requests/submit-module", requestPayload);
@@ -252,7 +254,7 @@ export default function RecurringCostTab({ lease }) {
 
     try {
       for (const id of selectedIds) {
-        const item = costs.find(c => getCostId(c) === id);
+        const item = costs.find(c => getMongoId(c) === id);
         if (!item) continue;
 
         if (item.active) {
@@ -260,7 +262,7 @@ export default function RecurringCostTab({ lease }) {
             siteId: lease?.siteId || "Unknown",
             action: "DELETE", 
             requestType: "RECURRING_COSTS", 
-            targetId: getCostId(item),
+            targetId: getMongoId(item),
             data: item
           };
           await axiosInstance.post("/lease/requests/submit-module", requestPayload).catch(e => console.warn(e));
@@ -280,14 +282,14 @@ export default function RecurringCostTab({ lease }) {
     }
   };
 
-  const handleSelectAll = (e) => setSelectedIds(e.target.checked ? costs.map(c => getCostId(c)).filter(id => id) : []);
+  const handleSelectAll = (e) => setSelectedIds(e.target.checked ? costs.map(c => getMongoId(c)).filter(Boolean) : []);
   const handleSelectRow = (e, id) => {
     e.stopPropagation();
     if (!id) return;
     setSelectedIds(prev => e.target.checked ? [...prev, id] : prev.filter(x => x !== id));
   };
 
-  const isFormValid = formData.costType !== "";
+  const isFormValid = formData.recurringCostId?.trim() !== "" && formData.costType !== "";
 
   return (
     <div className="flex flex-col h-full animate-[fadeIn_0.2s_ease-out]">
@@ -296,7 +298,13 @@ export default function RecurringCostTab({ lease }) {
           <button onClick={() => { setFormData(initialForm); setModal({ isOpen: true, mode: "ADD" }); }} className="bg-[#DE3B40] hover:bg-[#C11C22] text-white px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors">Add Cost</button>
           <button disabled={selectedIds.length === 0} onClick={handleDelete} className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${selectedIds.length > 0 ? "bg-red-50 text-[#DE3B40] border border-[#DE3B40]" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}>Delete Selected</button>
         </div>
-        <button onClick={handleBulkSubmit} disabled={selectedIds.length === 0} className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${selectedIds.length > 0 ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}>Submit Request for Selected</button>
+        <button 
+          onClick={handleBulkSubmit} 
+          disabled={selectedIds.length === 0 || !isActive} 
+          className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${(selectedIds.length > 0 && isActive) ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
+        >
+          Submit Request for Selected
+        </button>
       </div>
 
       <div className="border border-gray-200 rounded-sm overflow-hidden shadow-sm flex-1 bg-white relative">
@@ -305,7 +313,7 @@ export default function RecurringCostTab({ lease }) {
             <thead className="sticky top-0 z-10 bg-[#F39C12] text-white shadow-sm">
               <tr>
                 <th className="w-10 px-3 py-2 text-center border-b border-[#D68910]">
-                  <input type="checkbox" onChange={handleSelectAll} checked={costs.length > 0 && selectedIds.length === costs.filter(c => getCostId(c)).length} className="w-3.5 h-3.5 rounded cursor-pointer" />
+                  <input type="checkbox" onChange={handleSelectAll} checked={costs.length > 0 && selectedIds.length === costs.filter(c => getMongoId(c)).length} className="w-3.5 h-3.5 rounded cursor-pointer" />
                 </th>
                 <th className="px-4 py-2 font-semibold border-b border-[#D68910]">Recurring Cost ID</th>
                 <th className="px-4 py-2 font-semibold border-b border-[#D68910]">Cost Type</th>
@@ -319,13 +327,14 @@ export default function RecurringCostTab({ lease }) {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {costs.map((c, idx) => {
-                const costId = getCostId(c);
-                const isSelected = selectedIds.includes(costId);
+                const mongoId = getMongoId(c);
+                const displayId = getDisplayId(c);
+                const isSelected = selectedIds.includes(mongoId);
                 return (
-                  <tr key={costId || idx} onDoubleClick={() => { 
+                  <tr key={mongoId || idx} onDoubleClick={() => { 
                       setFormData({
                         ...c,
-                        recurringCostId: costId, 
+                        recurringCostId: displayId, 
                         overrideVatPercent: c.overrideVat && c.currVat === 0, 
                         overrideVatAmount: c.overrideVat && c.currVat > 0,
                         vatAmountOverrideVal: c.currVat,
@@ -333,12 +342,12 @@ export default function RecurringCostTab({ lease }) {
                       }); 
                       setModal({ isOpen: true, mode: "EDIT" }); 
                     }} 
-                    className={`cursor-pointer transition-colors ${isSelected ? "bg-blue-50" : "hover:bg-orange-50/50"} ${!costId ? "bg-red-50" : ""}`}
+                    className={`cursor-pointer transition-colors ${isSelected ? "bg-blue-50" : "hover:bg-orange-50/50"} ${!mongoId ? "bg-red-50" : ""}`}
                   >
                     <td className="px-3 py-2 text-center border-r border-gray-50">
-                      <input type="checkbox" checked={isSelected} onChange={(e) => handleSelectRow(e, costId)} onClick={e => e.stopPropagation()} disabled={!costId} className="w-3.5 h-3.5 rounded cursor-pointer disabled:opacity-30" />
+                      <input type="checkbox" checked={isSelected} onChange={(e) => handleSelectRow(e, mongoId)} onClick={e => e.stopPropagation()} disabled={!mongoId} className="w-3.5 h-3.5 rounded cursor-pointer disabled:opacity-30" />
                     </td>
-                    <td className="px-4 py-2 font-semibold text-blue-600 border-r border-gray-50">{costId || <span className="text-red-500 font-bold">Empty ID Error</span>}</td>
+                    <td className="px-4 py-2 font-semibold text-blue-600 border-r border-gray-50">{displayId || <span className="text-red-500 font-bold">Empty ID Error</span>}</td>
                     <td className="px-4 py-2 text-gray-700 border-r border-gray-50">{c.costType}</td>
                     <td className="px-4 py-2 text-gray-700 text-right border-r border-gray-50 font-mono">{c.amountInBase?.toLocaleString()}</td>
                     <td className="px-4 py-2 text-gray-700 text-right border-r border-gray-50 font-mono">{c.amountInVat?.toLocaleString()}</td>
@@ -370,7 +379,7 @@ export default function RecurringCostTab({ lease }) {
                 
                 {/* ---------------- CỘT 1 ---------------- */}
                 <div className="flex flex-col gap-4 bg-white p-4 rounded shadow-sm border border-gray-200">
-                  <Input label="Recurring Cost ID" required value={formData.recurringCostId} onChange={v => setFormData({...formData, recurringCostId: v})} disabled={modal.mode === "EDIT"} placeholder={modal.mode === "ADD" ? "Để trống sẽ tự động sinh mã" : ""} />
+                  <Input label="Recurring Cost ID" required value={formData.recurringCostId} onChange={v => setFormData({...formData, recurringCostId: v})} disabled={modal.mode === "EDIT"} placeholder="Enter Cost ID" />
                   
                   <Input label="Description" value={formData.description} onChange={v => setFormData({...formData, description: v})} />
                   
@@ -458,7 +467,11 @@ export default function RecurringCostTab({ lease }) {
                 <div className="flex gap-2">
                   <button onClick={() => setModal({ ...modal, isOpen: false })} className="px-5 py-2 text-xs font-bold text-gray-600 bg-gray-200 hover:bg-gray-300 rounded transition-colors">Cancel</button>
                   <button onClick={handleSaveDraft} disabled={!isFormValid} className="px-4 py-2 text-xs font-bold text-blue-600 bg-blue-50 rounded hover:bg-blue-100 disabled:opacity-50 transition-colors">Save as Draft</button>
-                  <button onClick={() => handleSubmitRequest(modal.mode === "ADD" ? "CREATE" : "UPDATE", formData)} disabled={!isFormValid} className="px-6 py-2 text-xs font-bold text-white bg-[#D68910] hover:bg-[#B9770E] disabled:opacity-50 shadow-sm transition-colors">
+                  <button 
+                    onClick={() => handleSubmitRequest(modal.mode === "ADD" ? "CREATE" : "UPDATE", formData)} 
+                    disabled={!isFormValid || !isActive} 
+                    className={`px-6 py-2 text-xs font-bold text-white shadow-sm transition-colors rounded ${(!isFormValid || !isActive) ? "bg-gray-400 cursor-not-allowed" : "bg-[#D68910] hover:bg-[#B9770E]"}`}
+                  >
                     {modal.mode === "ADD" ? "Save & Submit Request" : "Update & Submit Request"}
                   </button>
                 </div>

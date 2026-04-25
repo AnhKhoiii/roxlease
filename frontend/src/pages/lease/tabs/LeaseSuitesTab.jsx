@@ -29,6 +29,7 @@ const Checkbox = ({ label, checked, onChange, disabled }) => (
 // --- MAIN COMPONENT ---
 export default function LeaseSuitesTab({ lease }) {
   const leaseId = lease?.lsId; 
+  const isActive = lease?.active === true;
   const [leaseSuites, setLeaseSuites] = useState([]);
   const [masterSuites, setMasterSuites] = useState([]); 
   const [floors, setFloors] = useState([]); 
@@ -38,7 +39,7 @@ export default function LeaseSuitesTab({ lease }) {
   
   const [modalConfig, setModalConfig] = useState({ isOpen: false, mode: "ADD" });
 
-  const initialForm = { lsSuId: "", suId: "", floorId: "", dateStart: "", dateEnd: "", docUrl: "", active: false };
+  const initialForm = { lsSuId: "", suId: "", floorId: "", dateStart: "", dateEnd: "", docUrl: "", active: false, dateMatchLs: false };
   const [formData, setFormData] = useState(initialForm);
   const [originalData, setOriginalData] = useState(null);
 
@@ -74,7 +75,8 @@ export default function LeaseSuitesTab({ lease }) {
     if (!Array.isArray(masterSuites)) return [];
     return masterSuites.filter(su => {
       const isSameFloor = (su.flId || su.floorId) === formData.floorId; 
-      const isActiveElsewhere = su.status === "OCCUPIED"; 
+      const isCurrentSuite = originalData && (su.suiteId === originalData.suId || su.id === originalData.suId || su.suId === originalData.suId);
+      const isActiveElsewhere = su.status === "OCCUPIED" && !isCurrentSuite; 
       return isSameFloor && !isActiveElsewhere;
     });
   };
@@ -94,6 +96,10 @@ export default function LeaseSuitesTab({ lease }) {
 
   const sanitizePayload = (data) => {
     const payload = { ...data };
+    if (payload.dateMatchLs) {
+      payload.dateStart = lease?.startDate || null;
+      payload.dateEnd = lease?.endDate || null;
+    }
     if (payload.suId === "") payload.suId = null;
     if (payload.floorId === "") payload.floorId = null;
     if (payload.dateStart === "") payload.dateStart = null;
@@ -106,9 +112,10 @@ export default function LeaseSuitesTab({ lease }) {
       setLoading(true);
       const payload = sanitizePayload(formData);
       delete payload.floorId; 
+      const mongoId = payload.id || payload.lsSuId;
       
       if (modalConfig.mode === "EDIT") {
-        await axiosInstance.put(`/lease/leases/${leaseId}/suites/${payload.lsSuId}`, payload);
+        await axiosInstance.put(`/lease/leases/${leaseId}/suites/${mongoId}`, payload);
       } else {
         await axiosInstance.post(`/lease/leases/${leaseId}/suites`, payload);
       }
@@ -132,7 +139,7 @@ export default function LeaseSuitesTab({ lease }) {
         }
       }
 
-      let targetId = cleanDataObj.lsSuId || cleanDataObj.id; 
+      let targetId = cleanDataObj.id || cleanDataObj.lsSuId; 
       let changedData = { ...cleanDataObj };
       delete changedData.floorId;
 
@@ -140,7 +147,7 @@ export default function LeaseSuitesTab({ lease }) {
         const payloadToSave = { ...cleanDataObj };
         delete payloadToSave.floorId;
         const res = await axiosInstance.post(`/lease/leases/${leaseId}/suites`, payloadToSave);
-        targetId = res.data.lsSuId || res.data.id; 
+        targetId = res.data.id || res.data.lsSuId; 
       } else if (actionType === "UPDATE" && originalData) {
         changedData = {};
         Object.keys(cleanDataObj).forEach(key => {
@@ -170,18 +177,19 @@ export default function LeaseSuitesTab({ lease }) {
 
     try {
       for (const id of selectedIds) {
-        const item = leaseSuites.find(c => c.lsSuId === id);
+        const item = leaseSuites.find(c => (c.id || c.lsSuId) === id);
         if (!item) continue;
+        const mongoId = item.id || item.lsSuId;
 
         if (item.active) {
           const requestPayload = {
             siteId: lease?.siteId || "Unknown", action: "DELETE", 
-            requestType: "SUITE_ASSIGNMENT", targetId: item.lsSuId, data: item
+            requestType: "SUITE_ASSIGNMENT", targetId: mongoId, data: item
           };
           await axiosInstance.post("/lease/requests/submit-module", requestPayload).catch(e => console.warn(e));
           requestCount++;
         } else {
-          await axiosInstance.delete(`/lease/leases/${leaseId}/suites/${id}`).catch(e => console.warn(e));
+          await axiosInstance.delete(`/lease/leases/${leaseId}/suites/${mongoId}`).catch(e => console.warn(e));
           deletedCount++;
         }
       }
@@ -197,8 +205,9 @@ export default function LeaseSuitesTab({ lease }) {
     setLoading(true);
     try {
       for (const id of selectedIds) {
-        const item = leaseSuites.find(ls => ls.lsSuId === id);
+        const item = leaseSuites.find(ls => (ls.id || ls.lsSuId) === id);
         if (!item) continue;
+        const mongoId = item.id || item.lsSuId;
         const cleanDataObj = sanitizePayload(item);
         delete cleanDataObj.floorId;
 
@@ -210,7 +219,7 @@ export default function LeaseSuitesTab({ lease }) {
 
         const requestPayload = {
           siteId: lease?.siteId || "Unknown", action: "UPDATE", 
-          requestType: "SUITE_ASSIGNMENT", targetId: item.lsSuId, data: cleanDataObj
+          requestType: "SUITE_ASSIGNMENT", targetId: mongoId, data: cleanDataObj
         };
         await axiosInstance.post("/lease/requests/submit-module", requestPayload);
       }
@@ -221,11 +230,14 @@ export default function LeaseSuitesTab({ lease }) {
     finally { setLoading(false); }
   };
 
-  const handleSelectAll = (e) => setSelectedIds(e.target.checked ? leaseSuites.map(s => s.lsSuId) : []);
+  const handleSelectAll = (e) => setSelectedIds(e.target.checked ? leaseSuites.map(s => s.id || s.lsSuId).filter(Boolean) : []);
   const handleSelectRow = (e, id) => {
     e.stopPropagation();
+    if (!id) return;
     setSelectedIds(prev => e.target.checked ? [...prev, id] : prev.filter(selId => selId !== id));
   };
+
+  const isFormValid = formData.lsSuId?.trim() !== "";
 
   return (
     <div className="flex flex-col h-full animate-[fadeIn_0.2s_ease-out]">
@@ -235,7 +247,13 @@ export default function LeaseSuitesTab({ lease }) {
           {/* GẮN SỰ KIỆN handleDelete CHO NÚT DELETE SELECTED */}
           <button onClick={handleDelete} disabled={selectedIds.length === 0} className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${selectedIds.length > 0 ? "bg-red-50 text-[#DE3B40] border border-[#DE3B40]" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}>Delete Selected</button>
         </div>
-        <button onClick={handleBulkSubmit} disabled={selectedIds.length === 0} className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${selectedIds.length > 0 ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}>Submit Request for Selected</button>
+        <button 
+          onClick={handleBulkSubmit} 
+          disabled={selectedIds.length === 0 || !isActive} 
+          className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${(selectedIds.length > 0 && isActive) ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
+        >
+          Submit Request for Selected
+        </button>
       </div>
 
       <div className="border border-gray-200 rounded-sm overflow-hidden shadow-sm flex-1 bg-white relative">
@@ -252,12 +270,13 @@ export default function LeaseSuitesTab({ lease }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {Array.isArray(leaseSuites) && leaseSuites.map((ls) => {
+          {Array.isArray(leaseSuites) && leaseSuites.map((ls, idx) => {
+            const rowId = ls.id || ls.lsSuId;
               const detail = getSuiteDetails(ls.suId);
-              const isSelected = selectedIds.includes(ls.lsSuId);
+            const isSelected = selectedIds.includes(rowId);
               return (
-                <tr key={ls.lsSuId} onDoubleClick={() => { const data = {...ls, floorId: detail.floorId || detail.flId || ""}; setFormData(data); setOriginalData(data); setModalConfig({ isOpen: true, mode: "EDIT" }); }} className={`cursor-pointer transition-colors ${isSelected ? "bg-blue-50" : "hover:bg-orange-50/50"}`}>
-                  <td className="px-3 py-2 text-center border-r border-gray-50"><input type="checkbox" checked={isSelected} onChange={(e) => handleSelectRow(e, ls.lsSuId)} onClick={(e) => e.stopPropagation()} className="w-3.5 h-3.5 rounded" /></td>
+              <tr key={rowId || idx} onDoubleClick={() => { const data = {...ls, floorId: detail.floorId || detail.flId || ""}; setFormData(data); setOriginalData(data); setModalConfig({ isOpen: true, mode: "EDIT" }); }} className={`cursor-pointer transition-colors ${isSelected ? "bg-blue-50" : "hover:bg-orange-50/50"}`}>
+                <td className="px-3 py-2 text-center border-r border-gray-50"><input type="checkbox" checked={isSelected} onChange={(e) => handleSelectRow(e, rowId)} onClick={(e) => e.stopPropagation()} disabled={!rowId} className="w-3.5 h-3.5 rounded disabled:opacity-50" /></td>
                   <td className="px-4 py-2 font-semibold text-blue-600 border-r border-gray-50">{ls.suId}</td>
                   <td className="px-4 py-2 text-gray-700 border-r border-gray-50">{detail.floorId || detail.flId || "-"}</td>
                   <td className="px-4 py-2 text-gray-700 border-r border-gray-50">{ls.dateStart || "-"}</td>
@@ -282,12 +301,19 @@ export default function LeaseSuitesTab({ lease }) {
               <button onClick={() => setModalConfig({ ...modalConfig, isOpen: false })} className="text-white hover:text-red-100"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M6 18L18 6M6 6l12 12" /></svg></button>
             </div>
             <div className="p-6 bg-gray-50 flex flex-col gap-5">
-              <div className="grid grid-cols-2 gap-4"><Input label="Site ID" value={lease?.siteId} disabled /><Input label="Building ID" value={lease?.buildingId} disabled /></div>
+              <div className="grid grid-cols-3 gap-4">
+                <Input label="Site ID" value={lease?.siteId} disabled />
+                <Input label="Building ID" value={lease?.buildingId} disabled />
+                <Input label="Lease Suite ID" required value={formData.lsSuId} onChange={v => setFormData({...formData, lsSuId: v})} disabled={modalConfig.mode === "EDIT"} placeholder="Enter Lease Suite ID" />
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <Select label="Floor ID" required value={formData.floorId} onChange={v => { setFormData({...formData, floorId: v, suId: ""}); }} options={Array.isArray(floors) ? floors.map(f => ({ value: f.flId || f.id, label: f.flId || f.id })) : []} />
-                <Select label="Suite Code" required value={formData.suId} onChange={v => setFormData({...formData, suId: v})} options={getAvailableSuites().map(su => ({ value: su.suiteId || su.suId || su.id, label: su.suiteId || su.suId || su.id }))} disabled={!formData.floorId || modalConfig.mode === "EDIT"} />
+                <Select label="Suite Code" required value={formData.suId} onChange={v => setFormData({...formData, suId: v})} options={getAvailableSuites().map(su => ({ value: su.suiteId || su.suId || su.id, label: su.suiteId || su.suId || su.id }))} disabled={!formData.floorId} />
               </div>
-              <div className="grid grid-cols-2 gap-4"><Input type="date" label="Start Date" value={formData.dateStart} onChange={v => setFormData({...formData, dateStart: v})} /><Input type="date" label="End Date" value={formData.dateEnd} onChange={v => setFormData({...formData, dateEnd: v})} /></div>
+              <div className="grid grid-cols-2 gap-4">
+                <Input type="date" label="Start Date" disabled={formData.dateMatchLs} value={formData.dateMatchLs ? (lease?.startDate || "") : formData.dateStart} onChange={v => setFormData({...formData, dateStart: v})} />
+                <Input type="date" label="End Date" disabled={formData.dateMatchLs} value={formData.dateMatchLs ? (lease?.endDate || "") : formData.dateEnd} onChange={v => setFormData({...formData, dateEnd: v})} />
+              </div>
               <div className="flex flex-col gap-1 w-full bg-white p-3 rounded border border-gray-200">
                 <label className="font-bold text-[10px] text-gray-700 uppercase tracking-wide">Attachment Document</label>
                 <div className="flex items-center gap-3 mt-1">
@@ -296,13 +322,22 @@ export default function LeaseSuitesTab({ lease }) {
                 </div>
                 {formData.docUrl && <p className="text-[10px] mt-1.5 text-gray-500">Current file: <a href={`http://localhost:8080${formData.docUrl}`} target="_blank" rel="noreferrer" className="text-blue-600 underline">Download/View</a></p>}
               </div>
-              <div className="flex flex-col gap-2 bg-white p-3 rounded border border-gray-200"><Checkbox label="Active" checked={formData.active} onChange={() => {}} disabled={true} /></div>
+              <div className="flex flex-col gap-2 bg-white p-3 rounded border border-gray-200">
+                <Checkbox label="Date match lease?" checked={formData.dateMatchLs} onChange={v => setFormData({...formData, dateMatchLs: v, dateStart: v ? (lease?.startDate || "") : formData.dateStart, dateEnd: v ? (lease?.endDate || "") : formData.dateEnd})} />
+                <Checkbox label="Active" checked={formData.active} onChange={() => {}} disabled={true} />
+              </div>
               <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-200">
-                {modalConfig.mode === "EDIT" ? <button onClick={() => handleSubmitRequest("DELETE", formData)} className="px-4 py-2 text-xs font-bold text-red-500 hover:bg-red-50 rounded transition-colors">Request Delete</button> : <div></div>}
+                {modalConfig.mode === "EDIT" ? (
+                  <button onClick={() => handleSubmitRequest("DELETE", formData)} disabled={!isActive} className={`px-4 py-2 text-xs font-bold rounded transition-colors ${isActive ? "text-red-500 hover:bg-red-50 border border-red-100" : "text-gray-400 bg-gray-200 cursor-not-allowed"}`}>Request Delete</button>
+                ) : <div></div>}
                 <div className="flex gap-2">
                   <button onClick={() => setModalConfig({ ...modalConfig, isOpen: false })} className="px-4 py-2 text-xs font-bold text-gray-600 bg-gray-100 rounded hover:bg-gray-200">Cancel</button>
-                  <button onClick={handleSaveDraft} disabled={!formData.suId} className="px-4 py-2 text-xs font-bold text-blue-600 bg-blue-50 rounded hover:bg-blue-100 disabled:opacity-50">Save as Draft</button>
-                  <button onClick={() => handleSubmitRequest(modalConfig.mode === "ADD" ? "CREATE" : "UPDATE", formData)} disabled={!formData.suId} className="px-5 py-2 text-xs font-bold text-white bg-[#D68910] rounded hover:bg-[#B9770E] disabled:opacity-50 shadow-sm">
+                  <button onClick={handleSaveDraft} disabled={!isFormValid} className="px-4 py-2 text-xs font-bold text-blue-600 bg-blue-50 rounded hover:bg-blue-100 disabled:opacity-50">Save as Draft</button>
+                  <button 
+                    onClick={() => handleSubmitRequest(modalConfig.mode === "ADD" ? "CREATE" : "UPDATE", formData)} 
+                    disabled={!isFormValid || !isActive} 
+                    className={`px-5 py-2 text-xs font-bold text-white shadow-sm rounded transition-colors ${(!isFormValid || !isActive) ? "bg-gray-400 cursor-not-allowed" : "bg-[#D68910] hover:bg-[#B9770E]"}`}
+                  >
                     {modalConfig.mode === "ADD" ? "Save & Submit Request" : "Update & Submit Request"}
                   </button>
                 </div>

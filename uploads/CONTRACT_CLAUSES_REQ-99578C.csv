@@ -1,0 +1,12 @@
+﻿Field Name,New Value
+clauseId,TEST01
+clauseType,SPECIAL
+description,test
+startDate,2026-04-01
+endDate,2026-05-31
+dateMatchLs,true
+responsibleParty,LANDLORD
+exercisedBy,LANDLORD
+documentUrl,
+active,false
+leaseId,LEASE-01

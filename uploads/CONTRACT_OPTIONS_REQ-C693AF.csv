@@ -1,0 +1,13 @@
+﻿Field Name,New Value
+opId,op02
+opDescription,test
+opType,RENEWAL
+suiteId,APR-A_F02_SU-BD24
+issueDate,2026-05-01
+dateMatchLs,true
+startDate,2026-04-01
+endDate,2026-05-31
+exercisedBy,LANDLORD
+areaInvolved,94.39
+docUrl,
+active,false

@@ -130,6 +130,7 @@ public class RequestService {
         Class<?> entityClass = null;
 
         switch (req.getRequestType()) {
+            case CONTRACT_CLAUSES: entityClass = Clause.class; break;
             case CONTRACT_OPTIONS: entityClass = LeaseOption.class; break; 
             case CONTRACT_TERMS: entityClass = Clause.class; break;
             case SUITE_ASSIGNMENT: entityClass = LeaseSuite.class; break;
@@ -144,11 +145,31 @@ public class RequestService {
             Update update = new Update();
             if (req.getRequestData() != null) {
                 for (Map.Entry<String, Object> entry : req.getRequestData().entrySet()) {
-                    if (!entry.getKey().toLowerCase().contains("id") || entry.getKey().equals("suiteId") || entry.getKey().equals("amenityId")) {
-                        update.set(entry.getKey(), entry.getValue());
+                    String key = entry.getKey();
+                    Object value = entry.getValue();
+
+                    // Lọc bỏ các trường khóa chính (_id, id) và các custom ID có nguy cơ được đánh dấu @Id để tránh lỗi MongoDB "Modifying immutable field '_id'"
+                    if (!key.equals("_id") && !key.equals("id") && !key.equals("_class") && !key.equals("class") 
+                        && !key.equals("recurringCostId") && !key.equals("amendmentId") && !key.equals("opId") && !key.equals("clauseId") && !key.equals("lsSuId") && !key.equals("suId")) {
+                        
+                        // 🚀 FIX LỖI ÉP KIỂU (MappingException) DÀNH RIÊNG CHO RECURRING COST
+                        if (entityClass == RecurringCost.class && value != null) {
+                            if (value instanceof String && (key.contains("Date") || key.contains("date"))) {
+                                try {
+                                    value = java.time.LocalDate.parse((String) value);
+                                } catch (Exception ignored) {}
+                            } else if (value instanceof Number && (key.startsWith("amount") || key.equals("exchangeRate") || key.equals("currVat"))) {
+                                try {
+                                    value = new java.math.BigDecimal(value.toString());
+                                } catch (Exception ignored) {}
+                            }
+                        }
+                        
+                        update.set(key, value);
                     }
                 }
             }
+            update.set("active", true);
             mongoTemplate.updateFirst(query, update, entityClass);
         } else if ("DELETE".equals(req.getAction())) {
             mongoTemplate.remove(query, entityClass);

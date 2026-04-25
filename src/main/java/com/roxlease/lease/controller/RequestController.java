@@ -29,9 +29,8 @@ public class RequestController {
 
     private final RequestService service;
     private final RequestRepository requestRepository; 
-    private final LeaseRepository leaseRepository; // 🚀 KHAI BÁO THÊM REPO LEASE
+    private final LeaseRepository leaseRepository;
 
-    // 🚀 TIÊM LEASE REPOSITORY VÀO CONSTRUCTOR
     public RequestController(RequestService service, RequestRepository requestRepository, LeaseRepository leaseRepository) {
         this.service = service;
         this.requestRepository = requestRepository;
@@ -70,7 +69,6 @@ public class RequestController {
     public ResponseEntity<Request> approveRequest(@PathVariable String id, @RequestParam(defaultValue = "Admin") String user) {
         Request approvedReq = service.approveRequest(id, user);
 
-        // 🚀 ĐỔI ĐIỀU KIỆN SANG RQType.LEASE_DETAILS
         if (approvedReq != null && approvedReq.getRequestType() == RQType.LEASE_DETAILS) {
             
             String leaseId = approvedReq.getTargetId();

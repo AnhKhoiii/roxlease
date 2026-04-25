@@ -23,7 +23,7 @@ public class ClauseService {
 
     public Clause createClause(String leaseId, Clause clause) {
         clause.setLeaseId(leaseId);
-        if (clause.getIsActive() == null) clause.setIsActive(false);
+        if (clause.getActive() == null) clause.setActive(false);
         clause.setStatus("DRAFT");
         clause.setCreatedAt(LocalDateTime.now());
         clause.setUpdatedAt(LocalDateTime.now());
@@ -41,7 +41,7 @@ public class ClauseService {
         clause.setExercisedBy(updatedClause.getExercisedBy());
         clause.setDescription(updatedClause.getDescription());
         clause.setDocumentUrl(updatedClause.getDocumentUrl());
-        clause.setIsActive(updatedClause.getIsActive());
+        clause.setActive(updatedClause.getActive());
         clause.setUpdatedAt(LocalDateTime.now());
         
         return repository.save(clause);
@@ -51,7 +51,7 @@ public class ClauseService {
         Clause clause = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Clause not found"));
                 
-        if (Boolean.TRUE.equals(clause.getIsActive())) {
+        if (Boolean.TRUE.equals(clause.getActive())) {
             throw new IllegalStateException("Cannot delete while objects are active");
         }
         

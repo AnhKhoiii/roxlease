@@ -36,6 +36,7 @@ const Checkbox = ({ label, checked, onChange, disabled }) => (
 // --- MAIN COMPONENT ---
 export default function OptionsTab({ lease }) {
   const leaseId = lease?.lsId; 
+  const isActive = lease?.active === true;
   const [options, setOptions] = useState([]);
   const [availableSuites, setAvailableSuites] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -75,7 +76,7 @@ export default function OptionsTab({ lease }) {
     }));
   };
 
-  const handleSelectAll = (e) => setSelectedIds(e.target.checked ? options.map(o => o.opId) : []);
+  const handleSelectAll = (e) => setSelectedIds(e.target.checked ? options.map(o => o.opId || o.id).filter(Boolean) : []);
   const handleSelectRow = (e, id) => {
     e.stopPropagation();
     setSelectedIds(prev => e.target.checked ? [...prev, id] : prev.filter(selId => selId !== id));
@@ -96,6 +97,10 @@ export default function OptionsTab({ lease }) {
 
   const sanitizePayload = (data) => {
     const payload = { ...data };
+    if (payload.dateMatchLs) {
+      payload.startDate = lease?.startDate || null;
+      payload.endDate = lease?.endDate || null;
+    }
     if (payload.issueDate === "") payload.issueDate = null;
     if (payload.startDate === "") payload.startDate = null;
     if (payload.endDate === "") payload.endDate = null;
@@ -111,8 +116,9 @@ export default function OptionsTab({ lease }) {
     try {
       setLoading(true);
       const payload = sanitizePayload(formData);
+      const mongoId = payload.id || payload.opId;
       if (modalConfig.mode === "EDIT") {
-        await axiosInstance.put(`/lease/leases/${leaseId}/options/${payload.opId}`, payload);
+        await axiosInstance.put(`/lease/leases/${leaseId}/options/${mongoId}`, payload);
       } else {
         await axiosInstance.post(`/lease/leases/${leaseId}/options`, payload);
       }
@@ -125,13 +131,13 @@ export default function OptionsTab({ lease }) {
   const handleSubmitRequest = async (actionType, dataObj) => {
     try {
       setLoading(true);
-      let targetId = dataObj.opId || dataObj.id; 
+      let targetId = dataObj.id || dataObj.opId; 
       const cleanDataObj = sanitizePayload(dataObj);
       let changedData = { ...cleanDataObj };
 
       if (actionType === "CREATE") {
         const res = await axiosInstance.post(`/lease/leases/${leaseId}/options`, cleanDataObj);
-        targetId = res.data.opId || res.data.id; 
+        targetId = res.data.id || res.data.opId; 
       } else if (actionType === "UPDATE" && originalData) {
         changedData = {};
         Object.keys(cleanDataObj).forEach(key => {
@@ -163,16 +169,17 @@ export default function OptionsTab({ lease }) {
       for (const id of selectedIds) {
         const item = options.find(c => c.opId === id);
         if (!item) continue;
+        const mongoId = item.id || item.opId;
 
         if (item.active) {
           const requestPayload = {
             siteId: lease?.siteId || "Unknown", action: "DELETE", 
-            requestType: "CONTRACT_OPTIONS", targetId: item.opId, data: item
+            requestType: "CONTRACT_OPTIONS", targetId: mongoId, data: item
           };
           await axiosInstance.post("/lease/requests/submit-module", requestPayload).catch(e => console.warn(e));
           requestCount++;
         } else {
-          await axiosInstance.delete(`/lease/leases/${leaseId}/options/${id}`).catch(e => console.warn(e));
+          await axiosInstance.delete(`/lease/leases/${leaseId}/options/${mongoId}`).catch(e => console.warn(e));
           deletedCount++;
         }
       }
@@ -190,10 +197,11 @@ export default function OptionsTab({ lease }) {
       for (const id of selectedIds) {
         const item = options.find(o => o.opId === id);
         if (!item) continue;
+        const mongoId = item.id || item.opId;
         const cleanDataObj = sanitizePayload(item);
         const requestPayload = {
           siteId: lease?.siteId || "Unknown", action: "UPDATE", 
-          requestType: "CONTRACT_OPTIONS", targetId: item.opId, data: cleanDataObj
+          requestType: "CONTRACT_OPTIONS", targetId: mongoId, data: cleanDataObj
         };
         await axiosInstance.post("/lease/requests/submit-module", requestPayload);
       }
@@ -204,7 +212,7 @@ export default function OptionsTab({ lease }) {
     finally { setLoading(false); }
   };
 
-  const isFormValid = formData.opType !== "" && formData.opDescription?.trim() !== "";
+  const isFormValid = formData.opId?.trim() !== "" && formData.opType !== "" && formData.opDescription?.trim() !== "";
 
   return (
     <div className="flex flex-col h-full animate-[fadeIn_0.2s_ease-out]">
@@ -214,7 +222,13 @@ export default function OptionsTab({ lease }) {
           {/* GẮN SỰ KIỆN handleDelete */}
           <button onClick={handleDelete} disabled={selectedIds.length === 0} className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${selectedIds.length > 0 ? "bg-red-50 text-[#DE3B40] border border-[#DE3B40]" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}>Delete Selected</button>
         </div>
-        <button onClick={handleBulkSubmit} disabled={selectedIds.length === 0} className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${selectedIds.length > 0 ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}>Submit Request for Selected</button>
+        <button 
+          onClick={handleBulkSubmit} 
+          disabled={selectedIds.length === 0 || !isActive} 
+          className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${(selectedIds.length > 0 && isActive) ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
+        >
+          Submit Request for Selected
+        </button>
       </div>
 
       <div className="border border-gray-200 rounded-sm overflow-hidden shadow-sm flex-1 relative bg-white">
@@ -236,12 +250,13 @@ export default function OptionsTab({ lease }) {
               {options.length === 0 && !loading ? (
                 <tr><td colSpan={8} className="py-12 text-center text-gray-500 font-medium">No options found.</td></tr>
               ) : (
-                options.map((opt) => {
-                  const isSelected = selectedIds.includes(opt.opId);
+                options.map((opt, idx) => {
+                  const rowId = opt.opId || opt.id;
+                  const isSelected = selectedIds.includes(rowId);
                   return (
-                    <tr key={opt.opId} onDoubleClick={() => { setFormData({...opt}); setOriginalData({...opt}); setModalConfig({ isOpen: true, mode: "EDIT" }); }} className={`cursor-pointer transition-colors group ${isSelected ? "bg-blue-50" : "hover:bg-orange-50/50"}`}>
-                      <td className="px-3 py-2 text-center border-r border-gray-50"><input type="checkbox" checked={isSelected} onChange={(e) => handleSelectRow(e, opt.opId)} onClick={(e) => e.stopPropagation()} className="w-3.5 h-3.5 rounded" /></td>
-                      <td className="px-4 py-2 text-gray-700 border-r border-gray-50">{opt.opId || "-"}</td>
+                    <tr key={rowId || idx} onDoubleClick={() => { setFormData({...opt}); setOriginalData({...opt}); setModalConfig({ isOpen: true, mode: "EDIT" }); }} className={`cursor-pointer transition-colors group ${isSelected ? "bg-blue-50" : "hover:bg-orange-50/50"}`}>
+                      <td className="px-3 py-2 text-center border-r border-gray-50"><input type="checkbox" checked={isSelected} onChange={(e) => handleSelectRow(e, rowId)} onClick={(e) => e.stopPropagation()} className="w-3.5 h-3.5 rounded" /></td>
+                      <td className="px-4 py-2 text-gray-700 border-r border-gray-50">{rowId || "-"}</td>
                       <td className="px-4 py-2 font-semibold text-blue-600 border-r border-gray-50">{opt.opType}</td>
                       <td className="px-4 py-2 text-gray-700 border-r border-gray-50 truncate max-w-[150px]">{opt.opDescription}</td>
                       <td className="px-4 py-2 text-gray-700 border-r border-gray-50">{opt.startDate || "-"}</td>
@@ -267,16 +282,21 @@ export default function OptionsTab({ lease }) {
             <div className="p-7 bg-gray-50 flex-1 overflow-y-auto">
               <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6">
                 <div className="flex flex-col gap-5 border-r border-gray-100 pr-4">
-                  <Input label="Option ID" value={formData.opId} onChange={v => setFormData({...formData, opId: v})} disabled={modalConfig.mode === "EDIT"} placeholder={modalConfig.mode === "ADD" ? "Auto-generated if blank" : ""} />
+              <Input label="Option ID" required value={formData.opId} onChange={v => setFormData({...formData, opId: v})} disabled={modalConfig.mode === "EDIT"} placeholder="Enter Option ID" />
                   <Textarea label="Description" required value={formData.opDescription} onChange={v => setFormData({...formData, opDescription: v})} />
-                  <Select label="Option Type" required value={formData.opType} onChange={v => setFormData({...formData, opType: v})} options={[{value: 'RENEWAL', label: 'Renewal'}, {value: 'TERMINATION', label: 'Termination'}, {value: 'EXPANSION', label: 'Expansion'}, {value: 'REDUCTION', label: 'Reduction'}, {value: 'PURCHASE', label: 'Purchase'}]} />
+                  <Select label="Option Type" required value={formData.opType} onChange={v => setFormData({...formData, opType: v})} options={[
+                    {value: 'EARLY_TERMINATION', label: 'Early Termination'}, 
+                    {value: 'EXPANSION', label: 'Expansion'}, 
+                    {value: 'EXTENSION', label: 'Extension'}, 
+                    {value: 'RENEWAL', label: 'Renewal'}, 
+                    {value: 'LEASE_END', label: 'Lease End'}]} />
                 </div>
                 <div className="flex flex-col gap-5 border-r border-gray-100 pr-4">
                   <Input type="date" label="Date Issued" value={formData.issueDate} onChange={v => setFormData({...formData, issueDate: v})} />
-                  <Input type="date" label="Start Date" value={formData.startDate} onChange={v => setFormData({...formData, startDate: v})} />
-                  <Input type="date" label="End Date" value={formData.endDate} onChange={v => setFormData({...formData, endDate: v})} />
+              <Input type="date" label="Start Date" disabled={formData.dateMatchLs} value={formData.dateMatchLs ? (lease?.startDate || "") : formData.startDate} onChange={v => setFormData({...formData, startDate: v})} />
+              <Input type="date" label="End Date" disabled={formData.dateMatchLs} value={formData.dateMatchLs ? (lease?.endDate || "") : formData.endDate} onChange={v => setFormData({...formData, endDate: v})} />
                   <div className="flex flex-col gap-3 mt-1 bg-gray-50/80 p-3.5 rounded-lg border border-gray-200 shadow-inner">
-                    <Checkbox label="Date match lease?" checked={formData.dateMatchLs} onChange={v => setFormData({...formData, dateMatchLs: v})} />
+                <Checkbox label="Date match lease?" checked={formData.dateMatchLs} onChange={v => setFormData({...formData, dateMatchLs: v, startDate: v ? (lease?.startDate || "") : formData.startDate, endDate: v ? (lease?.endDate || "") : formData.endDate})} />
                     <Checkbox label="Active" checked={formData.active} onChange={() => {}} disabled={true} />
                   </div>
                 </div>
@@ -295,11 +315,17 @@ export default function OptionsTab({ lease }) {
                 </div>
               </div>
               <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-200">
-                {modalConfig.mode === "EDIT" ? <button onClick={() => handleSubmitRequest("DELETE", formData)} className="px-4 py-2 text-xs font-bold text-red-500 hover:bg-red-50 rounded transition-colors">Request Delete</button> : <div></div>}
+                {modalConfig.mode === "EDIT" ? (
+                  <button onClick={() => handleSubmitRequest("DELETE", formData)} disabled={!isActive} className={`px-4 py-2 text-xs font-bold rounded transition-colors ${isActive ? "text-red-500 hover:bg-red-50 border border-red-100" : "text-gray-400 bg-gray-200 cursor-not-allowed"}`}>Request Delete</button>
+                ) : <div></div>}
                 <div className="flex gap-2">
                   <button onClick={() => setModalConfig({ ...modalConfig, isOpen: false })} className="px-4 py-2 text-xs font-bold text-gray-600 bg-gray-100 rounded hover:bg-gray-200">Cancel</button>
                   <button onClick={handleSaveDraft} disabled={!isFormValid} className="px-4 py-2 text-xs font-bold text-blue-600 bg-blue-50 rounded hover:bg-blue-100 disabled:opacity-50">Save as Draft</button>
-                  <button onClick={() => handleSubmitRequest(modalConfig.mode === "ADD" ? "CREATE" : "UPDATE", formData)} disabled={!isFormValid} className="px-5 py-2 text-xs font-bold text-white bg-[#D68910] rounded hover:bg-[#B9770E] disabled:opacity-50 shadow-sm">
+                  <button 
+                    onClick={() => handleSubmitRequest(modalConfig.mode === "ADD" ? "CREATE" : "UPDATE", formData)} 
+                    disabled={!isFormValid || !isActive} 
+                    className={`px-5 py-2 text-xs font-bold text-white shadow-sm rounded transition-colors ${(!isFormValid || !isActive) ? "bg-gray-400 cursor-not-allowed" : "bg-[#D68910] hover:bg-[#B9770E]"}`}
+                  >
                     {modalConfig.mode === "ADD" ? "Save & Submit Request" : "Update & Submit Request"}
                   </button>
                 </div>

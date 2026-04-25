@@ -8,6 +8,8 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
+import jakarta.validation.constraints.NotNull;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -19,7 +21,7 @@ import java.time.LocalDateTime;
 public class LeaseAmenity {
 
     @Id
-    private String lsAmId; // Chuyển Integer thành String
+    private String lsAmId; 
 
     @Indexed
     @Field("amenity_id")

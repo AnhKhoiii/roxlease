@@ -45,12 +45,11 @@ export default function ClausesTab({ lease }) {
   
   const [modalConfig, setModalConfig] = useState({ isOpen: false, mode: "ADD" });
   
-  // 🚀 ĐÃ BỔ SUNG clauseType VÀO INITIAL FORM
   const initialForm = { 
     clauseId: "", clauseType: "", description: "", 
     startDate: "", endDate: "", dateMatchLs: false, 
     responsibleParty: "", exercisedBy: "", 
-    documentUrl: "", isActive: false 
+    documentUrl: "", active: false 
   };
   const [formData, setFormData] = useState(initialForm);
   const [originalData, setOriginalData] = useState(null); 
@@ -67,7 +66,7 @@ export default function ClausesTab({ lease }) {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const handleSelectAll = (e) => setSelectedIds(e.target.checked ? clauses.map(c => c.clauseId) : []);
+  const handleSelectAll = (e) => setSelectedIds(e.target.checked ? clauses.map(c => c.clauseId || c.id).filter(Boolean) : []);
   const handleSelectRow = (e, id) => {
     e.stopPropagation();
     setSelectedIds(prev => e.target.checked ? [...prev, id] : prev.filter(selId => selId !== id));
@@ -96,7 +95,7 @@ export default function ClausesTab({ lease }) {
   const handleSaveDraft = async () => {
     try {
       setLoading(true);
-      const payload = sanitizePayload({ ...formData, leaseId: leaseId, isActive: false });
+      const payload = sanitizePayload({ ...formData, leaseId: leaseId, active: false });
       if (modalConfig.mode === "EDIT") {
         await axiosInstance.put(`/lease/leases/${leaseId}/clauses/${payload.clauseId || payload.id}`, payload);
       } else {
@@ -111,13 +110,13 @@ export default function ClausesTab({ lease }) {
   const handleSubmitRequest = async (actionType, dataObj) => {
     try {
       setLoading(true);
-      let targetId = dataObj.clauseId || dataObj.id; 
+      let targetId = dataObj.id || dataObj.clauseId;
       const cleanDataObj = sanitizePayload({ ...dataObj, leaseId: leaseId });
       let changedData = { ...cleanDataObj };
 
       if (actionType === "CREATE") {
         const res = await axiosInstance.post(`/lease/leases/${leaseId}/clauses`, cleanDataObj);
-        targetId = res.data.clauseId || res.data.id; 
+        targetId = res.data.id || res.data.clauseId; 
       } else if (actionType === "UPDATE" && originalData) {
         changedData = {};
         Object.keys(cleanDataObj).forEach(key => {
@@ -147,8 +146,10 @@ export default function ClausesTab({ lease }) {
     try {
       for (const id of selectedIds) {
         const item = clauses.find(c => c.clauseId === id);
+        if (!item) continue;
+        const mongoId = item.id || item.clauseId;
 
-        if (item.isActive) {
+        if (item.active) {
           const requestPayload = {
             siteId: lease?.siteId || "Unknown", action: "DELETE", 
             requestType: "CONTRACT_CLAUSES", targetId: item.clauseId, data: item
@@ -156,7 +157,7 @@ export default function ClausesTab({ lease }) {
           await axiosInstance.post("/lease/requests/submit-module", requestPayload).catch(e => console.warn(e));
           requestCount++;
         } else {
-          await axiosInstance.delete(`/lease/leases/${leaseId}/clauses/${id}`).catch(e => console.warn(e));
+          await axiosInstance.delete(`/lease/leases/${leaseId}/clauses/${mongoId}`).catch(e => console.warn(e));
           deletedCount++;
         }
       }
@@ -174,10 +175,11 @@ export default function ClausesTab({ lease }) {
       for (const id of selectedIds) {
         const item = clauses.find(c => c.clauseId === id);
         if (!item) continue;
+        const mongoId = item.id || item.clauseId;
         const cleanDataObj = sanitizePayload(item);
         const requestPayload = {
           siteId: lease?.siteId || "Unknown", action: "UPDATE", 
-          requestType: "CONTRACT_CLAUSES", targetId: item.clauseId, data: cleanDataObj
+          requestType: "CONTRACT_CLAUSES", targetId: mongoId, data: cleanDataObj
         };
         await axiosInstance.post("/lease/requests/submit-module", requestPayload);
       }
@@ -189,7 +191,7 @@ export default function ClausesTab({ lease }) {
   };
 
   // 🚀 RÀNG BUỘC PHẢI NHẬP TYPE MỚI CHO LƯU
-  const isFormValid = formData.clauseType !== "" && formData.description?.trim() !== "";
+  const isFormValid = formData.clauseId?.trim() !== "" && formData.clauseType !== "" && formData.description?.trim() !== "";
 
   return (
     <div className="flex flex-col h-full animate-[fadeIn_0.2s_ease-out]">
@@ -226,12 +228,13 @@ export default function ClausesTab({ lease }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {clauses.map((c) => {
-                const isSelected = selectedIds.includes(c.clauseId);
+              {clauses.map((c, idx) => {
+                const rowId = c.clauseId || c.id;
+                const isSelected = selectedIds.includes(rowId);
                 return (
-                  <tr key={c.clauseId} onDoubleClick={() => { setFormData({...c}); setOriginalData({...c}); setModalConfig({ isOpen: true, mode: "EDIT" }); }} className={`cursor-pointer transition-colors ${isSelected ? "bg-blue-50/60" : "hover:bg-orange-50/50"}`}>
-                    <td className="px-3 py-2 text-center border-r border-gray-50"><input type="checkbox" checked={isSelected} onChange={(e) => handleSelectRow(e, c.clauseId)} onClick={e => e.stopPropagation()} className="w-3.5 h-3.5 rounded accent-blue-600 cursor-pointer" /></td>
-                    <td className="px-4 py-2 font-bold text-gray-800 border-r border-gray-50">{c.clauseId}</td>
+                  <tr key={rowId || idx} onDoubleClick={() => { setFormData({...c}); setOriginalData({...c}); setModalConfig({ isOpen: true, mode: "EDIT" }); }} className={`cursor-pointer transition-colors ${isSelected ? "bg-blue-50/60" : "hover:bg-orange-50/50"}`}>
+                    <td className="px-3 py-2 text-center border-r border-gray-50"><input type="checkbox" checked={isSelected} onChange={(e) => handleSelectRow(e, rowId)} onClick={e => e.stopPropagation()} className="w-3.5 h-3.5 rounded accent-blue-600 cursor-pointer" /></td>
+                    <td className="px-4 py-2 font-bold text-gray-800 border-r border-gray-50">{rowId}</td>
                     
                     {/* 🚀 HIỂN THỊ VALUE Ở BẢNG */}
                     <td className="px-4 py-2 font-semibold text-blue-600 border-r border-gray-50">{c.clauseType || "-"}</td> 
@@ -241,7 +244,7 @@ export default function ClausesTab({ lease }) {
                     <td className="px-4 py-2 font-semibold text-gray-600 border-r border-gray-50">{c.responsibleParty || "-"}</td>
                     <td className="px-4 py-2 text-gray-700 border-r border-gray-50 truncate max-w-[200px]">{c.description}</td>
                     <td className="px-4 py-2 text-center border-r border-gray-50">{c.documentUrl ? <a href={`http://localhost:8080${c.documentUrl}`} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="text-blue-500 underline font-semibold">View</a> : "-"}</td>
-                    <td className="px-4 py-2 text-center"><input type="checkbox" checked={c.isActive} readOnly className="w-3.5 h-3.5 rounded accent-blue-600" /></td>
+                    <td className="px-4 py-2 text-center"><input type="checkbox" checked={c.active} readOnly className="w-3.5 h-3.5 rounded accent-blue-600" /></td>
                   </tr>
                 );
               })}
@@ -263,7 +266,7 @@ export default function ClausesTab({ lease }) {
                 {/* CỘT 1 */}
                 <div className="flex flex-col gap-4">
                   <div className="pb-1 border-b border-gray-200"><span className="font-bold text-[10px] uppercase text-gray-500 tracking-wider">General</span></div>
-                  <Input label="Clause ID" value={formData.clauseId} onChange={v => setFormData({...formData, clauseId: v})} disabled={modalConfig.mode === "EDIT"} placeholder="Auto-generated if empty" />
+                  <Input label="Clause ID" required value={formData.clauseId} onChange={v => setFormData({...formData, clauseId: v})} disabled={modalConfig.mode === "EDIT"} placeholder="Enter Clause ID" />
                   
                   {/* 🚀 THÊM SELECT BOX CHỌN ENUM TYPE */}
                   <Select label="Clause Type" required value={formData.clauseType} onChange={v => setFormData({...formData, clauseType: v})} 
@@ -291,7 +294,7 @@ export default function ClausesTab({ lease }) {
                     <Input type="date" label="Start Date" value={formData.startDate} onChange={v => setFormData({...formData, startDate: v})} disabled={formData.dateMatchLs} />
                     <Input type="date" label="End Date" value={formData.endDate} onChange={v => setFormData({...formData, endDate: v})} disabled={formData.dateMatchLs} />
                   </div>
-                  <div className="bg-white p-3 rounded border border-gray-200 mt-auto"><Checkbox label="Active (Approved Status)" checked={formData.isActive} disabled={true} /></div>
+                  <div className="bg-white p-3 rounded border border-gray-200 mt-auto"><Checkbox label="Active" checked={formData.active} disabled={true} /></div>
                 </div>
 
                 {/* CỘT 3 */}
@@ -313,7 +316,9 @@ export default function ClausesTab({ lease }) {
               </div>
 
               <div className="flex justify-between items-center mt-3 pt-4 border-t border-gray-200">
-                {modalConfig.mode === "EDIT" ? <button onClick={() => handleSubmitRequest("DELETE", formData)} className="px-4 py-2 text-xs font-bold text-red-500 hover:bg-red-50 rounded transition-colors border border-red-100">Request Delete</button> : <div></div>}
+                {modalConfig.mode === "EDIT" ? (
+                  <button onClick={() => handleSubmitRequest("DELETE", formData)} disabled={!isActive} className={`px-4 py-2 text-xs font-bold rounded transition-colors ${isActive ? "text-red-500 hover:bg-red-50 border border-red-100" : "text-gray-400 bg-gray-200 cursor-not-allowed"}`}>Request Delete</button>
+                ) : <div></div>}
                 <div className="flex gap-2">
                   <button onClick={() => setModalConfig({ ...modalConfig, isOpen: false })} className="px-4 py-2 text-xs font-bold text-gray-600 bg-white border border-gray-300 rounded hover:bg-gray-100 shadow-sm transition-colors">Cancel</button>
                   <button onClick={handleSaveDraft} disabled={!isFormValid} className="px-5 py-2 text-xs font-bold text-gray-800 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50 shadow-sm transition-colors">Save as Draft</button>

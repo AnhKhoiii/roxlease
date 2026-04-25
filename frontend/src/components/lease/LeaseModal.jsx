@@ -270,10 +270,10 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData 
             {/* CỘT 3 */}
             <div className="flex flex-col gap-3">
               <div className="pb-0.5 border-b border-gray-100"><span className="font-bold text-blue-800 text-[9px] uppercase tracking-wider">Financial & Status</span></div>
-              <Input label="Deposit" type="number" value={formData.amountDeposit} onChange={v => handleChange('amountDeposit', v)} />
-              <Input label="Rent Unit Cost" type="number" value={formData.rentUnitCost} onChange={v => handleChange('rentUnitCost', v)} />
-              <Input label="Service Unit Cost" type="number" value={formData.serviceUnitCost} onChange={v => handleChange('serviceUnitCost', v)} />
-              <Input label="Currency" value={formData.currency} onChange={v => handleChange('currency', v)} />
+              <Input label="Deposit" type="number" value={formData.amountDeposit} onChange={v => handleChange('amountDeposit', v)} disabled={formData.active} />
+              <Input label="Rent Unit Cost" type="number" value={formData.rentUnitCost} onChange={v => handleChange('rentUnitCost', v)} disabled={formData.active} />
+              <Input label="Service Unit Cost" type="number" value={formData.serviceUnitCost} onChange={v => handleChange('serviceUnitCost', v)} disabled={formData.active} />
+              <Select label="Currency" value={formData.currency} onChange={v => handleChange('currency', v)} options={['VND', 'USD', 'GBP', 'EUR', 'JPY', 'CNY', 'KRW', 'SGD', 'THB', 'AUD']} />
               <Input label="Base Exchange Rate" type="number" value={formData.baseExchangeRate} onChange={v => handleChange('baseExchangeRate', v)} />
               <Select label="Rent Type" value={formData.rentType} onChange={v => handleChange('rentType', v)} options={['GROSS_RENT', 'NET_RENT', 'REVENUE_SHARING', 'TRIPLE_NET']} />
               <div className="flex flex-col gap-2 mt-1 bg-gray-50 p-2.5 rounded border border-gray-200/60">

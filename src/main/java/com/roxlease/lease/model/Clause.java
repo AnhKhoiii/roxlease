@@ -37,7 +37,7 @@ public class Clause {
     private String documentUrl;
     
     @NotNull
-    private Boolean isActive;
+    private Boolean active;
     
     private String status;
     

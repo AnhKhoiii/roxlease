@@ -125,7 +125,42 @@ export default function PropertyConsole() {
         await axiosInstance.post(`/floors/${formData.flId}/upload-dxf`, uploadData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
-        showToast('success', 'Auto-parsed DXF and imported Rooms/Suites successfully!');
+
+        // --- TỰ ĐỘNG TÍNH TOÁN GFA VÀ NFA TỪ BẢN VẼ SAU KHI UPLOAD ---
+        try {
+          // Lấy lại dữ liệu Floor để nhận drawingJson mới nhất
+          const floorRes = await axiosInstance.get('/space/properties/floors');
+          const updatedFloor = floorRes.data.find(f => f.flId === formData.flId);
+          
+          if (updatedFloor && updatedFloor.drawingJson) {
+            let calcGfa = 0;
+            let calcNfa = 0;
+            
+            // GFA: Tổng diện tích vùng Gross
+            if (updatedFloor.drawingJson.gross) {
+              calcGfa = updatedFloor.drawingJson.gross.reduce((sum, item) => sum + (item.area || 0), 0);
+            }
+            // NFA: Tổng diện tích không gian cho thuê (Suites) và các phòng (Rooms)
+            if (updatedFloor.drawingJson.suites) {
+              calcNfa += updatedFloor.drawingJson.suites.reduce((sum, item) => sum + (item.area || 0), 0);
+            }
+            if (updatedFloor.drawingJson.rooms) {
+              calcNfa += updatedFloor.drawingJson.rooms.reduce((sum, item) => sum + (item.area || 0), 0);
+            }
+            
+            // Cập nhật lại GFA/NFA cho Floor
+            await axiosInstance.put(`/space/properties/floors/${formData.flId}`, {
+              ...updatedFloor,
+              gfa: Number(calcGfa.toFixed(2)),
+              nfa: Number(calcNfa.toFixed(2))
+            });
+          }
+        } catch (calcErr) {
+          console.warn("Error calculating GFA/NFA:", calcErr);
+        }
+        // -------------------------------------------------------------
+
+        showToast('success', 'Auto-parsed DXF, calculated GFA/NFA and imported Rooms/Suites successfully!');
       } else {
         showToast('success', 'The record was saved successfully!');
       }
@@ -288,7 +323,7 @@ export default function PropertyConsole() {
                       <>
                         <td className="px-6 py-3 font-bold text-gray-800">{item.suiteId || '-'}</td>
                         <td className="px-6 py-3 font-semibold text-purple-600">{item.suiteCode || '-'}</td>
-                        <td className="px-6 py-3 text-gray-600">{item.suiteName || '-'}</td>
+                        <td className="px-6 py-3 text-gray-600">{item.suiteCode || item.name || '-'}</td>
                         <td className="px-6 py-3 font-bold text-green-600">{item.area ? `${item.area} m²` : '-'}</td>
                         <td className="px-6 py-3 text-gray-600">{item.flId || '-'}</td>
                         <td className="px-6 py-3 font-semibold text-blue-600">{buildingIdForRoomSuite}</td>
@@ -299,7 +334,7 @@ export default function PropertyConsole() {
                       <>
                         <td className="px-6 py-3 font-bold text-gray-800">{item.roomId || '-'}</td>
                         <td className="px-6 py-3 font-semibold text-purple-600">{item.roomCode || '-'}</td>
-                        <td className="px-6 py-3 text-gray-600">{item.roomName || '-'}</td>
+                        <td className="px-6 py-3 text-gray-600">{item.roomName || item.name || '-'}</td>
                         <td className="px-6 py-3 font-bold text-green-600">{item.area ? `${item.area} m²` : '-'}</td>
                         <td className="px-6 py-3 text-gray-600">{item.flId || '-'}</td>
                         <td className="px-6 py-3 font-semibold text-blue-600">{buildingIdForRoomSuite}</td>

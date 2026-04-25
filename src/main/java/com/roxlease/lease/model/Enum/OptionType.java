@@ -5,6 +5,5 @@ public enum OptionType {
     EXPANSION,
     EXTENSION,
     RENEWAL,
-    LEASE_END,
-    INCREASE_RENT
+    LEASE_END
 }

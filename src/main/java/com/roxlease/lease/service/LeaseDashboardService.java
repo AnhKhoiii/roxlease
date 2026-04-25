@@ -226,7 +226,7 @@ public class LeaseDashboardService {
 
         long adj1M = 0, adj3M = 0, adj6M = 0, adjOverdue = 0;
         for (Clause clause : clauses) {
-            if (!Boolean.TRUE.equals(clause.getIsActive()) || clause.getClauseType() != ClauseType.RENT_ESCALATION) continue;
+            if (!Boolean.TRUE.equals(clause.getActive()) || clause.getClauseType() != ClauseType.RENT_ESCALATION) continue;
             
             boolean hasMatchingCost = recurringCosts.stream().anyMatch(rc -> 
                 rc.getLsId().equals(clause.getLeaseId()) &&

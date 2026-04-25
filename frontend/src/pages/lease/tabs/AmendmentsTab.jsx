@@ -76,13 +76,14 @@ export default function AmendmentsTab({ lease }) {
   
   // Cấu trúc form bám sát DB Amendment.java
   const initialForm = { 
-    amendId: "", 
+    amendmentId: "", 
     description: "", 
     requestedDate: "", 
     effectiveDate: "", 
     exercisedBy: "", 
     documentUrl: "", 
-    active: false 
+    active: false,
+    dateMatchLs: false
   };
   const [formData, setFormData] = useState(initialForm);
   const [originalData, setOriginalData] = useState(null); 
@@ -103,9 +104,10 @@ export default function AmendmentsTab({ lease }) {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const handleSelectAll = (e) => setSelectedIds(e.target.checked ? amendments.map(a => a.amendId) : []);
+  const handleSelectAll = (e) => setSelectedIds(e.target.checked ? amendments.map(a => a.amendmentId || a.id).filter(Boolean) : []);
   const handleSelectRow = (e, id) => {
     e.stopPropagation();
+    if (!id) return;
     setSelectedIds(prev => e.target.checked ? [...prev, id] : prev.filter(selId => selId !== id));
   };
 
@@ -127,6 +129,10 @@ export default function AmendmentsTab({ lease }) {
 
   const sanitizePayload = (data) => {
     const payload = { ...data };
+    if (payload.dateMatchLs) {
+      payload.requestedDate = lease?.startDate || null;
+      payload.effectiveDate = lease?.startDate || null;
+    }
     if (payload.requestedDate === "") payload.requestedDate = null;
     if (payload.effectiveDate === "") payload.effectiveDate = null;
     if (payload.exercisedBy === "") payload.exercisedBy = null;
@@ -137,8 +143,9 @@ export default function AmendmentsTab({ lease }) {
     try {
       setLoading(true);
       const payload = sanitizePayload({ ...formData, leaseId: leaseId, active: false });
+      const mongoId = payload.id || payload.amendmentId;
       if (modalConfig.mode === "EDIT") {
-        await axiosInstance.put(`/lease/leases/${leaseId}/amendments/${payload.amendId || payload.id}`, payload);
+        await axiosInstance.put(`/lease/leases/${leaseId}/amendments/${mongoId}`, payload);
       } else {
         await axiosInstance.post(`/lease/leases/${leaseId}/amendments`, payload);
       }
@@ -154,13 +161,13 @@ export default function AmendmentsTab({ lease }) {
   const handleSubmitRequest = async (actionType, dataObj) => {
     try {
       setLoading(true);
-      let targetId = dataObj.amendId || dataObj.id; 
+      let targetId = dataObj.id || dataObj.amendmentId; 
       const cleanDataObj = sanitizePayload({ ...dataObj, leaseId: leaseId });
       let changedData = { ...cleanDataObj };
 
       if (actionType === "CREATE") {
         const res = await axiosInstance.post(`/lease/leases/${leaseId}/amendments`, cleanDataObj);
-        targetId = res.data.amendId || res.data.id; 
+        targetId = res.data.id || res.data.amendmentId; 
       } else if (actionType === "UPDATE" && originalData) {
         changedData = {};
         Object.keys(cleanDataObj).forEach(key => {
@@ -196,21 +203,22 @@ export default function AmendmentsTab({ lease }) {
 
     try {
       for (const id of selectedIds) {
-        const item = amendments.find(a => a.amendId === id);
+        const item = amendments.find(a => (a.id || a.amendmentId) === id);
         if (!item) continue;
+        const mongoId = item.id || item.amendmentId;
 
         if (item.active) {
           const requestPayload = {
             siteId: lease?.siteId || "Unknown", 
             action: "DELETE", 
             requestType: "CONTRACT_AMENDMENTS", 
-            targetId: item.amendId, 
+            targetId: mongoId, 
             data: item
           };
           await axiosInstance.post("/lease/requests/submit-module", requestPayload).catch(e => console.warn(e));
           requestCount++;
         } else {
-          await axiosInstance.delete(`/lease/leases/${leaseId}/amendments/${id}`).catch(e => console.warn(e));
+          await axiosInstance.delete(`/lease/leases/${leaseId}/amendments/${mongoId}`).catch(e => console.warn(e));
           deletedCount++;
         }
       }
@@ -229,14 +237,15 @@ export default function AmendmentsTab({ lease }) {
     setLoading(true);
     try {
       for (const id of selectedIds) {
-        const item = amendments.find(a => a.amendId === id);
+        const item = amendments.find(a => (a.id || a.amendmentId) === id);
         if (!item) continue;
+        const mongoId = item.id || item.amendmentId;
         const cleanDataObj = sanitizePayload(item);
         const requestPayload = {
           siteId: lease?.siteId || "Unknown", 
           action: "UPDATE", 
           requestType: "CONTRACT_AMENDMENTS", 
-          targetId: item.amendId, 
+          targetId: mongoId, 
           data: cleanDataObj
         };
         await axiosInstance.post("/lease/requests/submit-module", requestPayload);
@@ -251,7 +260,7 @@ export default function AmendmentsTab({ lease }) {
     }
   };
 
-  const isFormValid = formData.description?.trim() !== "";
+  const isFormValid = formData.amendmentId?.trim() !== "" && formData.description?.trim() !== "";
 
   return (
     <div className="flex flex-col h-full animate-[fadeIn_0.2s_ease-out]">
@@ -301,26 +310,24 @@ export default function AmendmentsTab({ lease }) {
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr><td colSpan="6" className="text-center py-8 text-orange-500 font-bold">Loading...</td></tr>
-              ) : amendments.map((a) => {
-                const isSelected = selectedIds.includes(a.amendId);
+              ) : amendments.map((a, idx) => {
+                const rowId = a.amendmentId || a.id;
+                const isSelected = selectedIds.includes(rowId);
                 return (
                   <tr 
-                    key={a.amendId} 
+                    key={rowId || idx} 
                     onDoubleClick={() => { setFormData({...a}); setOriginalData({...a}); setModalConfig({ isOpen: true, mode: "EDIT" }); }} 
-                    onClick={(e) => handleSelectRow(e, a.amendId)}
                     className={`cursor-pointer transition-colors ${isSelected ? "bg-blue-50/60" : "hover:bg-orange-50/50"}`}
                   >
                     <td className="px-3 py-2 text-center border-r border-gray-50">
-                      <input type="checkbox" checked={isSelected} readOnly className="w-3.5 h-3.5 rounded cursor-pointer accent-blue-600" />
+                      <input type="checkbox" checked={isSelected} onChange={(e) => handleSelectRow(e, rowId)} onClick={e => e.stopPropagation()} disabled={!rowId} className="w-3.5 h-3.5 rounded cursor-pointer accent-blue-600 disabled:opacity-50" />
                     </td>
-                    <td className="px-4 py-2 font-bold text-gray-800 border-r border-gray-50">{a.amendId}</td>
+                    <td className="px-4 py-2 font-bold text-gray-800 border-r border-gray-50">{rowId}</td>
                     <td className="px-4 py-2 text-gray-700 border-r border-gray-50 truncate max-w-[300px]">{a.description}</td>
                     <td className="px-4 py-2 text-gray-700 border-r border-gray-50">{a.requestedDate || "-"}</td>
                     <td className="px-4 py-2 font-medium text-gray-700 border-r border-gray-50">{a.effectiveDate || "-"}</td>
                     <td className="px-4 py-2 text-center">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${a.active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>
-                        {a.active ? "ACTIVE" : "DRAFT"}
-                      </span>
+                      <input type="checkbox" checked={a.active} readOnly className="w-3.5 h-3.5 rounded accent-blue-600" />
                     </td>
                   </tr>
                 );
@@ -338,7 +345,7 @@ export default function AmendmentsTab({ lease }) {
             
             <div className="bg-[#EFB034] px-5 py-3.5 flex justify-between items-center border-b border-[#D68910]">
               <h2 className="text-[13px] font-bold uppercase tracking-wide text-white drop-shadow-sm">
-                {modalConfig.mode === "ADD" ? "Add New Amendment" : `Edit Amendment: ${formData.amendId}`}
+                {modalConfig.mode === "ADD" ? "Add New Amendment" : `Edit Amendment: ${formData.amendmentId}`}
               </h2>
             </div>
             
@@ -352,11 +359,11 @@ export default function AmendmentsTab({ lease }) {
                   </div>
                   <Input 
                     label="Amendment ID" 
-                    value={formData.amendId} 
-                    onChange={v => setFormData({...formData, amendId: v})} 
-                    disabled={modalConfig.mode === "EDIT"} 
-                    placeholder="Auto-generated if empty" 
                     required
+                    value={formData.amendmentId} 
+                    onChange={v => setFormData({...formData, amendmentId: v})} 
+                    disabled={modalConfig.mode === "EDIT"} 
+                    placeholder="Enter Amendment ID" 
                   />
                   <Textarea 
                     label="Description" 
@@ -373,20 +380,11 @@ export default function AmendmentsTab({ lease }) {
                     <span className="font-bold text-[10px] uppercase text-gray-500 tracking-wider">Timeline & Status</span>
                   </div>
                   <div className="bg-white p-3 rounded border border-gray-200 flex flex-col gap-3 shadow-sm">
-                    <Input 
-                      type="date" 
-                      label="Requested Date" 
-                      value={formData.requestedDate} 
-                      onChange={v => setFormData({...formData, requestedDate: v})} 
-                    />
-                    <Input 
-                      type="date" 
-                      label="Effective Date" 
-                      value={formData.effectiveDate} 
-                      onChange={v => setFormData({...formData, effectiveDate: v})} 
-                    />
+                    <Input type="date" label="Requested Date" disabled={formData.dateMatchLs} value={formData.dateMatchLs ? (lease?.startDate || "") : formData.requestedDate} onChange={v => setFormData({...formData, requestedDate: v})} />
+                    <Input type="date" label="Effective Date" disabled={formData.dateMatchLs} value={formData.dateMatchLs ? (lease?.startDate || "") : formData.effectiveDate} onChange={v => setFormData({...formData, effectiveDate: v})} />
                   </div>
-                  <div className="bg-white p-3 rounded border border-gray-200 mt-auto shadow-sm">
+                  <div className="bg-white p-3 rounded border border-gray-200 mt-auto shadow-sm flex flex-col gap-2">
+                    <Checkbox label="Date match lease?" checked={formData.dateMatchLs} onChange={v => setFormData({...formData, dateMatchLs: v, requestedDate: v ? (lease?.startDate || "") : formData.requestedDate, effectiveDate: v ? (lease?.startDate || "") : formData.effectiveDate})} />
                     <Checkbox label="Active (Approved Status)" checked={formData.active} disabled={true} />
                   </div>
                 </div>
@@ -429,7 +427,7 @@ export default function AmendmentsTab({ lease }) {
 
               <div className="flex justify-between items-center mt-3 pt-4 border-t border-gray-200">
                 {modalConfig.mode === "EDIT" ? (
-                  <button onClick={() => handleSubmitRequest("DELETE", formData)} className="px-4 py-2 text-xs font-bold text-red-500 hover:bg-red-50 rounded transition-colors border border-red-100">Request Delete</button>
+                  <button onClick={() => handleSubmitRequest("DELETE", formData)} disabled={!isActive} className={`px-4 py-2 text-xs font-bold rounded transition-colors ${isActive ? "text-red-500 hover:bg-red-50 border border-red-100" : "text-gray-400 bg-gray-200 cursor-not-allowed"}`}>Request Delete</button>
                 ) : <div></div>}
                 
                 <div className="flex gap-2">
