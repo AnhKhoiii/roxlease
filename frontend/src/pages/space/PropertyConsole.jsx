@@ -28,6 +28,18 @@ export default function PropertyConsole() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [notification, setNotification] = useState({ show: false, type: '', message: '' });
 
+  const [filters, setFilters] = useState({ Region: "", Country: "", City: "" });
+
+  const filteredDataList = useMemo(() => {
+    return dataList.filter(item => {
+      const itemStr = JSON.stringify(item).toLowerCase();
+      const matchRegion = filters.Region === "" || itemStr.includes(filters.Region.toLowerCase());
+      const matchCountry = filters.Country === "" || itemStr.includes(filters.Country.toLowerCase());
+      const matchCity = filters.City === "" || itemStr.includes(filters.City.toLowerCase());
+      return matchRegion && matchCountry && matchCity;
+    });
+  }, [dataList, filters]);
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -148,12 +160,42 @@ export default function PropertyConsole() {
               calcNfa += updatedFloor.drawingJson.rooms.reduce((sum, item) => sum + (item.area || 0), 0);
             }
             
+            // Đảm bảo GFA tối thiểu phải bằng NFA (nếu bản vẽ thiếu layer gross hoặc sai sót)
+            calcGfa = Math.max(calcGfa, calcNfa);
+            
+            const finalGfa = Number(calcGfa.toFixed(2));
+            const finalNfa = Number(calcNfa.toFixed(2));
+
             // Cập nhật lại GFA/NFA cho Floor
             await axiosInstance.put(`/space/properties/floors/${formData.flId}`, {
               ...updatedFloor,
-              gfa: Number(calcGfa.toFixed(2)),
-              nfa: Number(calcNfa.toFixed(2))
+              gfa: finalGfa,
+              nfa: finalNfa
             });
+
+            // --- TỰ ĐỘNG CẬP NHẬT TỔNG DIỆN TÍCH CHO BUILDING ---
+            if (updatedFloor.blId) {
+              try {
+                const allFloorsRes = await axiosInstance.get(`/space/properties/floors?buildingId=${updatedFloor.blId}`);
+                let sumBuildingGfa = 0;
+                allFloorsRes.data.forEach(f => {
+                  if (f.flId === formData.flId) sumBuildingGfa += finalGfa;
+                  else sumBuildingGfa += (f.gfa || 0);
+                });
+                
+                const bldRes = await axiosInstance.get('/space/properties/buildings');
+                const parentBuilding = bldRes.data.find(b => b.blId === updatedFloor.blId);
+                if (parentBuilding) {
+                  await axiosInstance.put(`/space/properties/buildings/${parentBuilding.blId}`, {
+                    ...parentBuilding,
+                    areaGrossInt: Number(sumBuildingGfa.toFixed(2)),
+                    areaGrossExt: Number(sumBuildingGfa.toFixed(2)) // Tạm thời gán 2 chỉ số bằng nhau theo tổng GFA
+                  });
+                }
+              } catch (bldErr) {
+                console.warn("Error updating Building Area:", bldErr);
+              }
+            }
           }
         } catch (calcErr) {
           console.warn("Error calculating GFA/NFA:", calcErr);
@@ -222,7 +264,12 @@ export default function PropertyConsole() {
         {["Region", "Country", "City"].map((item) => (
           <div key={item} className="flex flex-col">
             <label className="font-semibold text-sm text-gray-700 mb-1.5">{item}</label>
-            <input className="border border-yellow-400 rounded px-3 py-1.5 w-48 outline-none focus:ring-1 focus:ring-yellow-500 text-[14px]" placeholder={`Enter ${item}...`} />
+            <input 
+              className="border border-yellow-400 rounded px-3 py-1.5 w-48 outline-none focus:ring-1 focus:ring-yellow-500 text-[14px]" 
+              placeholder={`Enter ${item}...`} 
+              value={filters[item]}
+              onChange={(e) => setFilters({...filters, [item]: e.target.value})}
+            />
           </div>
         ))}
       </div>
@@ -272,10 +319,10 @@ export default function PropertyConsole() {
             </thead>
 
             <tbody className="bg-white">
-              {dataList.length === 0 && !loading ? (
+              {filteredDataList.length === 0 && !loading ? (
                 <tr><td colSpan={headers.length} className="p-12 text-center text-gray-400 font-semibold text-lg">No data available</td></tr>
               ) : (
-                dataList.map((item, i) => {
+                filteredDataList.map((item, i) => {
                   
                   const parentBuilding = activeTab === 'floor' ? buildings.find(b => b.blId === item.blId) : null;
                   const siteIdForFloor = parentBuilding ? parentBuilding.siteId : '-';

@@ -22,6 +22,8 @@ export default function Location() {
     cityId: "", cityName: "", timezone: ""
   });
 
+  const [filterText, setFilterText] = useState({ region: "", country: "", city: "" });
+
   const fetchTreeData = async () => {
     try {
       const res = await axiosInstance.get('/space/locations/tree');
@@ -118,9 +120,9 @@ export default function Location() {
     <div className="flex flex-col h-full bg-gray-50 font-sans">
       <div className="bg-white p-4 border-b border-gray-200 flex gap-4 items-center shrink-0">
         <button className="bg-[#DE3B40] text-white px-5 py-2 rounded font-bold">Filter data</button>
-        <input placeholder="Region" className="border px-3 py-2 rounded w-48 outline-none" />
-        <input placeholder="Country" className="border px-3 py-2 rounded w-48 outline-none" />
-        <input placeholder="City" className="border px-3 py-2 rounded w-48 outline-none" />
+        <input placeholder="Region" value={filterText.region} onChange={e => setFilterText({...filterText, region: e.target.value})} className="border px-3 py-2 rounded w-48 outline-none" />
+        <input placeholder="Country" value={filterText.country} onChange={e => setFilterText({...filterText, country: e.target.value})} className="border px-3 py-2 rounded w-48 outline-none" />
+        <input placeholder="City" value={filterText.city} onChange={e => setFilterText({...filterText, city: e.target.value})} className="border px-3 py-2 rounded w-48 outline-none" />
       </div>
 
       <div className="flex flex-1 overflow-hidden">
@@ -149,19 +151,19 @@ export default function Location() {
           </div>
 
           <ul className="space-y-3 text-sm text-gray-700">
-            {treeData.regions.map(region => (
+            {treeData.regions.filter(r => (r.regionId||'').toLowerCase().includes(filterText.region.toLowerCase()) || (r.regionName||'').toLowerCase().includes(filterText.region.toLowerCase())).map(region => (
               <li key={region.regionId} className="select-none">
                 <span onClick={() => handleSelectNode('region', region)} className={`font-bold cursor-pointer hover:text-red-500 ${selectedNode?.regionId === region.regionId && selectedNode?.type === 'region' ? 'text-red-600' : ''}`}>
                    ▾ {region.regionId} - {region.regionName}
                 </span>
                 <ul className="ml-6 mt-2 space-y-2 border-l-2 border-gray-100 pl-3">
-                  {treeData.countries.filter(c => c.regionId === region.regionId).map(country => (
+                  {treeData.countries.filter(c => c.regionId === region.regionId && ((c.countryId||'').toLowerCase().includes(filterText.country.toLowerCase()) || (c.countryName||'').toLowerCase().includes(filterText.country.toLowerCase()))).map(country => (
                     <li key={country.countryId}>
                       <span onClick={() => handleSelectNode('country', country)} className={`font-semibold cursor-pointer hover:text-red-500 ${selectedNode?.countryId === country.countryId && selectedNode?.type === 'country' ? 'text-red-600' : ''}`}>
                          ▾ {country.countryId} - {country.countryName}
                       </span>
                       <ul className="ml-6 mt-2 space-y-2 border-l-2 border-gray-100 pl-3">
-                        {treeData.cities.filter(ci => ci.countryId === country.countryId).map(city => (
+                        {treeData.cities.filter(ci => ci.countryId === country.countryId && ((ci.cityId||'').toLowerCase().includes(filterText.city.toLowerCase()) || (ci.cityName||'').toLowerCase().includes(filterText.city.toLowerCase()))).map(city => (
                           <li key={city.cityId}>
                             <span onClick={() => handleSelectNode('city', city)} className={`cursor-pointer hover:text-red-500 ${selectedNode?.cityId === city.cityId && selectedNode?.type === 'city' ? 'text-red-600 font-bold' : ''}`}>
                                • {city.cityId} - {city.cityName}

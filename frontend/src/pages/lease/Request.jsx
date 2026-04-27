@@ -46,7 +46,9 @@ export default function Request() {
   const fetchPending = useCallback(async () => {
     setLoading(true);
     try {
-      const queryParams = new URLSearchParams({ page: pagePending, size, ...filters }).toString();
+      const activeFilters = {};
+      Object.keys(filters).forEach(k => { if (filters[k]) activeFilters[k] = filters[k]; });
+      const queryParams = new URLSearchParams({ page: pagePending, size, ...activeFilters }).toString();
       const res = await axiosInstance.get(`/lease/requests/pending?${queryParams}`);
       setPendingRequests(res.data.content || []);
       setTotalPending(res.data.totalPages || 0);
@@ -57,7 +59,9 @@ export default function Request() {
   const fetchHistory = useCallback(async () => {
     setLoading(true);
     try {
-      const queryParams = new URLSearchParams({ page: pageHistory, size, ...filters }).toString();
+      const activeFilters = {};
+      Object.keys(filters).forEach(k => { if (filters[k]) activeFilters[k] = filters[k]; });
+      const queryParams = new URLSearchParams({ page: pageHistory, size, ...activeFilters }).toString();
       const res = await axiosInstance.get(`/lease/requests/history?${queryParams}`);
       setHistoryRequests(res.data.content || []);
       setTotalHistory(res.data.totalPages || 0);

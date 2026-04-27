@@ -28,8 +28,8 @@ export default function VatCountryConsole() {
   useEffect(() => { fetchData(); }, []);
 
   const filteredCountries = vatCountries.filter((item) => {
-    const matchId = item.vatCountryId?.toLowerCase().includes(filters.vatCountryId.toLowerCase());
-    const matchName = item.countryName?.toLowerCase().includes(filters.countryName.toLowerCase());
+    const matchId = (item.vatCountryId || "").toLowerCase().includes(filters.vatCountryId.toLowerCase());
+    const matchName = (item.countryName || "").toLowerCase().includes(filters.countryName.toLowerCase());
     return matchId && matchName;
   });
 

@@ -1,0 +1,12 @@
+﻿Field Name,New Value
+clauseId,INCREASE 01
+clauseType,RENT_ESCALATION
+description,TEST
+startDate,2026-04-01
+endDate,2026-05-31
+dateMatchLs,true
+responsibleParty,TENANT
+exercisedBy,LANDLORD
+documentUrl,
+active,false
+leaseId,LEASE-01

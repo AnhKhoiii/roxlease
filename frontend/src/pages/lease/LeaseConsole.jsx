@@ -72,14 +72,19 @@ export default function LeaseConsole() {
   }, [page, size, globalFilters, columnFilters, sortConfig]);
 
   useEffect(() => {
-    const delayDebounceFn = setTimeout(() => { setPage(0); fetchLeases(); }, 400);
+    const delayDebounceFn = setTimeout(() => { fetchLeases(); }, 400);
     return () => clearTimeout(delayDebounceFn);
-  }, [globalFilters, columnFilters]);
+  }, [fetchLeases]);
 
-  useEffect(() => { fetchLeases(); }, [page, size, sortConfig]);
-
-  const handleGlobalFilterChange = (key, value) => setGlobalFilters(prev => ({ ...prev, [key]: value }));
-  const handleColumnFilterChange = (key, value) => setColumnFilters(prev => ({ ...prev, [key]: value }));
+  const handleGlobalFilterChange = (key, value) => {
+    setGlobalFilters(prev => ({ ...prev, [key]: value }));
+    setPage(0);
+  };
+  
+  const handleColumnFilterChange = (key, value) => {
+    setColumnFilters(prev => ({ ...prev, [key]: value }));
+    setPage(0);
+  };
   
   const handleClearFilters = () => {
     setGlobalFilters(initialGlobalFilters); setColumnFilters(initialColumnFilters);
@@ -90,17 +95,51 @@ export default function LeaseConsole() {
     let direction = "asc";
     if (sortConfig.key === key && sortConfig.direction === "asc") direction = "desc";
     setSortConfig({ key, direction });
+    setPage(0);
   };
 
   const filteredDataLocal = useMemo(() => {
      let filtered = [...data];
+     
+     // 1. Lọc theo các cột trong bảng (Column Filters)
      Object.keys(columnFilters).forEach(key => {
          if(columnFilters[key]) {
-             filtered = filtered.filter(item => String(item[key] || '').toLowerCase().includes(columnFilters[key].toLowerCase()));
+             const searchStr = columnFilters[key].toLowerCase();
+             filtered = filtered.filter(item => {
+                 let val = item[key];
+                 if (typeof val === 'boolean') val = val ? "yes" : "no";
+                 else val = String(val || '');
+                 return val.toLowerCase().includes(searchStr);
+             });
          }
      });
+
+     // 2. Cập nhật lọc kết hợp tức thời cho Global Filters
+     if (globalFilters.siteId) {
+         const s = globalFilters.siteId.toLowerCase();
+         filtered = filtered.filter(item => String(item.siteId || '').toLowerCase().includes(s));
+     }
+     if (globalFilters.buildingId) {
+         const s = globalFilters.buildingId.toLowerCase();
+         filtered = filtered.filter(item => String(item.buildingId || '').toLowerCase().includes(s));
+     }
+     if (globalFilters.leaseId) {
+         const s = globalFilters.leaseId.toLowerCase();
+         filtered = filtered.filter(item => String(item.lsId || item.leaseId || '').toLowerCase().includes(s));
+     }
+     if (globalFilters.landlordTenant) {
+         const s = globalFilters.landlordTenant.toLowerCase();
+         filtered = filtered.filter(item => String(item.partyId || item.partyName || '').toLowerCase().includes(s));
+     }
+     if (globalFilters.isSigned) {
+         filtered = filtered.filter(item => item.isSign === true || item.isSign === "yes" || item.signedDate);
+     }
+     if (globalFilters.isActive) {
+         filtered = filtered.filter(item => item.active === true || item.status === 'ACTIVE');
+     }
+
      return filtered;
-  }, [data, columnFilters]);
+  }, [data, columnFilters, globalFilters]);
   
   const handleOpenAdd = () => { 
     setModalMode("ADD"); 

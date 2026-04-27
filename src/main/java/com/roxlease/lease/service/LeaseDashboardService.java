@@ -4,6 +4,7 @@ import com.roxlease.cost.model.Enum.CostType;
 import com.roxlease.cost.model.Enum.PaymentStatus;
 import com.roxlease.lease.model.Enum.ClauseType;
 import com.roxlease.cost.model.Enum.ScheduleStatus;
+import com.roxlease.cost.model.Enum.Category;
 import com.roxlease.cost.model.PlannedRevenue;
 import com.roxlease.cost.model.RecurringCost;
 import com.roxlease.cost.model.RecurringCostSchedule;
@@ -277,10 +278,9 @@ public class LeaseDashboardService {
         Set<String> leasesWithAmenity = leaseAmenities.stream().map(LeaseAmenity::getLsId).collect(Collectors.toSet());
         List<Lease> nonAmenityLeases = allLeases.stream().filter(l -> !leasesWithAmenity.contains(l.getLsId())).collect(Collectors.toList());
 
-        // 🚀 Bóc tách Planned Revenue DỰA THEO CATEGORY (Không dùng LeaseId)
-        List<PlannedRevenue> contractPlans = allPlans.stream().filter(p -> CostType.BASERENT.name().equalsIgnoreCase(p.getCategory())).collect(Collectors.toList());
-        List<PlannedRevenue> servicePlans = allPlans.stream().filter(p -> CostType.BASESERVICE.name().equalsIgnoreCase(p.getCategory())).collect(Collectors.toList());
-        List<PlannedRevenue> amenityPlans = allPlans.stream().filter(p -> p.getCategory() != null && !CostType.BASERENT.name().equalsIgnoreCase(p.getCategory()) && !CostType.BASESERVICE.name().equalsIgnoreCase(p.getCategory())).collect(Collectors.toList());
+        List<PlannedRevenue> contractPlans = allPlans.stream().filter(p -> Category.RENTAL_REVENUE == p.getCategory()).collect(Collectors.toList());
+        List<PlannedRevenue> servicePlans = allPlans.stream().filter(p -> Category.SERVICE_REVENUE == p.getCategory()).collect(Collectors.toList());
+        List<PlannedRevenue> amenityPlans = allPlans.stream().filter(p -> p.getCategory() != null && Category.RENTAL_REVENUE != p.getCategory() && Category.SERVICE_REVENUE != p.getCategory()).collect(Collectors.toList());
 
         // Lấy KPI Cards
         DashboardResponse.KPICards contractKpi = calculateRevenueKPI(schedules.stream().filter(s -> !leasesWithAmenity.contains(s.getLeaseId()) && s.getCostType() == CostType.BASERENT).collect(Collectors.toList()), contractPlans, toDate, 0, 0);
@@ -390,10 +390,9 @@ public class LeaseDashboardService {
             }
         }
 
-        // 🚀 Planned Revenue (Ánh xạ trực tiếp từ Category của file PlannedRevenue KHÔNG qua LeaseId)
         for (PlannedRevenue p : plans) {
             if (p.getYear() != null && p.getYear() == year && p.getPlannedCost() != null) {
-                String catName = p.getCategory() != null ? p.getCategory() : "Other";
+                String catName = p.getCategory().toString();
                 boolean matched = false;
                 for (String c : categories) {
                     if (c.equalsIgnoreCase(catName) || catName.toUpperCase().contains(c.toUpperCase().replace(" ", "_"))) {

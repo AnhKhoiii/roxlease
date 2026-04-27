@@ -1,5 +1,6 @@
 package com.roxlease.cost.model;
 
+import com.roxlease.cost.model.Enum.Category;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,7 +23,7 @@ public class PlannedRevenue {
     private String id;
     
     private String siteId;
-    private String category;
+    private Category category;
     private Integer year;
     private Integer month;
     

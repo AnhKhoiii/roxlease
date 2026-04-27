@@ -290,7 +290,7 @@ export default function PlannedRevenue() {
                       <input type="checkbox" checked={selectedIds.includes(item.id)} onChange={(e) => handleSelectRow(e, item.id)} onClick={e => e.stopPropagation()} className="w-3.5 h-3.5 rounded cursor-pointer" />
                     </td>
                     <td className="px-4 py-2.5 font-bold text-blue-600 border-r border-gray-50">{item.siteId}</td>
-                    <td className="px-4 py-2.5 text-gray-700 border-r border-gray-50">{item.category}</td>
+                    <td className="px-4 py-2.5 text-gray-700 border-r border-gray-50">{item.category ? item.category.charAt(0).toUpperCase() + item.category.slice(1).toLowerCase() : ""}</td>
                     <td className="px-4 py-2.5 text-center text-gray-700 border-r border-gray-50">{item.year}</td>
                     <td className="px-4 py-2.5 text-gray-700 border-r border-gray-50 font-medium">{monthNames[item.month - 1] || item.month}</td>
                     <td className="px-4 py-2.5 text-right font-mono font-bold text-green-600 border-r border-gray-50">{item.plannedRevenue?.toLocaleString()}</td>
@@ -339,10 +339,9 @@ export default function PlannedRevenue() {
                   label="Category" required 
                   value={formData.category} onChange={v => setFormData({...formData, category: v})} 
                   options={[
-                    { value: "Retail", label: "Retail" },
-                    { value: "Office", label: "Office" },
-                    { value: "Industrial", label: "Industrial" },
-                    { value: "Residential", label: "Residential" }
+                    { value: "RENTAL_REVENUE", label: "Retail Revenue" },
+                    { value: "SERVICE_REVENUE", label: "Service Revenue" },
+                    { value: "AMENITY_REVENUE", label: "Amenity Revenue" }
                   ]}
                 />
                 
