@@ -36,8 +36,8 @@ const SearchableSelect = ({ label, value, options, onChange, disabled, placehold
   }, []);
 
   const filteredOptions = options.filter(opt =>
-    opt.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    opt.value.toLowerCase().includes(searchTerm.toLowerCase())
+    String(opt.label || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    String(opt.value || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const selectedOpt = options.find(o => o.value === value);
@@ -190,8 +190,9 @@ export default function SpaceConsole() {
   
   // ================= CẮT BỎ TIỀN TỐ BUILDING Ở DROP DOWN TẦNG =================
   const floorOptions = filteredFloors.map(f => {
-      const displayId = f.flId.includes('_') ? f.flId.split('_').pop() : f.flId;
-      return { value: f.flId, label: `${displayId} - ${f.flName}` };
+      const safeFlId = String(f.flId || "");
+      const displayId = safeFlId.includes('_') ? safeFlId.split('_').pop() : safeFlId;
+      return { value: safeFlId, label: `${displayId} - ${f.flName || "N/A"}` };
   });
 
   return (

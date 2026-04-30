@@ -102,8 +102,11 @@ export default function RecurringCostTab({ lease }) {
   useEffect(() => {
     if (!modal.isOpen) return;
 
-    const country = vatCountries.find(c => c.countryName === formData.vatCountry);
-    const systemVatPercent = country ? (country.vatPercent || 0) : 0;
+    let systemVatPercent = 0;
+    if (!lease?.vatExcluded) {
+      const country = vatCountries.find(c => c.countryName === formData.vatCountry);
+      systemVatPercent = country ? (country.vatPercent || 0) : 0;
+    }
 
     const activeVatPercent = formData.overrideVatPercent 
       ? Number(formData.vatPercentOverrideVal || 0) 
@@ -134,6 +137,10 @@ export default function RecurringCostTab({ lease }) {
   // ==============================================================
   const formatPayload = (dataObj) => {
     let payload = { ...dataObj };
+
+    if (lease?.vatExcluded) {
+      payload.vatCountry = null;
+    }
 
     // 🚀 FIX LỖI 1: NẾU TÍCH DATE MATCH LEASE, ÉP LẤY NGÀY TỪ LEASE GÁN VÀO PAYLOAD TRƯỚC KHI GỬI
     if (payload.dateMatchLs) {
@@ -391,7 +398,13 @@ export default function RecurringCostTab({ lease }) {
                     ]} 
                   />
                   
-                  <Select label="VAT Country" value={formData.vatCountry} onChange={v => setFormData({...formData, vatCountry: v})} options={vatCountries.map(c => ({value: c.countryName, label: c.countryName}))} />
+                  <Select 
+                    label="VAT Country" 
+                    value={lease?.vatExcluded ? "" : formData.vatCountry} 
+                    onChange={v => setFormData({...formData, vatCountry: v})} 
+                    options={vatCountries.map(c => ({value: c.countryName, label: c.countryName}))} 
+                    disabled={lease?.vatExcluded} 
+                  />
                   
                   <Input label="VAT (%)" value={computed.systemVat} disabled={true} placeholder="System Auto-filled" onChange={() => {}} />
                   

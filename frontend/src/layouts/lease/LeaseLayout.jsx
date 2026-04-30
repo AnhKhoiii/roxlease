@@ -8,7 +8,6 @@ export default function LeaseLayout() {
 
   // Kiểm tra quyền (Permissions)
   const hasAppAccess = (appCode) => {
-    return true;
     return perms.includes(`LEASE_${appCode}_VIEW`) || perms.includes(`LEASE_${appCode}_EDIT`);
   };
 
@@ -71,7 +70,7 @@ export default function LeaseLayout() {
           )}
 
           {/* Cost Wizard */ }
-          {hasAppAccess('COST_WIZARD') && (
+          {hasAppAccess('COSTWIZARD') && (
             <NavLink 
               to="/lease/cost-wizard" 
               className={`px-4 py-3 rounded text-[15px] font-semibold transition-all ${

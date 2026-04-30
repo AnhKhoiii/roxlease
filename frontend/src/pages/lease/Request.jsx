@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import axiosInstance from "../../api/axiosInstance";
 
 export default function Request() {
@@ -7,11 +7,9 @@ export default function Request() {
   // ==========================================
   const [pendingRequests, setPendingRequests] = useState([]);
   const [pagePending, setPagePending] = useState(0);
-  const [totalPending, setTotalPending] = useState(0);
 
   const [historyRequests, setHistoryRequests] = useState([]);
   const [pageHistory, setPageHistory] = useState(0);
-  const [totalHistory, setTotalHistory] = useState(0);
 
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -46,33 +44,59 @@ export default function Request() {
   const fetchPending = useCallback(async () => {
     setLoading(true);
     try {
-      const activeFilters = {};
-      Object.keys(filters).forEach(k => { if (filters[k]) activeFilters[k] = filters[k]; });
-      const queryParams = new URLSearchParams({ page: pagePending, size, ...activeFilters }).toString();
-      const res = await axiosInstance.get(`/lease/requests/pending?${queryParams}`);
+      // Gọi Backend lấy size=1000 để tự lọc trên Frontend
+      const res = await axiosInstance.get(`/lease/requests/pending?page=0&size=1000`);
       setPendingRequests(res.data.content || []);
-      setTotalPending(res.data.totalPages || 0);
     } catch (err) { console.error("Failed to fetch pending requests", err); } 
     finally { setLoading(false); }
-  }, [pagePending, filters]);
+  }, []);
 
   const fetchHistory = useCallback(async () => {
     setLoading(true);
     try {
-      const activeFilters = {};
-      Object.keys(filters).forEach(k => { if (filters[k]) activeFilters[k] = filters[k]; });
-      const queryParams = new URLSearchParams({ page: pageHistory, size, ...activeFilters }).toString();
-      const res = await axiosInstance.get(`/lease/requests/history?${queryParams}`);
+      const res = await axiosInstance.get(`/lease/requests/history?page=0&size=1000`);
       setHistoryRequests(res.data.content || []);
-      setTotalHistory(res.data.totalPages || 0);
     } catch (err) { console.error("Failed to fetch history requests", err); } 
     finally { setLoading(false); }
-  }, [pageHistory, filters]);
+  }, []);
 
   useEffect(() => {
     if (activeTab === "PENDING") fetchPending();
     else fetchHistory();
-  }, [activeTab, pagePending, pageHistory]); 
+  }, [activeTab, fetchPending, fetchHistory]); 
+
+  // ==========================================
+  // LOCAL FILTERING & PAGINATION
+  // ==========================================
+  const filteredPending = useMemo(() => {
+    return pendingRequests.filter(item => {
+      const matchId = !filters.requestId || (item.requestId || item.id || "").toLowerCase().includes(filters.requestId.toLowerCase());
+      const matchType = !filters.requestType || item.requestType === filters.requestType;
+      const matchSite = !filters.siteId || (item.siteId || "").toLowerCase().includes(filters.siteId.toLowerCase());
+      const matchUser = !filters.requestedBy || (item.createdBy || item.requestedBy || "").toLowerCase().includes(filters.requestedBy.toLowerCase());
+      const itemDate = item.createdDate ? new Date(item.createdDate).toISOString().split('T')[0] : "";
+      const matchFrom = !filters.fromDate || itemDate >= filters.fromDate;
+      const matchTo = !filters.toDate || itemDate <= filters.toDate;
+      return matchId && matchType && matchSite && matchUser && matchFrom && matchTo;
+    });
+  }, [pendingRequests, filters]);
+
+  const filteredHistory = useMemo(() => {
+    return historyRequests.filter(item => {
+      const matchId = !filters.requestId || (item.requestId || item.id || "").toLowerCase().includes(filters.requestId.toLowerCase());
+      const matchType = !filters.requestType || item.requestType === filters.requestType;
+      const matchSite = !filters.siteId || (item.siteId || "").toLowerCase().includes(filters.siteId.toLowerCase());
+      const matchUser = !filters.requestedBy || (item.createdBy || item.requestedBy || item.completedBy || "").toLowerCase().includes(filters.requestedBy.toLowerCase());
+      const itemDate = item.createdDate ? new Date(item.createdDate).toISOString().split('T')[0] : "";
+      const matchFrom = !filters.fromDate || itemDate >= filters.fromDate;
+      const matchTo = !filters.toDate || itemDate <= filters.toDate;
+      return matchId && matchType && matchSite && matchUser && matchFrom && matchTo;
+    });
+  }, [historyRequests, filters]);
+
+  const currentData = activeTab === "PENDING" ? filteredPending.slice(pagePending * size, (pagePending + 1) * size) : filteredHistory.slice(pageHistory * size, (pageHistory + 1) * size);
+  const totalPendingPages = Math.ceil(filteredPending.length / size) || 1;
+  const totalHistoryPages = Math.ceil(filteredHistory.length / size) || 1;
 
   // ==========================================
   // XỬ LÝ SỰ KIỆN TẠO MỚI (PARSE FILE CSV & SUBMIT)
@@ -152,9 +176,10 @@ export default function Request() {
   // ==========================================
   // CÁC HÀM DUYỆT / TỪ CHỐI
   // ==========================================
-  const handleFilter = () => {
-    if (activeTab === "PENDING") { setPagePending(0); fetchPending(); } 
-    else { setPageHistory(0); fetchHistory(); }
+  const handleFilterChange = (field, value) => {
+    setFilters(prev => ({ ...prev, [field]: value }));
+    setPagePending(0);
+    setPageHistory(0);
   };
 
   const handleApprove = async (id) => {
@@ -205,11 +230,11 @@ export default function Request() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
           <div className="flex flex-col gap-1">
             <label className="text-[10px] font-bold text-gray-600 uppercase">Request ID</label>
-            <input type="text" value={filters.requestId} onChange={e => setFilters({...filters, requestId: e.target.value})} placeholder="Filter..." className="border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-500" />
+            <input type="text" value={filters.requestId} onChange={e => handleFilterChange('requestId', e.target.value)} placeholder="Filter..." className="border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-500" />
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[10px] font-bold text-gray-600 uppercase">Request Type</label>
-            <select value={filters.requestType} onChange={e => setFilters({...filters, requestType: e.target.value})} className="border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-500 bg-white">
+            <select value={filters.requestType} onChange={e => handleFilterChange('requestType', e.target.value)} className="border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-500 bg-white">
               <option value="">All Types</option>
               <option value="CONTRACT_OPTIONS">Contract Options</option>
               <option value="CONTRACT_TERMS">Contract Terms</option>
@@ -219,26 +244,20 @@ export default function Request() {
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[10px] font-bold text-gray-600 uppercase">Site ID</label>
-            <input type="text" value={filters.siteId} onChange={e => setFilters({...filters, siteId: e.target.value})} placeholder="Filter..." className="border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-500" />
+            <input type="text" value={filters.siteId} onChange={e => handleFilterChange('siteId', e.target.value)} placeholder="Filter..." className="border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-500" />
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[10px] font-bold text-gray-600 uppercase">Requested By</label>
-            <input type="text" value={filters.requestedBy} onChange={e => setFilters({...filters, requestedBy: e.target.value})} placeholder="Filter..." className="border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-500" />
+            <input type="text" value={filters.requestedBy} onChange={e => handleFilterChange('requestedBy', e.target.value)} placeholder="Filter..." className="border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-500" />
           </div>
 
           <div className="flex flex-col gap-1 lg:col-span-2">
             <label className="text-[10px] font-bold text-gray-600 uppercase">Created Date</label>
             <div className="flex items-center gap-2">
-              <input type="date" value={filters.fromDate} onChange={e => setFilters({...filters, fromDate: e.target.value})} className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-500" />
+              <input type="date" value={filters.fromDate} onChange={e => handleFilterChange('fromDate', e.target.value)} className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-500" />
               <span className="text-xs text-gray-500 font-medium">to</span>
-              <input type="date" value={filters.toDate} onChange={e => setFilters({...filters, toDate: e.target.value})} className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-500" />
+              <input type="date" value={filters.toDate} onChange={e => handleFilterChange('toDate', e.target.value)} className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-500" />
             </div>
-          </div>
-
-          <div className="lg:col-span-2 flex justify-end lg:justify-start">
-            <button onClick={handleFilter} className="bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-800 px-6 py-1.5 rounded text-xs font-bold shadow-sm transition-colors">
-              Apply Filters
-            </button>
           </div>
         </div>
       </div>
@@ -281,10 +300,10 @@ export default function Request() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {(activeTab === "PENDING" ? pendingRequests : historyRequests).length === 0 && !loading ? (
+              {currentData.length === 0 && !loading ? (
                 <tr><td colSpan={10} className="py-16 text-center text-gray-500 font-medium">No requests found in this queue.</td></tr>
               ) : (
-                (activeTab === "PENDING" ? pendingRequests : historyRequests).map((item, idx) => (
+                currentData.map((item, idx) => (
                   <tr key={item.id || idx} className="hover:bg-blue-50/50 transition-colors group">
                     
                     {activeTab === "PENDING" && (
@@ -345,10 +364,10 @@ export default function Request() {
 
         {/* 4. PAGINATION FOOTER */}
         <div className="bg-gray-50 border-t border-gray-200 px-4 py-2.5 flex items-center justify-between shrink-0">
-          <div className="text-xs text-gray-600 font-medium">Page <span className="font-bold">{activeTab === "PENDING" ? pagePending + 1 : pageHistory + 1}</span> of {activeTab === "PENDING" ? totalPending || 1 : totalHistory || 1}</div>
+          <div className="text-xs text-gray-600 font-medium">Page <span className="font-bold">{activeTab === "PENDING" ? pagePending + 1 : pageHistory + 1}</span> of {activeTab === "PENDING" ? totalPendingPages : totalHistoryPages}</div>
           <div className="flex gap-2">
             <button onClick={() => activeTab === "PENDING" ? setPagePending(p => Math.max(0, p - 1)) : setPageHistory(p => Math.max(0, p - 1))} disabled={(activeTab === "PENDING" ? pagePending : pageHistory) === 0 || loading} className="px-3 py-1 border border-gray-300 rounded text-xs font-semibold bg-white hover:bg-gray-100 disabled:opacity-50 transition-colors">Prev</button>
-            <button onClick={() => activeTab === "PENDING" ? setPagePending(p => Math.min(totalPending - 1, p + 1)) : setPageHistory(p => Math.min(totalHistory - 1, p + 1))} disabled={(activeTab === "PENDING" ? pagePending >= totalPending - 1 : pageHistory >= totalHistory - 1) || loading} className="px-3 py-1 border border-gray-300 rounded text-xs font-semibold bg-white hover:bg-gray-100 disabled:opacity-50 transition-colors">Next</button>
+            <button onClick={() => activeTab === "PENDING" ? setPagePending(p => Math.min(totalPendingPages - 1, p + 1)) : setPageHistory(p => Math.min(totalHistoryPages - 1, p + 1))} disabled={(activeTab === "PENDING" ? pagePending >= totalPendingPages - 1 : pageHistory >= totalHistoryPages - 1) || loading} className="px-3 py-1 border border-gray-300 rounded text-xs font-semibold bg-white hover:bg-gray-100 disabled:opacity-50 transition-colors">Next</button>
           </div>
         </div>
       </div>

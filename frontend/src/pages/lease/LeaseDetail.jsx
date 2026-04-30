@@ -38,13 +38,7 @@ export default function LeaseDetail() {
     }
   };
 
-  // 🚀 ĐÃ SỬA: ĐỒNG BỘ LOGIC BÓC TÁCH DỮ LIỆU & GỬI REQUEST GIỐNG BÊN CONSOLE
   const handleSaveModal = async (incomingData, isSendRequest) => {
-    if (isSendRequest && !lease?.active) {
-      alert("Cannot send request for an inactive lease!");
-      return;
-    }
-
     try {
       // 1. Trích xuất dữ liệu Lease thực sự
       const actualLeaseData = isSendRequest ? incomingData.requestData : incomingData;

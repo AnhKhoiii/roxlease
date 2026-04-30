@@ -173,8 +173,11 @@ export default function PlannedRevenue() {
   const handleSave = async () => {
     try {
       setLoading(true);
+
+      // Loại bỏ `id` khỏi payload nếu là thêm mới để Backend tự sinh sequence ID
+      const { id, ...restData } = formData;
       const payload = {
-        ...formData,
+        ...(isEditMode ? formData : restData),
         year: Number(formData.year),
         month: Number(formData.month),
         plannedRevenue: Number(formData.plannedRevenue),
@@ -191,7 +194,8 @@ export default function PlannedRevenue() {
       setModalOpen(false);
       fetchData();
     } catch (error) {
-      alert("Error saving data!");
+      const errorMsg = error.response?.data?.error || error.response?.data?.message || "Error saving data!";
+      alert(errorMsg);
     } finally {
       setLoading(false);
     }

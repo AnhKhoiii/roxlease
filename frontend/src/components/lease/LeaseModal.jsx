@@ -106,7 +106,7 @@ const AutocompleteInput = ({ label, value, onChange, options = [], disabled, pla
 // ==========================================
 // MODAL CHÍNH
 // ==========================================
-export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData }) {
+export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData, isLeaseActive }) {
   const [formData, setFormData] = useState({});
   const [sites, setSites] = useState([]);
   const [buildings, setBuildings] = useState([]);
@@ -218,6 +218,8 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData 
     }
   };
 
+  const isActive = isLeaseActive ?? formData.active;
+
   return (
     <div className="fixed inset-0 bg-black/50 z-[100] flex justify-center items-center backdrop-blur-sm p-4">
       <div className="bg-white w-[1200px] rounded-xl shadow-2xl flex flex-col overflow-hidden animate-[fadeIn_0.2s_ease-out] max-h-[95vh]">
@@ -227,15 +229,34 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData 
           <div className="flex gap-2 items-center">
             {mode === "ADD" ? (
               <>
-                <button onClick={() => handleSaveAction(false)} className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors">Save Draft</button>
-                <button onClick={() => handleSaveAction(true)} className="bg-[#DE3B40] hover:bg-[#C11C22] text-white px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors">Save & Send Request</button>
+                <button 
+                  onClick={() => handleSaveAction(false)} 
+                  className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors"
+                >
+                  Save Draft
+                </button>
+                <button 
+                  onClick={() => handleSaveAction(true)} 
+                  className="bg-[#DE3B40] hover:bg-[#C11C22] text-white px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors"
+                >
+                  Save & Send Request
+                </button>
               </>
             ) : (
               <>
-                <button onClick={() => handleSaveAction(false)} className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors">Save Changes</button>
-                {!formData.active && (
-                  <button onClick={() => handleSaveAction(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors">Update & Send Request</button>
-                )}
+                <button 
+                  onClick={() => handleSaveAction(false)} 
+                  disabled={isActive}
+                  className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${isActive ? 'bg-gray-400 cursor-not-allowed' : 'bg-gray-800 hover:bg-gray-900'} text-white`}
+                >
+                  Save Changes
+                </button>
+                <button 
+                  onClick={() => handleSaveAction(true)} 
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors"
+                >
+                  Update & Send Request
+                </button>
               </>
             )}
             <button onClick={onClose} className="text-white hover:text-red-100 ml-2 transition-colors"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>

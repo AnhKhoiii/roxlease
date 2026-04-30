@@ -28,17 +28,30 @@ export default function PropertyConsole() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [notification, setNotification] = useState({ show: false, type: '', message: '' });
 
-  const [filters, setFilters] = useState({ Region: "", Country: "", City: "" });
+  const [filters, setFilters] = useState({ id: "", name: "" });
 
   const filteredDataList = useMemo(() => {
     return dataList.filter(item => {
-      const itemStr = JSON.stringify(item).toLowerCase();
-      const matchRegion = filters.Region === "" || itemStr.includes(filters.Region.toLowerCase());
-      const matchCountry = filters.Country === "" || itemStr.includes(filters.Country.toLowerCase());
-      const matchCity = filters.City === "" || itemStr.includes(filters.City.toLowerCase());
-      return matchRegion && matchCountry && matchCity;
+      if (!item) return false;
+      
+      let itemId = "";
+      let itemName = "";
+
+      if (activeTab === 'site') { itemId = item.siteId; itemName = item.siteName; }
+      else if (activeTab === 'building') { itemId = item.blId; itemName = item.blName; }
+      else if (activeTab === 'floor') { itemId = item.flId; itemName = item.flName; }
+      else if (activeTab === 'suite') { itemId = item.suiteId; itemName = item.suiteCode || item.name; }
+      else if (activeTab === 'room') { itemId = item.roomId; itemName = item.roomName || item.name; }
+      
+      const idValue = String(itemId || "").toLowerCase();
+      const nameValue = String(itemName || "").toLowerCase();
+
+      const matchId = filters.id === "" || idValue.includes(filters.id.toLowerCase());
+      const matchName = filters.name === "" || nameValue.includes(filters.name.toLowerCase());
+      
+      return matchId && matchName;
     });
-  }, [dataList, filters]);
+  }, [dataList, filters, activeTab]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -86,7 +99,10 @@ export default function PropertyConsole() {
     }
   };
 
-  useEffect(() => { fetchData(); }, [activeTab]);
+  useEffect(() => { 
+    setFilters({ id: "", name: "" }); // Reset filter mỗi khi người dùng đổi tab
+    fetchData(); 
+  }, [activeTab]);
 
   const isReadOnlyTab = false; 
   
@@ -261,17 +277,24 @@ export default function PropertyConsole() {
         <button className="bg-red-500 hover:bg-red-600 transition-colors text-white px-6 py-2.5 rounded font-semibold text-[14px]">
           Filter data
         </button>
-        {["Region", "Country", "City"].map((item) => (
-          <div key={item} className="flex flex-col">
-            <label className="font-semibold text-sm text-gray-700 mb-1.5">{item}</label>
-            <input 
-              className="border border-yellow-400 rounded px-3 py-1.5 w-48 outline-none focus:ring-1 focus:ring-yellow-500 text-[14px]" 
-              placeholder={`Enter ${item}...`} 
-              value={filters[item]}
-              onChange={(e) => setFilters({...filters, [item]: e.target.value})}
-            />
-          </div>
-        ))}
+        <div className="flex flex-col">
+          <label className="font-semibold text-sm text-gray-700 mb-1.5">Search by ID</label>
+          <input 
+            className="border border-yellow-400 rounded px-3 py-1.5 w-48 outline-none focus:ring-1 focus:ring-yellow-500 text-[14px]" 
+            placeholder="Enter ID..." 
+            value={filters.id}
+            onChange={(e) => setFilters({...filters, id: e.target.value})}
+          />
+        </div>
+        <div className="flex flex-col">
+          <label className="font-semibold text-sm text-gray-700 mb-1.5">Search by Name</label>
+          <input 
+            className="border border-yellow-400 rounded px-3 py-1.5 w-48 outline-none focus:ring-1 focus:ring-yellow-500 text-[14px]" 
+            placeholder="Enter Name..." 
+            value={filters.name}
+            onChange={(e) => setFilters({...filters, name: e.target.value})}
+          />
+        </div>
       </div>
 
       <div className="bg-white rounded-md shadow flex-1 flex flex-col overflow-hidden">
