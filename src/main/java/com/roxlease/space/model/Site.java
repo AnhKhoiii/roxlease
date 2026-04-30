@@ -39,7 +39,6 @@ public class Site {
 
     private Double lat;
     
-    @Field("long") 
     private Double longitude;
 
     private Division division;

@@ -38,9 +38,9 @@ const Select = ({ label, value, onChange, disabled, error, options = [] }) => (
 );
 
 const TextArea = ({ label, value, onChange, disabled, placeholder }) => (
-  <div className="flex flex-col gap-1.5 h-full">
+  <div className="flex flex-col gap-1.5 w-full">
     <label className="font-bold text-[13px] text-gray-700">{label}</label>
-    <textarea value={value || ''} onChange={e => onChange(e.target.value)} disabled={disabled} placeholder={placeholder} className="border border-gray-300 focus:border-[#EFB034] rounded px-4 py-2.5 flex-1 outline-none disabled:bg-gray-100 disabled:text-gray-500 resize-none text-[14px] min-h-[80px]" />
+    <textarea value={value || ''} onChange={e => onChange(e.target.value)} disabled={disabled} placeholder={placeholder} rows="3" className="border border-gray-300 focus:border-[#EFB034] rounded px-4 py-2.5 outline-none disabled:bg-gray-100 disabled:text-gray-500 resize-none text-[14px]" />
   </div>
 );
 
@@ -83,7 +83,7 @@ export default function PropertyModal({ isOpen, onClose, onSave, onDelete, mode,
         }
     }
 
-    const numericFields = ['latitude', 'longitude', 'areaGrossExt', 'areaGrossInt', 'gfa', 'nfa'];
+    const numericFields = ['latitude', 'lat', 'longitude', 'areaGrossExt', 'areaGrossInt', 'gfa', 'nfa'];
     numericFields.forEach(field => {
        if (payload[field] === "" || payload[field] === undefined) { payload[field] = null; } 
        else { payload[field] = Number(payload[field]); }
@@ -113,21 +113,20 @@ export default function PropertyModal({ isOpen, onClose, onSave, onDelete, mode,
                 <Input label="Site ID *" value={formData.siteId} onChange={v => handleChange('siteId', v)} disabled={mode === "EDIT" || !canEdit} error={errors.siteId} />
                 <Select label="City *" value={formData.cityId} onChange={v => handleChange('cityId', v)} disabled={!canEdit} error={errors.cityId} options={cities.map(c => ({ value: c.cityId, label: c.cityName || c.cityId }))} />
                 <Select label="Division *" value={formData.division} onChange={v => handleChange('division', v)} disabled={!canEdit} options={[{value: 'OFFICE', label: 'Office'}, {value: 'COMPLEX', label: 'Complex'}]} />
+              </div>
+
+              <div className="space-y-5">
                 <Input label="Site Name" value={formData.siteName} onChange={v => handleChange('siteName', v)} disabled={!canEdit} />
+                <Input label="Manager Contact" value={formData.siteContact} onChange={v => handleChange('siteContact', v)} disabled={!canEdit} />
+                <Input label="Email" type="email" value={formData.siteEmail} onChange={v => handleChange('siteEmail', v)} disabled={!canEdit} />
+                <Input label="Phone" value={formData.sitePhone} onChange={v => handleChange('sitePhone', v)} disabled={!canEdit} />
+              </div>
+
+              <div className="space-y-5">
                 <TextArea label="Address" value={formData.address} onChange={v => handleChange('address', v)} disabled={!canEdit} />
-              </div>
-
-              <div className="space-y-5">
-                <Input label="Manager Contact" value={formData.managerContact} onChange={v => handleChange('managerContact', v)} disabled={!canEdit} />
-                <Input label="Email" type="email" value={formData.email} onChange={v => handleChange('email', v)} disabled={!canEdit} />
-                <Input label="Phone" value={formData.phone} onChange={v => handleChange('phone', v)} disabled={!canEdit} />
-                <Input label="General Contact (Fallback)" value={formData.siteContact} onChange={v => handleChange('siteContact', v)} disabled={!canEdit} />
-              </div>
-
-              <div className="space-y-5">
                 <div className="grid grid-cols-2 gap-4">
-                  <Input label="Latitude" type="number" value={formData.latitude} onChange={v => handleChange('latitude', v)} disabled={!canEdit} />
                   <Input label="Longitude" type="number" value={formData.longitude} onChange={v => handleChange('longitude', v)} disabled={!canEdit} />
+                  <Input label="Latitude" type="number" value={formData.lat} onChange={v => handleChange('lat', v)} disabled={!canEdit} />
                 </div>
                 <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
                   <Upload label="Upload Site Image" accept="image/*" onChange={file => handleChange('image', file)} disabled={!canEdit} />
@@ -141,28 +140,26 @@ export default function PropertyModal({ isOpen, onClose, onSave, onDelete, mode,
               <div className="space-y-5">
                 <Input label="Building ID (blId) *" value={formData.blId} onChange={v => handleChange('blId', v)} disabled={mode === "EDIT" || !canEdit} error={errors.blId} />
                 <Select label="Site ID *" value={formData.siteId} onChange={v => handleChange('siteId', v)} disabled={!canEdit} error={errors.siteId} options={sites.map(site => ({ value: site.siteId, label: site.siteId }))} />
+                <Input label="Gross Ext. Area" type="number" value={formData.areaGrossExt} onChange={v => handleChange('areaGrossExt', v)} disabled={!canEdit} />
+                <Input label="Gross Int. Area" type="number" value={formData.areaGrossInt} onChange={v => handleChange('areaGrossInt', v)} disabled={!canEdit} />
+              </div>
+
+              <div className="space-y-5">
                 <Input label="Building Name" value={formData.blName} onChange={v => handleChange('blName', v)} disabled={!canEdit} />
                 <Input label="Date Built" type="date" value={formData.dateBuilt} onChange={v => handleChange('dateBuilt', v)} disabled={!canEdit} />
+                <Input label="Building Manager" value={formData.blContact} onChange={v => handleChange('blContact', v)} disabled={!canEdit} />
+                <Input label="Email" type="email" value={formData.blEmail} onChange={v => handleChange('blEmail', v)} disabled={!canEdit} />
+                <Input label="Phone" value={formData.blPhone} onChange={v => handleChange('blPhone', v)} disabled={!canEdit} />
+              </div>
+
+              <div className="space-y-5">
                 <TextArea label="Description" value={formData.description} onChange={v => handleChange('description', v)} disabled={!canEdit} />
-              </div>
-
-              <div className="space-y-5">
-                <Input label="Building Manager" value={formData.buildingManager} onChange={v => handleChange('buildingManager', v)} disabled={!canEdit} />
-                <Input label="Email" type="email" value={formData.email} onChange={v => handleChange('email', v)} disabled={!canEdit} />
-                <Input label="Phone" value={formData.phone} onChange={v => handleChange('phone', v)} disabled={!canEdit} />
                 <div className="grid grid-cols-2 gap-4">
-                  <Input label="Gross Ext. Area" type="number" value={formData.areaGrossExt} onChange={v => handleChange('areaGrossExt', v)} disabled={!canEdit} />
-                  <Input label="Gross Int. Area" type="number" value={formData.areaGrossInt} onChange={v => handleChange('areaGrossInt', v)} disabled={!canEdit} />
-                </div>
-              </div>
-
-              <div className="space-y-5">
-                <div className="grid grid-cols-2 gap-4">
-                  <Input label="Latitude" type="number" value={formData.latitude} onChange={v => handleChange('latitude', v)} disabled={!canEdit} />
                   <Input label="Longitude" type="number" value={formData.longitude} onChange={v => handleChange('longitude', v)} disabled={!canEdit} />
+                  <Input label="Latitude" type="number" value={formData.lat} onChange={v => handleChange('lat', v)} disabled={!canEdit} />
                 </div>
                 <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
-                  <Upload label="Upload Building Image" accept="image/*" onChange={file => handleChange('image', file)} disabled={!canEdit} />
+                  <Upload label="Upload Building Image" accept="image/*" onChange={file => handleChange('blImage', file)} disabled={!canEdit} />
                 </div>
               </div>
             </div>

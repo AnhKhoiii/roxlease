@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import axiosInstance from "../../api/axiosInstance";
 import { useOutletContext } from "react-router-dom";
 import PropertyModal from "../../components/space/PropertyModal";

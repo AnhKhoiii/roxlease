@@ -25,6 +25,9 @@ public class Suite {
     @Field("suite_code")
     private String suiteCode;
 
+    @Field("suite_name")
+    private String suiteName;
+
     @Field("geometry")
     private Map<String, Object> geometry;
 

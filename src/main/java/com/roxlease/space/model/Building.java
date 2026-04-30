@@ -25,7 +25,6 @@ public class Building {
 
     private Double lat;
 
-    @Field("long")
     private Double longitude;
 
     @Field("description") 

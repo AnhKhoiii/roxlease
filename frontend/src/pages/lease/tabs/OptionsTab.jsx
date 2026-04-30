@@ -292,7 +292,6 @@ export default function OptionsTab({ lease }) {
                     {value: 'LEASE_END', label: 'Lease End'}]} />
                 </div>
                 <div className="flex flex-col gap-5 border-r border-gray-100 pr-4">
-                  <Input type="date" label="Date Issued" value={formData.issueDate} onChange={v => setFormData({...formData, issueDate: v})} />
               <Input type="date" label="Start Date" disabled={formData.dateMatchLs} value={formData.dateMatchLs ? (lease?.startDate || "") : formData.startDate} onChange={v => setFormData({...formData, startDate: v})} />
               <Input type="date" label="End Date" disabled={formData.dateMatchLs} value={formData.dateMatchLs ? (lease?.endDate || "") : formData.endDate} onChange={v => setFormData({...formData, endDate: v})} />
                   <div className="flex flex-col gap-3 mt-1 bg-gray-50/80 p-3.5 rounded-lg border border-gray-200 shadow-inner">

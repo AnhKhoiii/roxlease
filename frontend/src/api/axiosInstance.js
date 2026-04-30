@@ -3,8 +3,7 @@ import axios from 'axios';
 // Khởi tạo một instance của axios với các cấu hình mặc định
 const axiosInstance = axios.create({
   // Địa chỉ gốc của backend Spring Boot
-  //baseURL: 'http://localhost:8080/api', 
-  baseURL: 'https://casing-entryway-bulldog.ngrok-free.dev/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api',
   timeout: 60000, // Thời gian chờ tối đa (10 giây)
   headers: {
     'Content-Type': 'application/json',
@@ -63,43 +62,5 @@ axiosInstance.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
-const handleSave = async (e) => {
-  e.preventDefault();
-  setNotification({ show: false, type: '', message: '' });
-
-  // Validate mật khẩu khớp (Frontend)
-  if (formData.new !== formData.confirm) {
-    setNotification({ show: true, type: 'error', message: 'Mật khẩu xác nhận không khớp!' });
-    return;
-  }
-
-  try {
-    await axiosInstance.post('/auth/change-password', {
-      currentPassword: formData.current,
-      newPassword: formData.new
-    });
-
-    setNotification({ show: true, type: 'success', message: 'Đổi mật khẩu thành công! Đang đăng xuất...' });
-    
-    // Hủy token và đẩy về Login sau 2 giây
-    setTimeout(() => {
-      localStorage.removeItem('jwt_token');
-      window.location.href = '/login';
-    }, 2000);
-
-  } catch (error) {
-    // Đọc đúng key "error" từ backend trả về
-    const backendError = error.response?.data?.error;
-
-    if (backendError === "WRONG_CURRENT_PASSWORD") {
-      setNotification({ show: true, type: 'error', message: 'Mật khẩu hiện tại không chính xác!' });
-    } else if (backendError === "INVALID_PASSWORD_FORMAT") {
-      setNotification({ show: true, type: 'error', message: 'Mật khẩu không đúng định dạng yêu cầu!' });
-    } else {
-      setNotification({ show: true, type: 'error', message: backendError || 'Máy chủ gặp sự cố (500).' });
-    }
-  }
-};
 
 export default axiosInstance;

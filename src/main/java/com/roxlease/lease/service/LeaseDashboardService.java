@@ -229,7 +229,14 @@ public class LeaseDashboardService {
         for (Clause clause : clauses) {
             if (!Boolean.TRUE.equals(clause.getActive()) || clause.getClauseType() != ClauseType.RENT_ESCALATION) continue;
             
+            // Lọc theo lease active (bao gồm cả hợp đồng còn hạn hoặc đã hết hạn nhưng vẫn active)
+            boolean isLeaseActive = leases.stream().anyMatch(ls -> 
+                ls.getLsId().equals(clause.getLeaseId()) && Boolean.TRUE.equals(ls.getActive())
+            );
+            if (!isLeaseActive) continue;
+
             boolean hasMatchingCost = recurringCosts.stream().anyMatch(rc -> 
+                Boolean.TRUE.equals(rc.getActive()) &&
                 rc.getLsId().equals(clause.getLeaseId()) &&
                 Objects.equals(rc.getStartDate(), clause.getStartDate()) &&
                 Objects.equals(rc.getEndDate(), clause.getEndDate())

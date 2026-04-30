@@ -22,15 +22,15 @@ public class Floor {
     @Field("bl_id")
     private String blId;
 
-    private Double nfa; // Net Floor Area
-    private Double gfa; // Gross Floor Area
+    private Double nfa;
+    private Double gfa;
 
     @Field("drawing_dwg")
     private String drawingDwg;
 
     @Field("drawing_json")
-    private Map<String, Object> drawingJson; // Dữ liệu JSON lưu dạng Map
+    private Map<String, Object> drawingJson; 
 
     @Field("drawing_svg")
-    private String drawingSvg; // Lưu chuỗi text SVG dài
+    private String drawingSvg; 
 }

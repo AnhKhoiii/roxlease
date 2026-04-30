@@ -36,7 +36,6 @@ public class LeaseOptionService {
         option.setOpDescription(updatedOption.getOpDescription());
         option.setOpType(updatedOption.getOpType());
         option.setSuiteId(updatedOption.getSuiteId());
-        option.setIssueDate(updatedOption.getIssueDate());
         option.setDateMatchLs(updatedOption.getDateMatchLs());
         option.setStartDate(updatedOption.getStartDate());
         option.setEndDate(updatedOption.getEndDate());

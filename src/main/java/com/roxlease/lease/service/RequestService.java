@@ -7,6 +7,8 @@ import com.roxlease.lease.model.Clause;
 import com.roxlease.lease.model.LeaseOption;
 import com.roxlease.lease.model.LeaseSuite;
 import com.roxlease.cost.model.RecurringCost;
+import com.roxlease.cost.model.RecurringCostSchedule;
+import com.roxlease.cost.model.Enum.PaymentStatus;
 import com.roxlease.lease.model.Amendment;
 import com.roxlease.lease.repository.RequestRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -87,6 +89,48 @@ public class RequestService {
                         repository.save(pReq);
                     }
                 }
+            }
+        }
+
+        // 3. LOGIC ĐẶC BIỆT CHO EARLY TERMINATION: TỰ ĐỘNG HỦY CÁC KỲ CHI PHÍ TRONG TƯƠNG LAI
+        if (request.getRequestType() == RQType.CONTRACT_OPTIONS) {
+            try {
+                LeaseOption option = null;
+                if (request.getTargetId() != null && !request.getTargetId().equals("NEW")) {
+                    option = mongoTemplate.findById(request.getTargetId(), LeaseOption.class);
+                }
+
+                String opType = null;
+                String lsId = null;
+                java.time.LocalDate startDate = null;
+
+                if (option != null) {
+                    opType = option.getOpType() != null ? option.getOpType().name() : null;
+                    lsId = option.getLsId();
+                    startDate = option.getStartDate();
+                } else if (request.getRequestData() != null) {
+                    Map<String, Object> reqData = request.getRequestData();
+                    opType = String.valueOf(reqData.get("opType"));
+                    lsId = String.valueOf(reqData.get("lsId"));
+                    if (reqData.get("startDate") != null) {
+                        startDate = java.time.LocalDate.parse(reqData.get("startDate").toString());
+                    }
+                }
+
+                if ("EARLY_TERMINATION".equals(opType) && lsId != null && startDate != null && !"null".equals(lsId)) {
+                    Query cancelQuery = new Query(Criteria.where("leaseId").is(lsId)
+                            .and("dueDate").gt(startDate)
+                            .and("paymentStatus").is(PaymentStatus.PENDING)); 
+
+                    Update cancelUpdate = new Update()
+                            .set("paymentStatus", PaymentStatus.REJECTED)
+                            .set("cancelReason", "Tự động hủy do hợp đồng kích hoạt Early Termination (Chấm dứt sớm)")
+                            .set("approvalDate", LocalDateTime.now());
+
+                    mongoTemplate.updateMulti(cancelQuery, cancelUpdate, RecurringCostSchedule.class);
+                }
+            } catch (Exception e) {
+                System.err.println("Lỗi hủy lịch chi phí do Early Termination: " + e.getMessage());
             }
         }
 

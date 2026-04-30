@@ -37,9 +37,6 @@ public class LeaseOption {
     @Field("op_type")
     private OptionType opType;
 
-    @Field("issue_date")
-    private LocalDate issueDate;
-
     @Field("date_match_ls")
     private Boolean dateMatchLs;
 
