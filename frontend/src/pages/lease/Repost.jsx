@@ -38,10 +38,15 @@ export default function LeaseReports() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Danh sách 8 Tab theo yêu cầu 
+  const [filters, setFilters] = useState({
+    siteId: '',
+    fromDate: '',
+    toDate: ''
+  });
+
+  // Danh sách 7 Tab theo yêu cầu (Đã bỏ opt-exp)
   const tabs = [
     { id: "lease-exp", label: "Lease by Expiration", desc: "Tổng hợp các hợp đồng theo ngày đến hạn" },
-    { id: "opt-exp", label: "Options by Expiration", desc: "Tổng hợp các tuỳ chọn hợp đồng đến hạn" },
     { id: "landlord", label: "Lease by Landlord", desc: "Tổng hợp hợp đồng theo landlord" },
     { id: "tenant", label: "Lease by Tenant", desc: "Tổng hợp hợp đồng theo tenant" },
     { id: "inc-month", label: "Income by Month", desc: "Doanh thu theo tháng" },
@@ -53,8 +58,12 @@ export default function LeaseReports() {
   const fetchReportData = useCallback(async (tabId) => {
     setLoading(true);
     try {
-      // API chung xử lý cho cả 8 loại báo cáo dựa trên tabId
-      const res = await axiosInstance.get(`/lease/analytics/reports?type=${tabId}`);
+      const queryParams = new URLSearchParams({ type: tabId });
+      if (filters.siteId) queryParams.append('siteId', filters.siteId);
+      if (filters.fromDate) queryParams.append('fromDate', filters.fromDate);
+      if (filters.toDate) queryParams.append('toDate', filters.toDate);
+      
+      const res = await axiosInstance.get(`/lease/analytics/reports?${queryParams.toString()}`);
       setData(res.data || []);
     } catch (error) {
       console.error("Lỗi lấy dữ liệu báo cáo:", error);
@@ -62,7 +71,7 @@ export default function LeaseReports() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filters]);
 
   useEffect(() => {
     fetchReportData(activeTab);
@@ -72,12 +81,11 @@ export default function LeaseReports() {
   const getHeaders = () => {
     switch(activeTab) {
       case "lease-exp": return ["Lease ID", "Tenant", "Start Date", "End Date", "Remaining Days", "Status"];
-      case "opt-exp": return ["Lease ID", "Option Type", "Option Date", "Description", "Status"];
       case "landlord":
       case "tenant": return ["Party Name", "Lease Count", "Total Area (m2)", "Total Revenue"];
-      case "inc-month":
+      case "inc-month": return ["Month/Year", "Cost Type", "Total Amount", "Transaction Count", "Payment Status"];
+      case "inc-year": return ["Year", "Cost Type", "Total Amount", "Growth %", "Budget vs Actual"];
       case "exp-month": return ["Month/Year", "Total Amount", "Transaction Count", "Payment Status"];
-      case "inc-year":
       case "exp-year": return ["Year", "Total Amount", "Growth %", "Budget vs Actual"];
       default: return [];
     }
@@ -88,14 +96,28 @@ export default function LeaseReports() {
       <div className="max-w-[1600px] mx-auto space-y-6">
         
         {/* TIÊU ĐỀ TRANG */}
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-start">
           <div>
             <h1 className="text-2xl font-black text-gray-800 uppercase tracking-tight">Reports Analytics</h1>
             <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">Hệ thống báo cáo tổng hợp chi tiết</p>
           </div>
-          <button onClick={() => fetchReportData(activeTab)} className="bg-blue-900 text-white px-5 py-2 rounded-lg text-xs font-bold uppercase shadow-sm hover:bg-blue-800 transition-all">
-            Refresh Data
-          </button>
+          <div className="flex items-end gap-3">
+             <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Site ID</label>
+                <input type="text" placeholder="e.g. S-HN-001" value={filters.siteId} onChange={e => setFilters({...filters, siteId: e.target.value})} className="border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-32" />
+             </div>
+             <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">From Date</label>
+                <input type="date" value={filters.fromDate} onChange={e => setFilters({...filters, fromDate: e.target.value})} className="border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+             </div>
+             <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">To Date</label>
+                <input type="date" value={filters.toDate} onChange={e => setFilters({...filters, toDate: e.target.value})} className="border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+             </div>
+             <button onClick={() => fetchReportData(activeTab)} className="bg-blue-900 text-white px-5 py-2 rounded-lg text-xs font-bold uppercase shadow-sm hover:bg-blue-800 transition-all h-[38px] mb-0.5">
+               Refresh Data
+             </button>
+          </div>
         </div>
 
         {/* 🚀 LAYOUT 8 TAB THEO YÊU CẦU */}

@@ -97,4 +97,15 @@ public class RecurringCost {
     @LastModifiedDate
     @Field("updated_at")
     private LocalDateTime updatedAt;
+
+    // Hàm hỗ trợ lấy tỷ giá thực tế dùng cho Dashboard & Report
+    public BigDecimal getEffectiveExchangeRate(com.roxlease.lease.model.Lease lease) {
+        if (Boolean.TRUE.equals(this.overrideExchangeRate) && this.exchangeRate != null) {
+            return this.exchangeRate;
+        }
+        if (lease != null && lease.getBaseExchangeRate() != null) {
+            return lease.getBaseExchangeRate();
+        }
+        return BigDecimal.ONE; // Fallback an toàn nếu không có tỷ giá
+    }
 }

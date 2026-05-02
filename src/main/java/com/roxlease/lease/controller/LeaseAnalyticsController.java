@@ -20,7 +20,9 @@ public class LeaseAnalyticsController {
     @GetMapping("/reports")
     public ResponseEntity<List<Map<String, Object>>> getReports(
             @RequestParam String type,
-            @RequestParam(required = false) String siteId) {
-        return ResponseEntity.ok(analyticsService.getReportDataByType(type, siteId));
+            @RequestParam(required = false) String siteId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        return ResponseEntity.ok(analyticsService.getReportDataByType(type, siteId, fromDate, toDate));
     }
 }

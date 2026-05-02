@@ -164,7 +164,11 @@ const LeaseAlerts = ({ alerts, charts }) => {
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie data={data} innerRadius={55} outerRadius={75} dataKey="value" stroke="none" paddingAngle={2}>
-                {data.map((entry, index) => <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />)}
+                {data.map((entry, index) => {
+                  let fillColor = CHART_COLORS[index % CHART_COLORS.length];
+                  if (entry.name && entry.name.toLowerCase().includes('paid late')) fillColor = '#EF4444';
+                  return <Cell key={`cell-${index}`} fill={fillColor} />;
+                })}
               </Pie>
               <Tooltip formatter={(val) => formatNum(val)} contentStyle={{ fontSize: '11px', borderRadius: '8px' }} />
               <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 'bold' }} />

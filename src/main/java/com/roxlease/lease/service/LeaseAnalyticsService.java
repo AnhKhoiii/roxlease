@@ -29,7 +29,7 @@ public class LeaseAnalyticsService {
     // ============================================================================
     // 🚀 LOGIC XỬ LÝ 8 TAB REPORTS THEO TÀI LIỆU USECASE
     // ============================================================================
-    public List<Map<String, Object>> getReportDataByType(String type, String siteId) {
+    public List<Map<String, Object>> getReportDataByType(String type, String siteId, LocalDate fromDate, LocalDate toDate) {
         List<Map<String, Object>> result = new ArrayList<>();
         LocalDate sysdate = LocalDate.now();
 
@@ -41,7 +41,27 @@ public class LeaseAnalyticsService {
 
         List<Lease> leases = mongoTemplate.find(leaseQuery, Lease.class);
         List<LeaseOption> allOptions = mongoTemplate.findAll(LeaseOption.class);
-        List<RecurringCostSchedule> schedules = mongoTemplate.findAll(RecurringCostSchedule.class);
+        
+        Set<String> validLeaseIds = leases.stream().map(Lease::getLsId).collect(Collectors.toSet());
+        Query scheduleQuery = new Query();
+        if (siteId != null && !siteId.isEmpty()) {
+            scheduleQuery.addCriteria(Criteria.where("leaseId").in(validLeaseIds));
+        }
+        List<RecurringCostSchedule> schedules = mongoTemplate.find(scheduleQuery, RecurringCostSchedule.class);
+        
+        if (fromDate != null || toDate != null) {
+            leases = leases.stream().filter(ls -> {
+                LocalDate dateToCompare = ls.getEndDate();
+                if (dateToCompare == null) return true;
+                return (fromDate == null || !dateToCompare.isBefore(fromDate)) && (toDate == null || !dateToCompare.isAfter(toDate));
+            }).collect(Collectors.toList());
+            
+            schedules = schedules.stream().filter(s -> {
+                LocalDate dateToCompare = s.getDueDate();
+                if (dateToCompare == null) return true;
+                return (fromDate == null || !dateToCompare.isBefore(fromDate)) && (toDate == null || !dateToCompare.isAfter(toDate));
+            }).collect(Collectors.toList());
+        }
 
         switch (type) {
             case "lease-exp":
@@ -78,23 +98,6 @@ public class LeaseAnalyticsService {
                 result.sort(Comparator.comparing(m -> (Long) m.get("Remaining Days")));
                 break;
 
-            case "opt-exp":
-                // 2. Options by Expiration Date
-                for (LeaseOption opt : allOptions) {
-                    if (!Boolean.TRUE.equals(opt.getActive()) || opt.getEndDate() == null) continue;
-                    long remainingDays = ChronoUnit.DAYS.between(sysdate, opt.getEndDate());
-                    
-                    Map<String, Object> map = new LinkedHashMap<>();
-                    map.put("Lease ID", opt.getLsId());
-                    map.put("Option Type", opt.getOpType() != null ? opt.getOpType().name() : "-");
-                    map.put("Option Date", opt.getEndDate().toString());
-                    map.put("Description", opt.getOpDescription() != null ? opt.getOpDescription() : "-");
-                    map.put("Status", remainingDays < 0 ? "Overdue" : "Pending Action");
-                    result.add(map);
-                }
-                result.sort(Comparator.comparing(m -> (String) m.get("Option Date")));
-                break;
-
             case "landlord":
             case "tenant":
                 // 3 & 4. Lease by Landlord / Tenant
@@ -129,7 +132,14 @@ public class LeaseAnalyticsService {
                 Map<String, List<RecurringCostSchedule>> monthlyGroup = schedules.stream()
                         .filter(s -> s.getPaymentStatus() == PaymentStatus.PAID && s.getDueDate() != null)
                         .filter(s -> isIncomeMonth ? isIncomeType(s.getCostType()) : !isIncomeType(s.getCostType()))
-                        .collect(Collectors.groupingBy(s -> s.getDueDate().format(DateTimeFormatter.ofPattern("MM/yyyy"))));
+                        .collect(Collectors.groupingBy(s -> {
+                            String monthYear = s.getDueDate().format(DateTimeFormatter.ofPattern("MM/yyyy"));
+                            if (isIncomeMonth) {
+                                String costTypeStr = s.getCostType() != null ? s.getCostType().name() : "OTHER";
+                                return monthYear + "|" + costTypeStr;
+                            }
+                            return monthYear;
+                        }));
 
                 for (Map.Entry<String, List<RecurringCostSchedule>> entry : monthlyGroup.entrySet()) {
                     BigDecimal totalAmount = entry.getValue().stream()
@@ -137,7 +147,13 @@ public class LeaseAnalyticsService {
                             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
                     Map<String, Object> map = new LinkedHashMap<>();
-                    map.put("Month/Year", entry.getKey());
+                    if (isIncomeMonth) {
+                        String[] parts = entry.getKey().split("\\|");
+                        map.put("Month/Year", parts[0]);
+                        map.put("Cost Type", parts[1]);
+                    } else {
+                        map.put("Month/Year", entry.getKey());
+                    }
                     map.put("Total Amount", String.format("%,.0f VND", totalAmount));
                     map.put("Transaction Count", entry.getValue().size());
                     map.put("Payment Status", "PAID");
@@ -151,18 +167,31 @@ public class LeaseAnalyticsService {
             case "exp-year":
                 // 6 & 8. Income / Expense by Year
                 boolean isIncomeYear = type.equals("inc-year");
-                Map<Integer, List<RecurringCostSchedule>> yearlyGroup = schedules.stream()
+                Map<String, List<RecurringCostSchedule>> yearlyGroup = schedules.stream()
                         .filter(s -> s.getPaymentStatus() == PaymentStatus.PAID && s.getDueDate() != null)
                         .filter(s -> isIncomeYear ? isIncomeType(s.getCostType()) : !isIncomeType(s.getCostType()))
-                        .collect(Collectors.groupingBy(s -> s.getDueDate().getYear()));
+                        .collect(Collectors.groupingBy(s -> {
+                            String year = String.valueOf(s.getDueDate().getYear());
+                            if (isIncomeYear) {
+                                String costTypeStr = s.getCostType() != null ? s.getCostType().name() : "OTHER";
+                                return year + "|" + costTypeStr;
+                            }
+                            return year;
+                        }));
 
-                for (Map.Entry<Integer, List<RecurringCostSchedule>> entry : yearlyGroup.entrySet()) {
+                for (Map.Entry<String, List<RecurringCostSchedule>> entry : yearlyGroup.entrySet()) {
                     BigDecimal totalAmount = entry.getValue().stream()
                             .map(s -> s.getAmountInBase() != null ? s.getAmountInBase() : BigDecimal.ZERO)
                             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
                     Map<String, Object> map = new LinkedHashMap<>();
-                    map.put("Year", entry.getKey().toString());
+                    if (isIncomeYear) {
+                        String[] parts = entry.getKey().split("\\|");
+                        map.put("Year", parts[0]);
+                        map.put("Cost Type", parts[1]);
+                    } else {
+                        map.put("Year", entry.getKey());
+                    }
                     map.put("Total Amount", String.format("%,.0f VND", totalAmount));
                     map.put("Growth %", "-"); // Logic tăng trưởng năm sau so với năm trước có thể thêm sau
                     map.put("Budget vs Actual", "N/A");
