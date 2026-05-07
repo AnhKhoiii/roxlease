@@ -3,8 +3,8 @@ import axios from 'axios';
 // Khởi tạo một instance của axios với các cấu hình mặc định
 const axiosInstance = axios.create({
   // Địa chỉ gốc của backend Spring Boot
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api',
-  //baseURL: https://casing-entryway-bulldog.ngrok-free.dev/api,
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api' ,
+  //baseURL: import.meta.env.VITE_API_BASE_URL || 'https://casing-entryway-bulldog.ngrok-free.dev/api' ,
   timeout: 60000, // Thời gian chờ tối đa (10 giây)
   headers: {
     'Content-Type': 'application/json',

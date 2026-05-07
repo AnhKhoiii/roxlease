@@ -1,0 +1,21 @@
+﻿Field Name,New Value
+recurringCostId,TEST-DASHBOARD
+description,
+costType,BASESERVICE
+vatCountry,null
+dateMatchLs,false
+overrideExchangeRate,false
+active,false
+startDate,2025-05-02
+endDate,2026-05-03
+period,MONTHLY
+interval,1
+amountInBase,100000000000
+amountOutBase,0
+amountInVat,0
+amountInTotal,100000000000
+amountOutVat,0
+amountOutTotal,0
+exchangeRate,1
+currVat,0
+overrideVat,false

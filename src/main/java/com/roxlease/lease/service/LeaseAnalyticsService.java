@@ -4,6 +4,7 @@ import com.roxlease.cost.model.Enum.CostType;
 import com.roxlease.cost.model.Enum.PaymentStatus;
 import com.roxlease.cost.model.Enum.ScheduleStatus;
 import com.roxlease.cost.model.RecurringCostSchedule;
+import com.roxlease.cost.model.RecurringCost;
 import com.roxlease.lease.model.Lease;
 import com.roxlease.lease.model.LeaseOption;
 import com.roxlease.lease.model.Enum.OptionType;
@@ -14,6 +15,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
@@ -25,6 +27,158 @@ import java.util.stream.Collectors;
 public class LeaseAnalyticsService {
 
     private final MongoTemplate mongoTemplate;
+
+    // ============================================================================
+    // LẤY DỮ LIỆU KPI CHO DASHBOARD (SERVICE & AMENITY)
+    // Áp dụng đúng công thức KH yêu cầu
+    // ============================================================================
+    public Map<String, Map<String, Object>> getDashboardKPIs(LocalDate toDate) {
+        if (toDate == null) toDate = LocalDate.now();
+        int targetYear = toDate.getYear();
+        int targetMonth = toDate.getMonthValue();
+
+        // 1. TẬP HỢP CATEGORY THEO YÊU CẦU
+        List<String> amenityCategories = Arrays.asList("OCC", "Billboard", "Pool", "Parking Area", "Event Hall", "Other");
+        String serviceCategory = "Service";
+
+        // Truy vấn dữ liệu Kế hoạch (Plan)
+        // Sử dụng org.bson.Document để mapping linh hoạt vì data từ collection plans (hoặc planned_revenues)
+        Query planQuery = new Query();
+        List<org.bson.Document> allPlans = mongoTemplate.find(planQuery, org.bson.Document.class, "planned_revenues");
+
+        // Lấy toàn bộ CPĐK và Lịch biểu để check theo đúng công thức
+        List<RecurringCost> allCosts = mongoTemplate.findAll(RecurringCost.class);
+        List<RecurringCostSchedule> allSchedules = mongoTemplate.findAll(RecurringCostSchedule.class);
+        
+        // Map category & trạng thái của từng RecurringCost cho các Schedule
+        Map<String, String> costCategoryMap = new HashMap<>();
+        Set<String> scheduledCostIds = new HashSet<>();
+        for (RecurringCost c : allCosts) {
+            if (c.getCostType() != null) {
+                costCategoryMap.put(c.getRecurringCostId(), c.getCostType());
+            }
+            if ("SCHEDULED".equals(c.getScheduleStatus())) {
+                scheduledCostIds.add(c.getRecurringCostId());
+            }
+        }
+
+        // --- CÁC BIẾN TÍNH TOÁN CHO SERVICE ---
+        BigDecimal svcAnnualPlan = BigDecimal.ZERO;
+        BigDecimal svcPlanToDate = BigDecimal.ZERO;
+        BigDecimal svcActualToDate = BigDecimal.ZERO;
+        BigDecimal svcAnnualForecast = BigDecimal.ZERO;
+
+        // --- CÁC BIẾN TÍNH TOÁN CHO AMENITY ---
+        BigDecimal amActualRev = BigDecimal.ZERO;     // Doanh thu thực hiện tiện ích theo tháng
+        BigDecimal amForecastRev = BigDecimal.ZERO;   // Doanh thu dự báo tiện ích theo tháng
+        BigDecimal amAnnualPlan = BigDecimal.ZERO;
+        BigDecimal amPlanToDate = BigDecimal.ZERO;
+        BigDecimal amActualToDate = BigDecimal.ZERO;
+        BigDecimal amAnnualForecast = BigDecimal.ZERO;
+
+        // 2. TÍNH CHỈ SỐ PLAN (KẾ HOẠCH DOANH THU)
+        for (org.bson.Document plan : allPlans) {
+            String cat = plan.getString("category");
+            if (cat == null) continue;
+
+            java.util.Date rawDate = plan.getDate("end_date");
+            if (rawDate == null) continue;
+            
+            LocalDate endDate = rawDate.toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate();
+            Object planCostObj = plan.get("plan_cost");
+            BigDecimal planCost = planCostObj != null ? new BigDecimal(planCostObj.toString()) : BigDecimal.ZERO;
+
+            if (endDate.getYear() == targetYear) {
+                // Dành cho Service
+                if (serviceCategory.equalsIgnoreCase(cat) || "Income_Base service".equalsIgnoreCase(cat)) {
+                    svcAnnualPlan = svcAnnualPlan.add(planCost);
+                    if (endDate.getMonthValue() <= targetMonth) {
+                        svcPlanToDate = svcPlanToDate.add(planCost); // KH Lũy kế đến thời điểm báo cáo
+                    }
+                }
+                // Dành cho Amenity (Trừ Rental & Service)
+                else if (amenityCategories.contains(cat)) {
+                    amAnnualPlan = amAnnualPlan.add(planCost);
+                    if (endDate.getMonthValue() <= targetMonth) {
+                        amPlanToDate = amPlanToDate.add(planCost);
+                    }
+                }
+            }
+        }
+
+        // 3. TÍNH CHỈ SỐ ACTUAL & FORECAST (THỰC TẾ & DỰ BÁO)
+        for (RecurringCostSchedule sch : allSchedules) {
+            String cat = costCategoryMap.get(sch.getRecurringCostId());
+            if (cat == null) continue;
+
+            LocalDate due = sch.getDueDate();
+            if (due == null || due.getYear() != targetYear) continue;
+
+            BigDecimal amt = sch.getAmountInBase() != null ? sch.getAmountInBase() : BigDecimal.ZERO;
+            boolean isPaid = sch.getPaymentStatus() == PaymentStatus.PAID;
+            boolean isNotCancelled = sch.getPaymentStatus() != PaymentStatus.REJECTED; // Tương đương != CANCELLED
+            boolean isScheduledPlan = scheduledCostIds.contains(sch.getRecurringCostId()); // CPĐK có Schedule_Status = Schedule
+
+            // --- LOGIC CHO SERVICE ---
+            if (serviceCategory.equalsIgnoreCase(cat) || "Income_Base service".equalsIgnoreCase(cat) || "BASESERVICE".equalsIgnoreCase(cat)) {
+                if (isPaid && !due.isAfter(toDate)) {
+                    svcActualToDate = svcActualToDate.add(amt);
+                }
+                if (isScheduledPlan) {
+                    svcAnnualForecast = svcAnnualForecast.add(amt);
+                }
+            }
+            
+            // --- LOGIC CHO AMENITY ---
+            else if (amenityCategories.contains(cat)) {
+                // Các chỉ số tính theo đúng Tháng (Monthly)
+                if (due.getMonthValue() == targetMonth) {
+                    if (isPaid) amActualRev = amActualRev.add(amt);
+                    if (isNotCancelled) amForecastRev = amForecastRev.add(amt); // Dự báo tiện ích theo tháng
+                }
+
+                // Lũy kế đến thời điểm báo cáo & Dự báo năm
+                if (isPaid && !due.isAfter(toDate)) {
+                    amActualToDate = amActualToDate.add(amt);
+                }
+                if (isScheduledPlan) {
+                    amAnnualForecast = amAnnualForecast.add(amt);
+                }
+            }
+        }
+
+        // 4. TÍNH TỈ LỆ HOÀN THÀNH (ACHIEVEMENTS) & TRẢ VỀ DỮ LIỆU
+        Map<String, Object> serviceKPI = new LinkedHashMap<>();
+        serviceKPI.put("Annual Plan", svcAnnualPlan);
+        serviceKPI.put("Plan to Date", svcPlanToDate);
+        serviceKPI.put("Actual to Date", svcActualToDate);
+        serviceKPI.put("Annual Forecast", svcAnnualForecast);
+        serviceKPI.put("Plan Achievement (%)", calcPercentage(svcActualToDate, svcAnnualPlan));
+        serviceKPI.put("Forecast Achievement (%)", calcPercentage(svcAnnualForecast, svcAnnualPlan));
+        serviceKPI.put("YTD Achievement (%)", calcPercentage(svcActualToDate, svcPlanToDate));
+
+        Map<String, Object> amenityKPI = new LinkedHashMap<>();
+        amenityKPI.put("Actual Revenue", amActualRev);
+        amenityKPI.put("Forecast Revenue", amForecastRev);
+        amenityKPI.put("Annual Plan", amAnnualPlan);
+        amenityKPI.put("Plan to Date", amPlanToDate);
+        amenityKPI.put("Actual to Date", amActualToDate);
+        amenityKPI.put("Annual Forecast", amAnnualForecast);
+        amenityKPI.put("Plan Achievement (%)", calcPercentage(amActualToDate, amAnnualPlan));
+        amenityKPI.put("Forecast Achievement (%)", calcPercentage(amAnnualForecast, amAnnualPlan));
+        amenityKPI.put("YTD Achievement (%)", calcPercentage(amActualToDate, amPlanToDate));
+
+        Map<String, Map<String, Object>> dashboardData = new HashMap<>();
+        dashboardData.put("Service", serviceKPI);
+        dashboardData.put("Amenity", amenityKPI);
+
+        return dashboardData;
+    }
+
+    private double calcPercentage(BigDecimal part, BigDecimal total) {
+        if (total == null || total.compareTo(BigDecimal.ZERO) == 0) return 0.0;
+        return part.divide(total, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100")).doubleValue();
+    }
 
     // ============================================================================
     // 🚀 LOGIC XỬ LÝ 8 TAB REPORTS THEO TÀI LIỆU USECASE
