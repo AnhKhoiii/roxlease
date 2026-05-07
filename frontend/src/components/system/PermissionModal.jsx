@@ -55,7 +55,6 @@ export default function PermissionModal({ isOpen, onClose, onSave, mode, initial
               <option value="">-- Choose Module --</option>
               <option value="SPACE">SPACE</option>
               <option value="LEASE">LEASE</option>
-              <option value="COST">COST</option>
               <option value="SERVICEDESK">SERVICEDESK</option>
               <option value="SYSTEM">SYSTEM</option>
             </select>

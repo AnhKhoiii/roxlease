@@ -101,7 +101,7 @@ export default function AmenityConsole() {
         
         {/* HEADER */}
         <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200 shrink-0">
-          <h2 className="font-bold text-xl uppercase tracking-wider text-gray-800">Quản lý Amenity</h2>
+          <h2 className="font-bold text-xl uppercase tracking-wider text-gray-800">Amenity</h2>
 
           <div className="flex gap-3">
             <button onClick={handleOpenAdd} disabled={!canEdit} className={`px-5 py-2 rounded font-bold shadow-sm transition-colors text-[14px] ${canEdit ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>

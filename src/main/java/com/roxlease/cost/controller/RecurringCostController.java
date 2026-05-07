@@ -47,7 +47,7 @@ public class RecurringCostController {
     public ResponseEntity<?> deleteCost(@PathVariable String leaseId, @PathVariable String costId) {
         try {
             service.delete(costId);
-            return ResponseEntity.ok(Collections.singletonMap("message", "Đã xóa Recurring Cost thành công!"));
+            return ResponseEntity.ok(Collections.singletonMap("message", "Đã xóa Recurring Cost và các kỳ thanh toán liên quan thành công!"));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Collections.singletonMap("error", "Lỗi khi xóa: " + e.getMessage()));
         }

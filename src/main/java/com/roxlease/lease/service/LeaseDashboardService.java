@@ -209,13 +209,12 @@ public class LeaseDashboardService {
 
         long overdue270 = 0, overdueMore270 = 0, paidLate = 0;
         for (RecurringCostSchedule sch : schedules) {
-            if (sch.getScheduleStatus() != ScheduleStatus.SCHEDULED && sch.getScheduleStatus() != ScheduleStatus.APPROVED) continue;
             if (sch.getDueDate() == null) continue;
             
             if (sch.getPaymentStatus() == PaymentStatus.PENDING || sch.getPaymentStatus() == null) { 
                 long delay = ChronoUnit.DAYS.between(sch.getDueDate(), LocalDate.now()); 
                 if (delay > 0) {
-                    if (delay < 270) overdue270++;
+                    if (delay <= 270) overdue270++;
                     else overdueMore270++;
                 }
             } else if (sch.getPaymentStatus() == PaymentStatus.PAID) { 
@@ -317,7 +316,7 @@ public class LeaseDashboardService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             BigDecimal forecast = allSchedules.stream()
-                .filter(s -> s.getCostType() == costType && (ScheduleStatus.SCHEDULED!=s.getScheduleStatus()) && s.getDueDate() != null && s.getDueDate().getYear() == year && s.getDueDate().getMonthValue() == month)
+                .filter(s -> s.getCostType() == costType && s.getPaymentStatus() != PaymentStatus.REJECTED && s.getDueDate() != null && s.getDueDate().getYear() == year && s.getDueDate().getMonthValue() == month)
                 .map(s -> s.getAmountInBase() != null ? s.getAmountInBase() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -430,7 +429,7 @@ public class LeaseDashboardService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal annualForecast = schedules.stream()
-                .filter(s -> (ScheduleStatus.SCHEDULED == s.getScheduleStatus() || ScheduleStatus.APPROVED == s.getScheduleStatus()) && s.getDueDate() != null && s.getDueDate().getYear() == currentYear)
+                .filter(s -> s.getPaymentStatus() != PaymentStatus.REJECTED && s.getDueDate() != null && s.getDueDate().getYear() == currentYear)
                 .map(s -> s.getAmountInBase() != null ? s.getAmountInBase() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 

@@ -1,0 +1,26 @@
+﻿Field Name,New Value
+recurringCostId,test0001
+lsId,LEASE-01
+costType,BASERENT
+vatCountry,null
+currVat,0
+amountInBase,10000
+amountInVat,0
+amountInTotal,10000
+overrideExchangeRate,false
+exchangeRate,1
+amountOutBase,10000
+amountOutVat,0
+amountOutTotal,10000
+overrideVat,false
+manualBase,null
+scheduleStatus,SCHEDULED
+dateMatchLs,true
+period,DAILY
+interval,1
+startDate,2026-04-01
+endDate,2026-05-31
+active,true
+description,test
+createdAt,null
+updatedAt,2026-05-08T00:06:41.34

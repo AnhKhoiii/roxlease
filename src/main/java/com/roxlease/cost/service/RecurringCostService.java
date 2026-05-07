@@ -1,9 +1,14 @@
 package com.roxlease.cost.service;
 
 import com.roxlease.cost.model.RecurringCost;
+import com.roxlease.cost.model.RecurringCostSchedule;
 import com.roxlease.cost.repository.RecurringCostRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -11,6 +16,9 @@ import java.util.List;
 public class RecurringCostService {
     @Autowired
     private RecurringCostRepository repository;
+
+    @Autowired
+    private MongoTemplate mongoTemplate;
 
     public List<RecurringCost> getByLeaseId(String leaseId) {
         return repository.findByLsId(leaseId);
@@ -26,6 +34,10 @@ public class RecurringCostService {
     }
 
     public void delete(String id) {
+        // Xóa tất cả các Schedule (Kỳ thanh toán) liên quan đến Recurring Cost này trước khi xóa Cost
+        Query query = new Query(Criteria.where("recurringCostId").is(id));
+        mongoTemplate.remove(query, RecurringCostSchedule.class);
+
         repository.deleteById(id);
     }
 }
