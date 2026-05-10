@@ -15,6 +15,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import com.roxlease.system.model.PasswordResetToken;
 import com.roxlease.system.repository.PasswordResetTokenRepository;
 import com.roxlease.core.utils.JwtUtils;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -24,6 +25,9 @@ import java.util.UUID;
 
 @Service
 public class AuthService {
+
+    @Value("${app.frontend.url:http://localhost:5173}")
+    private String frontendUrl;
 
     private final ActiveSessionRepository sessionRepository;
     private final UserRepository userRepository;
@@ -160,7 +164,7 @@ public class AuthService {
         tokenRepository.save(resetToken);
 
         // Gửi email
-        String resetLink = "http://localhost:5173/reset-password?token=" + token;
+        String resetLink = frontendUrl + "/reset-password?token=" + token;
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(email);
         message.setSubject("[ROX Lease] Please enter your password");
@@ -171,8 +175,8 @@ public class AuthService {
         mailSender.send(message);
     }
 
-    // --- RESET PASSWORD ---
-    public void resetPassword(String token, String newPassword) {
+    // --- VALIDATE RESET TOKEN ---
+    public void validateResetToken(String token) {
         PasswordResetToken resetToken = tokenRepository.findByToken(token)
                 .orElseThrow(() -> new RuntimeException("The link is invalid or does not exist"));
 
@@ -182,7 +186,13 @@ public class AuthService {
         if (resetToken.getExpiryDate().isBefore(LocalDateTime.now())) {
             throw new RuntimeException("The link has expired");
         }
+    }
 
+    // --- RESET PASSWORD ---
+    public void resetPassword(String token, String newPassword) {
+        validateResetToken(token); // Tái sử dụng logic kiểm tra
+
+        PasswordResetToken resetToken = tokenRepository.findByToken(token).get(); // Gọi get() do validateResetToken đã kiểm tra kỹ
         User user = userRepository.findByEmail(resetToken.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 

@@ -217,6 +217,24 @@ export default function PlannedRevenue() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} selected records?`)) return;
+
+    setLoading(true);
+    try {
+      for (const id of selectedIds) {
+        await axiosInstance.delete(`/cost/planned-revenues/${id}`).catch(e => console.warn(`Failed to delete ${id}`, e));
+      }
+      setSelectedIds([]);
+      fetchData();
+    } catch (error) {
+      alert("Error deleting some or all selected data!");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSelectAll = (e) => setSelectedIds(e.target.checked ? listData.map(item => item.id) : []);
   const handleSelectRow = (e, id) => {
     e.stopPropagation();
@@ -255,12 +273,22 @@ export default function PlannedRevenue() {
           </button>
         </div>
 
-        <button 
-          onClick={() => { setFormData(initialForm); setIsEditMode(false); setModalOpen(true); }} 
-          className="bg-[#DE3B40] hover:bg-[#C11C22] text-white px-5 py-2 rounded text-sm font-bold shadow-sm transition-colors"
-        >
-          + Add New
-        </button>
+        <div className="flex items-center gap-3">
+          {selectedIds.length > 0 && (
+            <button 
+              onClick={handleBulkDelete} 
+              className="px-5 py-2 rounded text-sm font-bold shadow-sm transition-colors bg-red-50 text-[#DE3B40] border border-[#DE3B40] hover:bg-red-100"
+            >
+              Delete Selected ({selectedIds.length})
+            </button>
+          )}
+          <button 
+            onClick={() => { setFormData(initialForm); setIsEditMode(false); setModalOpen(true); }} 
+            className="bg-[#DE3B40] hover:bg-[#C11C22] text-white px-5 py-2 rounded text-sm font-bold shadow-sm transition-colors"
+          >
+            + Add New
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 flex-1 overflow-hidden relative">
@@ -271,6 +299,7 @@ export default function PlannedRevenue() {
                 <th className="w-10 px-4 py-3 text-center border-b border-[#D68910]">
                   <input type="checkbox" onChange={handleSelectAll} checked={listData.length > 0 && selectedIds.length === listData.length} className="w-3.5 h-3.5 rounded cursor-pointer border-none" />
                 </th>
+                <th className="px-4 py-3 font-semibold tracking-wide border-b border-[#D68910]">ID</th>
                 <th className="px-4 py-3 font-semibold tracking-wide border-b border-[#D68910]">Site ID</th>
                 <th className="px-4 py-3 font-semibold tracking-wide border-b border-[#D68910]">Category</th>
                 <th className="px-4 py-3 font-semibold tracking-wide border-b border-[#D68910] text-center">Year</th>
@@ -281,9 +310,9 @@ export default function PlannedRevenue() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
-                <tr><td colSpan="7" className="text-center py-12 text-orange-500 font-bold">Loading...</td></tr>
+                <tr><td colSpan="8" className="text-center py-12 text-orange-500 font-bold">Loading...</td></tr>
               ) : listData.length === 0 ? (
-                <tr><td colSpan="7" className="text-center py-12 text-gray-500 font-medium">No Planned Data Found.</td></tr>
+                <tr><td colSpan="8" className="text-center py-12 text-gray-500 font-medium">No Planned Data Found.</td></tr>
               ) : (
                 listData.map((item) => (
                   <tr key={item.id} 
@@ -293,6 +322,7 @@ export default function PlannedRevenue() {
                     <td className="px-4 py-2.5 text-center border-r border-gray-50">
                       <input type="checkbox" checked={selectedIds.includes(item.id)} onChange={(e) => handleSelectRow(e, item.id)} onClick={e => e.stopPropagation()} className="w-3.5 h-3.5 rounded cursor-pointer" />
                     </td>
+                    <td className="px-4 py-2.5 font-bold text-gray-800 border-r border-gray-50">{item.id}</td>
                     <td className="px-4 py-2.5 font-bold text-blue-600 border-r border-gray-50">{item.siteId}</td>
                     <td className="px-4 py-2.5 text-gray-700 border-r border-gray-50">{item.category || ""}</td>
                     <td className="px-4 py-2.5 text-center text-gray-700 border-r border-gray-50">{item.year}</td>
@@ -322,6 +352,12 @@ export default function PlannedRevenue() {
             
             <div className="p-8 bg-gray-50 flex flex-col gap-6">
               
+              {isEditMode && (
+                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                   <Input label="Planned Revenue ID" value={formData.id} disabled />
+                </div>
+              )}
+
               <div className="grid grid-cols-3 gap-6 bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
                 <Input 
                   type="number" label="Planned Revenue" required 
@@ -344,13 +380,13 @@ export default function PlannedRevenue() {
                   value={formData.category} onChange={v => setFormData({...formData, category: v})} 
                   options={[
                     { value: "OCC", label: "OCC" },
-                    { value: "Rental", label: "Rental" },
-                    { value: "Service", label: "Service" },
-                    { value: "Billboard", label: "Billboard" },
-                    { value: "Pool", label: "Pool" },
-                    { value: "Parking Area", label: "Parking Area" },
-                    { value: "Event Hall", label: "Event Hall" },
-                    { value: "Other", label: "Other" }
+                    { value: "RENTAL", label: "Rental" },
+                    { value: "SERVICE", label: "Service" },
+                    { value: "BILLBOARD", label: "Billboard" },
+                    { value: "POOL", label: "Pool" },
+                    { value: "PARKING_AREA", label: "Parking Area" },
+                    { value: "EVENT_HALL", label: "Event Hall" },
+                    { value: "OTHER", label: "Other" }
                   ]}
                 />
                 

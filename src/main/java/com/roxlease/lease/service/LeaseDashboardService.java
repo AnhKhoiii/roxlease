@@ -181,6 +181,11 @@ public class LeaseDashboardService {
         List<Clause> clauses = mongoTemplate.findAll(Clause.class);
         List<RecurringCost> recurringCosts = mongoTemplate.findAll(RecurringCost.class);
         
+        List<Map<String, Object>> exp1MList = new ArrayList<>();
+        List<Map<String, Object>> exp3MList = new ArrayList<>();
+        List<Map<String, Object>> exp6MList = new ArrayList<>();
+        List<Map<String, Object>> expOverdueList = new ArrayList<>();
+
         long exp1M = 0, exp3M = 0, exp6M = 0, expOverdue = 0;
         for (Lease ls : leases) {
             if (!Boolean.TRUE.equals(ls.getActive())) continue;
@@ -200,12 +205,21 @@ public class LeaseDashboardService {
 
             if (effectiveEnd != null) {
                 long daysLeft = ChronoUnit.DAYS.between(LocalDate.now(), effectiveEnd); 
-                if (daysLeft < 0) expOverdue++;
-                else if (daysLeft <= 30) exp1M++;
-                else if (daysLeft <= 90) exp3M++;
-                else if (daysLeft <= 180) exp6M++;
+                Map<String, Object> detail = new HashMap<>();
+                detail.put("id", ls.getLsId());
+                detail.put("name", ls.getPartyId() != null ? ls.getPartyId() : "N/A");
+                detail.put("value", effectiveEnd.toString());
+                
+                if (daysLeft < 0) { expOverdue++; expOverdueList.add(detail); }
+                else if (daysLeft <= 30) { exp1M++; exp1MList.add(detail); }
+                else if (daysLeft <= 90) { exp3M++; exp3MList.add(detail); }
+                else if (daysLeft <= 180) { exp6M++; exp6MList.add(detail); }
             }
         }
+
+        List<Map<String, Object>> overdue270List = new ArrayList<>();
+        List<Map<String, Object>> overdueMore270List = new ArrayList<>();
+        List<Map<String, Object>> paidLateList = new ArrayList<>();
 
         long overdue270 = 0, overdueMore270 = 0, paidLate = 0;
         for (RecurringCostSchedule sch : schedules) {
@@ -214,15 +228,30 @@ public class LeaseDashboardService {
             if (sch.getPaymentStatus() == PaymentStatus.PENDING || sch.getPaymentStatus() == null) { 
                 long delay = ChronoUnit.DAYS.between(sch.getDueDate(), LocalDate.now()); 
                 if (delay > 0) {
-                    if (delay <= 270) overdue270++;
-                    else overdueMore270++;
+                    Map<String, Object> detail = new HashMap<>();
+                    detail.put("id", sch.getLeaseId() != null ? sch.getLeaseId() : "N/A");
+                    detail.put("name", sch.getCostType() != null ? sch.getCostType().name() : "N/A");
+                    detail.put("value", (sch.getAmountInBase() != null ? sch.getAmountInBase() : "0") + " VND");
+
+                    if (delay <= 270) { overdue270++; overdue270List.add(detail); }
+                    else { overdueMore270++; overdueMore270List.add(detail); }
                 }
             } else if (sch.getPaymentStatus() == PaymentStatus.PAID) { 
                 if (sch.getPaymentDate() != null && sch.getDueDate().isBefore(sch.getPaymentDate())) {
-                    paidLate++;
+                    Map<String, Object> detail = new HashMap<>();
+                    detail.put("id", sch.getLeaseId() != null ? sch.getLeaseId() : "N/A");
+                    detail.put("name", sch.getCostType() != null ? sch.getCostType().name() : "N/A");
+                    detail.put("value", (sch.getAmountInBase() != null ? sch.getAmountInBase() : "0") + " VND");
+
+                    paidLate++; paidLateList.add(detail);
                 }
             }
         }
+
+        List<Map<String, Object>> adj1MList = new ArrayList<>();
+        List<Map<String, Object>> adj3MList = new ArrayList<>();
+        List<Map<String, Object>> adj6MList = new ArrayList<>();
+        List<Map<String, Object>> adjOverdueList = new ArrayList<>();
 
         long adj1M = 0, adj3M = 0, adj6M = 0, adjOverdue = 0;
         for (Clause clause : clauses) {
@@ -243,28 +272,33 @@ public class LeaseDashboardService {
 
             if (!hasMatchingCost && clause.getStartDate() != null) {
                 long days = ChronoUnit.DAYS.between(toDate, clause.getStartDate()); 
-                if (days < 0) adjOverdue++;
-                else if (days <= 30) adj1M++;
-                else if (days <= 90) adj3M++;
-                else if (days <= 180) adj6M++;
+                Map<String, Object> detail = new HashMap<>();
+                detail.put("id", clause.getClauseId() != null ? clause.getClauseId() : "N/A");
+                detail.put("name", "Lease: " + clause.getLeaseId());
+                detail.put("value", clause.getStartDate().toString());
+
+                if (days < 0) { adjOverdue++; adjOverdueList.add(detail); }
+                else if (days <= 30) { adj1M++; adj1MList.add(detail); }
+                else if (days <= 90) { adj3M++; adj3MList.add(detail); }
+                else if (days <= 180) { adj6M++; adj6MList.add(detail); }
             }
         }
 
         return DashboardResponse.Charts.builder()
                 .contractExpiration(Arrays.asList(
-                        DashboardResponse.ChartData.builder().name("< 1 Month").value(exp1M).build(),
-                        DashboardResponse.ChartData.builder().name("1-3 Months").value(exp3M).build(),
-                        DashboardResponse.ChartData.builder().name("3-6 Months").value(exp6M).build(),
-                        DashboardResponse.ChartData.builder().name("Overdue").value(expOverdue).build()))
+                        DashboardResponse.ChartData.builder().name("< 1 Month").value(exp1M).details(exp1MList).build(),
+                        DashboardResponse.ChartData.builder().name("1-3 Months").value(exp3M).details(exp3MList).build(),
+                        DashboardResponse.ChartData.builder().name("3-6 Months").value(exp6M).details(exp6MList).build(),
+                        DashboardResponse.ChartData.builder().name("Overdue").value(expOverdue).details(expOverdueList).build()))
                 .overduePayment(Arrays.asList(
-                        DashboardResponse.ChartData.builder().name("< 270 Days").value(overdue270).build(),
-                        DashboardResponse.ChartData.builder().name("> 270 Days").value(overdueMore270).build(),
-                        DashboardResponse.ChartData.builder().name("Paid Late").value(paidLate).build()))
+                        DashboardResponse.ChartData.builder().name("< 270 Days").value(overdue270).details(overdue270List).build(),
+                        DashboardResponse.ChartData.builder().name("> 270 Days").value(overdueMore270).details(overdueMore270List).build(),
+                        DashboardResponse.ChartData.builder().name("Paid Late").value(paidLate).details(paidLateList).build()))
                 .priceAdjustment(Arrays.asList(
-                        DashboardResponse.ChartData.builder().name("< 1 Month").value(adj1M).build(),
-                        DashboardResponse.ChartData.builder().name("1-3 Months").value(adj3M).build(),
-                        DashboardResponse.ChartData.builder().name("3-6 Months").value(adj6M).build(),
-                        DashboardResponse.ChartData.builder().name("Overdue").value(adjOverdue).build()))
+                        DashboardResponse.ChartData.builder().name("< 1 Month").value(adj1M).details(adj1MList).build(),
+                        DashboardResponse.ChartData.builder().name("1-3 Months").value(adj3M).details(adj3MList).build(),
+                        DashboardResponse.ChartData.builder().name("3-6 Months").value(adj6M).details(adj6MList).build(),
+                        DashboardResponse.ChartData.builder().name("Overdue").value(adjOverdue).details(adjOverdueList).build()))
                 .build();
     }
 
@@ -275,7 +309,9 @@ public class LeaseDashboardService {
         List<Lease> allLeases = mongoTemplate.findAll(Lease.class);
         List<LeaseAmenity> leaseAmenities = mongoTemplate.findAll(LeaseAmenity.class);
         List<RecurringCostSchedule> schedules = mongoTemplate.findAll(RecurringCostSchedule.class);
-        List<PlannedRevenue> allPlans = mongoTemplate.findAll(PlannedRevenue.class);
+        
+        // 🚀 ĐÃ FIX: Dùng Document để lấy dữ liệu tránh lỗi MappingException từ Enum Category
+        List<org.bson.Document> allPlans = mongoTemplate.find(new Query(), org.bson.Document.class, "planned_revenues");
 
         List<Room> rooms = mongoTemplate.find(spaceQuery, Room.class);
         BigDecimal nfa = rooms.stream().map(r -> r.getArea() != null ? BigDecimal.valueOf(r.getArea()) : BigDecimal.ZERO).reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -284,9 +320,23 @@ public class LeaseDashboardService {
         Set<String> leasesWithAmenity = leaseAmenities.stream().map(LeaseAmenity::getLsId).collect(Collectors.toSet());
         List<Lease> nonAmenityLeases = allLeases.stream().filter(l -> !leasesWithAmenity.contains(l.getLsId())).collect(Collectors.toList());
 
-        List<PlannedRevenue> contractPlans = allPlans.stream().filter(p -> Category.RENTAL_REVENUE == p.getCategory()).collect(Collectors.toList());
-        List<PlannedRevenue> servicePlans = allPlans.stream().filter(p -> Category.SERVICE_REVENUE == p.getCategory()).collect(Collectors.toList());
-        List<PlannedRevenue> amenityPlans = allPlans.stream().filter(p -> p.getCategory() != null && Category.RENTAL_REVENUE != p.getCategory() && Category.SERVICE_REVENUE != p.getCategory()).collect(Collectors.toList());
+        List<org.bson.Document> contractPlans = new ArrayList<>();
+        List<org.bson.Document> servicePlans = new ArrayList<>();
+        List<org.bson.Document> amenityPlans = new ArrayList<>();
+
+        for (org.bson.Document p : allPlans) {
+            String catStr = p.getString("category");
+            if (catStr == null) continue;
+            String catUpper = catStr.toUpperCase().replace(" ", "_");
+            
+            if (catUpper.contains("RENTAL") || catUpper.contains("INCOME_BASE_RENT")) {
+                contractPlans.add(p);
+            } else if (catUpper.contains("SERVICE") || catUpper.contains("INCOME_BASE_SERVICE")) {
+                servicePlans.add(p);
+            } else {
+                amenityPlans.add(p);
+            }
+        }
 
         // Lấy KPI Cards
         DashboardResponse.KPICards contractKpi = calculateRevenueKPI(schedules.stream().filter(s -> !leasesWithAmenity.contains(s.getLeaseId()) && s.getCostType() == CostType.BASERENT).collect(Collectors.toList()), contractPlans, toDate, 0, 0);
@@ -304,7 +354,7 @@ public class LeaseDashboardService {
                 .build();
     }
 
-    private List<DashboardResponse.MonthlyRevenue> buildMonthlyChart(List<RecurringCostSchedule> allSchedules, List<PlannedRevenue> plans, CostType costType, int year, List<Lease> leases, BigDecimal safeNfa) {
+    private List<DashboardResponse.MonthlyRevenue> buildMonthlyChart(List<RecurringCostSchedule> allSchedules, List<org.bson.Document> plans, CostType costType, int year, List<Lease> leases, BigDecimal safeNfa) {
         List<DashboardResponse.MonthlyRevenue> monthlyData = new ArrayList<>();
         
         for (int m = 1; m <= 12; m++) {
@@ -321,14 +371,14 @@ public class LeaseDashboardService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             BigDecimal planned = plans.stream()
-                .filter(p -> p.getYear() != null && p.getYear() == year && p.getMonth() != null && p.getMonth() == month)
-                .map(p -> p.getPlannedCost() != null ? p.getPlannedCost() : BigDecimal.ZERO)
+                .filter(p -> getYearFromDoc(p) == year && getMonthFromDoc(p) == month)
+                .map(p -> getCostFromDoc(p, "plannedCost", "plan_cost", "planned_cost"))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             // 🚀 Lấy Planned OCC Nhập tay từ DB
             double plannedOcc = plans.stream()
-                .filter(p -> p.getYear() != null && p.getYear() == year && p.getMonth() != null && p.getMonth() == month && p.getPlannedOcc() != null)
-                .mapToDouble(p -> p.getPlannedOcc().doubleValue())
+                .filter(p -> getYearFromDoc(p) == year && getMonthFromDoc(p) == month && getCostFromDoc(p, "plannedOcc", "planned_occ").compareTo(BigDecimal.ZERO) > 0)
+                .mapToDouble(p -> getCostFromDoc(p, "plannedOcc", "planned_occ").doubleValue())
                 .findFirst().orElse(0.0);
 
             double actualOcc = 0;
@@ -349,7 +399,7 @@ public class LeaseDashboardService {
     }
 
     // 🚀 HÀM PHÂN LOẠI CATEGORY CHO AMENITY DÙNG PLAN THEO CATEGORY
-    private List<DashboardResponse.AmenityRevenueData> buildAmenityChart(List<RecurringCostSchedule> schedules, List<PlannedRevenue> plans, int year, Set<String> amenityLeaseIds) {
+    private List<DashboardResponse.AmenityRevenueData> buildAmenityChart(List<RecurringCostSchedule> schedules, List<org.bson.Document> plans, int year, Set<String> amenityLeaseIds) {
         List<Amenity> allAmenities = mongoTemplate.findAll(Amenity.class);
         List<LeaseAmenity> allLeaseAmenities = mongoTemplate.findAll(LeaseAmenity.class);
 
@@ -396,18 +446,23 @@ public class LeaseDashboardService {
             }
         }
 
-        for (PlannedRevenue p : plans) {
-            if (p.getYear() != null && p.getYear() == year && p.getPlannedCost() != null) {
-                String catName = p.getCategory().toString();
-                boolean matched = false;
-                for (String c : categories) {
-                    if (c.equalsIgnoreCase(catName) || catName.toUpperCase().contains(c.toUpperCase().replace(" ", "_"))) {
-                        plannedMap.put(c, plannedMap.get(c).add(p.getPlannedCost()));
-                        matched = true;
-                        break;
+        for (org.bson.Document p : plans) {
+            if (getYearFromDoc(p) == year) {
+                BigDecimal cost = getCostFromDoc(p, "plannedCost", "plan_cost", "planned_cost");
+                if (cost.compareTo(BigDecimal.ZERO) > 0) {
+                    String catName = p.getString("category");
+                    if (catName == null) catName = "Other";
+                    
+                    boolean matched = false;
+                    for (String c : categories) {
+                        if (c.equalsIgnoreCase(catName) || catName.toUpperCase().contains(c.toUpperCase().replace(" ", "_"))) {
+                            plannedMap.put(c, plannedMap.get(c).add(cost));
+                            matched = true;
+                            break;
+                        }
                     }
+                    if (!matched) plannedMap.put("Other", plannedMap.get("Other").add(cost));
                 }
-                if (!matched) plannedMap.put("Other", plannedMap.get("Other").add(p.getPlannedCost()));
             }
         }
 
@@ -419,7 +474,7 @@ public class LeaseDashboardService {
         return list;
     }
 
-    private DashboardResponse.KPICards calculateRevenueKPI(List<RecurringCostSchedule> schedules, List<PlannedRevenue> plans, LocalDate toDate, double actualOcc, double forecastOcc) {
+    private DashboardResponse.KPICards calculateRevenueKPI(List<RecurringCostSchedule> schedules, List<org.bson.Document> plans, LocalDate toDate, double actualOcc, double forecastOcc) {
         int currentYear = toDate.getYear();
         int currentMonth = toDate.getMonthValue();
 
@@ -435,11 +490,14 @@ public class LeaseDashboardService {
 
         BigDecimal annualPlan = BigDecimal.ZERO;
         BigDecimal planToDate = BigDecimal.ZERO;
-        for (PlannedRevenue p : plans) {
-            if (p.getYear() != null && p.getYear() == currentYear && p.getPlannedCost() != null) {
-                annualPlan = annualPlan.add(p.getPlannedCost());
-                if (p.getMonth() != null && p.getMonth() <= currentMonth) {
-                    planToDate = planToDate.add(p.getPlannedCost());
+        for (org.bson.Document p : plans) {
+            if (getYearFromDoc(p) == currentYear) {
+                BigDecimal cost = getCostFromDoc(p, "plannedCost", "plan_cost", "planned_cost");
+                annualPlan = annualPlan.add(cost);
+                
+                int m = getMonthFromDoc(p);
+                if (m > 0 && m <= currentMonth) {
+                    planToDate = planToDate.add(cost);
                 }
             }
         }
@@ -456,5 +514,28 @@ public class LeaseDashboardService {
                 .planAchievement(planAchievement).forecastAchievement(forecastAchievement).ytdAchievement(ytdAchievement)
                 .actualOcc(actualOcc).forecastOcc(forecastOcc)
                 .build();
+    }
+
+    // --- Helper methods for safe mapping ---
+    private int getYearFromDoc(org.bson.Document p) {
+        if (p.get("year") != null) return Integer.parseInt(p.get("year").toString());
+        java.util.Date d = p.getDate("end_date");
+        if (d != null) return d.toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate().getYear();
+        return -1;
+    }
+
+    private int getMonthFromDoc(org.bson.Document p) {
+        if (p.get("month") != null) return Integer.parseInt(p.get("month").toString());
+        java.util.Date d = p.getDate("end_date");
+        if (d != null) return d.toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate().getMonthValue();
+        return -1;
+    }
+
+    private BigDecimal getCostFromDoc(org.bson.Document p, String... keys) {
+        for (String k : keys) {
+            Object val = p.get(k);
+            if (val != null) return new BigDecimal(val.toString());
+        }
+        return BigDecimal.ZERO;
     }
 }

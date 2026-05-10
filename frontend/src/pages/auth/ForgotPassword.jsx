@@ -44,10 +44,10 @@ export default function ForgotPassword() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
             <div>
               <label className="font-semibold text-gray-700 block mb-1">Email <span className="text-red-500">*</span></label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="Nhập địa chỉ email..." className="w-full border border-gray-300 rounded px-4 py-3 outline-none focus:border-red-500 transition-colors" />
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="Enter your email..." className="w-full border border-gray-300 rounded px-4 py-3 outline-none focus:border-red-500 transition-colors" />
             </div>
             <button type="submit" disabled={loading} className="w-full bg-[#E32128] text-white font-bold py-3 rounded mt-2 hover:bg-[#C11C22] transition disabled:opacity-70">
-              {loading ? 'Đang gửi...' : 'Gửi đường link'}
+              {loading ? 'Sending...' : 'Send Link'}
             </button>
             <button type="button" onClick={() => navigate('/login')} className="w-full text-gray-600 font-semibold mt-2 hover:text-red-500 transition">
               Back to Login

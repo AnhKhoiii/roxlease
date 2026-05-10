@@ -5,6 +5,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @Data
 @Builder
@@ -46,6 +47,7 @@ public class DashboardResponse {
     @Data @Builder public static class ChartData {
         private String name;
         private Number value;
+        private List<Map<String, Object>> details;
     }
 
     @Data @Builder public static class RevenueMetrics {

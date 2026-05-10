@@ -155,7 +155,7 @@ const OverviewSection = ({ overview, amenity }) => {
 // ==================================================
 // 2. LEASE ALERTS & DONUT CHARTS
 // ==================================================
-const LeaseAlerts = ({ alerts, charts }) => {
+const LeaseAlerts = ({ alerts, charts, onChartClick }) => {
   const renderDonut = (title, data) => (
     <div className="flex flex-col items-center bg-white p-4 rounded-lg shadow-sm border border-gray-100 h-[280px]">
       <h3 className="font-bold text-[11px] text-gray-600 uppercase tracking-wide mb-2 text-center">{title}</h3>
@@ -163,11 +163,26 @@ const LeaseAlerts = ({ alerts, charts }) => {
         {data && data.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
-              <Pie data={data} innerRadius={55} outerRadius={75} dataKey="value" stroke="none" paddingAngle={2}>
+              <Pie 
+                data={data} 
+                innerRadius={55} 
+                outerRadius={75} 
+                dataKey="value" 
+                stroke="none" 
+                paddingAngle={2}
+                className="cursor-pointer outline-none"
+              >
                 {data.map((entry, index) => {
                   let fillColor = CHART_COLORS[index % CHART_COLORS.length];
                   if (entry.name && entry.name.toLowerCase().includes('paid late')) fillColor = '#EF4444';
-                  return <Cell key={`cell-${index}`} fill={fillColor} />;
+                  return (
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={fillColor} 
+                      onClick={() => onChartClick && onChartClick(title, entry)}
+                      className="hover:opacity-80 transition-opacity cursor-pointer outline-none" 
+                    />
+                  );
                 })}
               </Pie>
               <Tooltip formatter={(val) => formatNum(val)} contentStyle={{ fontSize: '11px', borderRadius: '8px' }} />
@@ -323,6 +338,18 @@ export default function LeaseDashboard() {
     buildingId: ""
   });
 
+  const [chartDetailModal, setChartDetailModal] = useState({ isOpen: false, title: "", category: "", list: [] });
+
+  const handleChartClick = (chartTitle, entry) => {
+    const detailsList = entry.payload?.details || entry.details || [];
+    setChartDetailModal({
+      isOpen: true,
+      title: chartTitle,
+      category: entry.name,
+      list: detailsList
+    });
+  };
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
@@ -388,12 +415,70 @@ export default function LeaseDashboard() {
 
         {/* CÁC SECTION DỮ LIỆU */}
         <OverviewSection overview={data?.overview} amenity={data?.amenity} />
-        <LeaseAlerts alerts={data?.leaseAlerts} charts={data?.charts} />
+        <LeaseAlerts alerts={data?.leaseAlerts} charts={data?.charts} onChartClick={handleChartClick} />
         <ContractRevenueSection revenue={data?.revenue} />
         <ServiceFeeSection revenue={data?.revenue} />
         <AmenityRevenueSection revenue={data?.revenue} />
 
       </div>
+
+      {/* MODAL CHI TIẾT LỚP 2 CHO CHART */}
+      {chartDetailModal.isOpen && (
+        <div className="fixed inset-0 z-[100] bg-black/50 flex justify-center items-center backdrop-blur-sm p-4">
+          <div className="bg-white w-[800px] rounded-xl shadow-2xl flex flex-col overflow-hidden animate-[fadeIn_0.2s_ease-out] max-h-[85vh]">
+            <div className="bg-[#EFB034] px-5 py-4 flex justify-between items-center shrink-0">
+              <div>
+                <h2 className="text-[15px] font-bold uppercase tracking-wide text-white">
+                  {chartDetailModal.title}
+                </h2>
+                <p className="text-xs text-white/90 font-medium mt-0.5">
+                  Category: {chartDetailModal.category}
+                </p>
+              </div>
+              <button onClick={() => setChartDetailModal({ isOpen: false, title: "", category: "", list: [] })} className="text-white hover:text-red-100 transition-colors">
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            
+            <div className="p-0 overflow-auto flex-1">
+              {chartDetailModal.list && chartDetailModal.list.length > 0 ? (
+                <table className="w-full text-left text-[12px] whitespace-nowrap">
+                  <thead className="sticky top-0 bg-gray-100 shadow-sm border-b border-gray-200">
+                    <tr>
+                      <th className="px-4 py-3 font-bold text-gray-700 uppercase tracking-wide">ID</th>
+                      <th className="px-4 py-3 font-bold text-gray-700 uppercase tracking-wide">Details / Name</th>
+                      <th className="px-4 py-3 font-bold text-gray-700 uppercase tracking-wide text-right">Status / Value</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {chartDetailModal.list.map((item, idx) => (
+                      <tr key={idx} className="hover:bg-blue-50/50 transition-colors">
+                        <td className="px-4 py-2.5 font-semibold text-blue-600">{item.id || item.lsId || item.code || `Item-${idx+1}`}</td>
+                        <td className="px-4 py-2.5 text-gray-700">{item.name || item.description || item.partyName || item.title || "-"}</td>
+                        <td className="px-4 py-2.5 text-gray-700 text-right font-medium">{item.status || item.value || item.amount || "-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                 <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+                    <svg className="w-12 h-12 text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <p className="text-gray-500 font-medium">Không có dữ liệu chi tiết cho mục này.</p>
+                    <p className="text-[11px] text-gray-400 mt-1">Backend cần trả về field <code className="bg-gray-100 px-1 rounded text-red-500">details</code> (dạng mảng) trong payload của Chart để hiển thị.</p>
+                 </div>
+              )}
+            </div>
+            
+            <div className="bg-gray-50 px-5 py-3 border-t border-gray-200 flex justify-end shrink-0">
+              <button onClick={() => setChartDetailModal({ isOpen: false, title: "", category: "", list: [] })} className="px-5 py-2 bg-white border border-gray-300 rounded text-xs font-bold text-gray-700 hover:bg-gray-100 transition-colors shadow-sm">
+                Đóng (Close)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
