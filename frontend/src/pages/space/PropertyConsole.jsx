@@ -40,7 +40,7 @@ export default function PropertyConsole() {
       if (activeTab === 'site') { itemId = item.siteId; itemName = item.siteName; }
       else if (activeTab === 'building') { itemId = item.blId; itemName = item.blName; }
       else if (activeTab === 'floor') { itemId = item.flId; itemName = item.flName; }
-      else if (activeTab === 'suite') { itemId = item.suiteId; itemName = item.suiteCode || item.name; }
+      else if (activeTab === 'suite') { itemId = item.suiteId; itemName = item.suiteName || item.name; }
       else if (activeTab === 'room') { itemId = item.roomId; itemName = item.roomName || item.name; }
       
       const idValue = String(itemId || "").toLowerCase();
@@ -393,7 +393,7 @@ export default function PropertyConsole() {
                       <>
                         <td className="px-6 py-3 font-bold text-gray-800">{item.suiteId || '-'}</td>
                         <td className="px-6 py-3 font-semibold text-purple-600">{item.suiteCode || '-'}</td>
-                        <td className="px-6 py-3 text-gray-600">{item.suiteCode || item.name || '-'}</td>
+                        <td className="px-6 py-3 text-gray-600">{item.suiteName || item.name || '-'}</td>
                         <td className="px-6 py-3 font-bold text-green-600">{item.area ? `${item.area} m²` : '-'}</td>
                         <td className="px-6 py-3 text-gray-600">{item.flId || '-'}</td>
                         <td className="px-6 py-3 font-semibold text-blue-600">{buildingIdForRoomSuite}</td>

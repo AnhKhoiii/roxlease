@@ -232,6 +232,19 @@ const ApprovalCostTab = () => {
     }
   };
 
+  const getDueDateClass = (dueDateStr) => {
+    if (!dueDateStr) return "text-gray-700";
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const due = new Date(dueDateStr);
+    due.setHours(0, 0, 0, 0);
+    const diffDays = Math.round((due - today) / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) return "text-red-600 font-bold";
+    if (diffDays <= 30) return "text-yellow-600 font-bold";
+    return "text-green-600 font-bold";
+  };
+
   return (
     <div className="flex flex-col h-full animate-[fadeIn_0.2s_ease-out]">
       <CostModal isOpen={modal.isOpen} data={modal.data} mode={modal.mode} onClose={() => setModal({ isOpen: false })} onAction={handleAction} />
@@ -253,7 +266,7 @@ const ApprovalCostTab = () => {
                 return (
                   <tr key={idx} className="hover:bg-orange-50/50 cursor-pointer" onDoubleClick={() => setModal({ isOpen: true, data: row, mode: "VIEW" })}>
                     <td className="px-4 py-2.5 font-bold text-blue-600">{row.id || "N/A"}</td>
-                    <td className="px-4 py-2.5 text-gray-700">{row.dueDate ? new Date(row.dueDate).toLocaleDateString() : "-"}</td>
+                    <td className={`px-4 py-2.5 ${getDueDateClass(row.dueDate)}`}>{row.dueDate ? new Date(row.dueDate).toLocaleDateString() : "-"}</td>
                     <td className="px-4 py-2.5 text-right font-mono font-bold text-green-600">{row.amountInTotal?.toLocaleString()}</td>
                     <td className="px-4 py-2.5 text-right font-mono font-bold text-red-600">{row.amountOutTotal?.toLocaleString()}</td>
                     <td className="px-4 py-2.5 text-center"><span className="bg-orange-100 text-orange-700 px-2 py-1 rounded text-[10px] font-bold">PENDING</span></td>
