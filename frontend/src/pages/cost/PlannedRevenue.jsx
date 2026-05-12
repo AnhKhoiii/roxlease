@@ -139,7 +139,8 @@ export default function PlannedRevenue() {
       if (filters.year) queryParams.append("year", filters.year);
       if (filters.month) queryParams.append("month", filters.month);
       queryParams.append("size", 100); 
-
+      queryParams.append("sort", "createdAt,desc"); 
+      queryParams.append("_t", new Date().getTime()); 
       const res = await axiosInstance.get(`/cost/planned-revenues?${queryParams.toString()}`);
       setListData(res.data.content || []);
     } catch (error) {
@@ -163,9 +164,14 @@ export default function PlannedRevenue() {
     }
   };
 
+  // Tách fetchSites ra một useEffect riêng để chỉ gọi 1 lần khi mới mở trang,
+  // tránh việc bị gọi lại API liên tục mỗi khi đổi điều kiện filter
+  useEffect(() => { 
+    fetchSites(); 
+  }, []);
+
   useEffect(() => { 
     fetchData(); 
-    fetchSites(); 
   }, [fetchData]);
 
   const handleFilter = () => fetchData();

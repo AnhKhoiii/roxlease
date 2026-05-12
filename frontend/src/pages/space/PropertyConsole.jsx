@@ -188,30 +188,6 @@ export default function PropertyConsole() {
               gfa: finalGfa,
               nfa: finalNfa
             });
-
-            // --- TỰ ĐỘNG CẬP NHẬT TỔNG DIỆN TÍCH CHO BUILDING ---
-            if (updatedFloor.blId) {
-              try {
-                const allFloorsRes = await axiosInstance.get(`/space/properties/floors?buildingId=${updatedFloor.blId}`);
-                let sumBuildingGfa = 0;
-                allFloorsRes.data.forEach(f => {
-                  if (f.flId === formData.flId) sumBuildingGfa += finalGfa;
-                  else sumBuildingGfa += (f.gfa || 0);
-                });
-                
-                const bldRes = await axiosInstance.get('/space/properties/buildings');
-                const parentBuilding = bldRes.data.find(b => b.blId === updatedFloor.blId);
-                if (parentBuilding) {
-                  await axiosInstance.put(`/space/properties/buildings/${parentBuilding.blId}`, {
-                    ...parentBuilding,
-                    areaGrossInt: Number(sumBuildingGfa.toFixed(2)),
-                    areaGrossExt: Number(sumBuildingGfa.toFixed(2)) // Tạm thời gán 2 chỉ số bằng nhau theo tổng GFA
-                  });
-                }
-              } catch (bldErr) {
-                console.warn("Error updating Building Area:", bldErr);
-              }
-            }
           }
         } catch (calcErr) {
           console.warn("Error calculating GFA/NFA:", calcErr);

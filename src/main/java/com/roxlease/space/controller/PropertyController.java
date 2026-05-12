@@ -35,6 +35,37 @@ public class PropertyController {
         this.suiteRepo = suiteRepo;
     }
 
+    // ================= HELPER SYNC AREA =================
+    private void syncFloorArea(String floorId) {
+        if (floorId == null || floorId.isEmpty() || !floorRepo.existsById(floorId)) return;
+        double totalRoomArea = roomRepo.findAll().stream()
+                .filter(r -> floorId.equals(r.getFlId()))
+                .mapToDouble(r -> r.getArea() != null ? r.getArea() : 0.0).sum();
+        double totalSuiteArea = suiteRepo.findAll().stream()
+                .filter(s -> floorId.equals(s.getFlId()))
+                .mapToDouble(s -> s.getArea() != null ? s.getArea() : 0.0).sum();
+        
+        double totalNfa = totalRoomArea + totalSuiteArea;
+        floorRepo.findById(floorId).ifPresent(f -> {
+            f.setNfa(totalNfa);
+            if (f.getGfa() == null || f.getGfa() < totalNfa) f.setGfa(totalNfa);
+            floorRepo.save(f);
+            syncBuildingArea(f.getBlId());
+        });
+    }
+
+    private void syncBuildingArea(String buildingId) {
+        if (buildingId == null || buildingId.isEmpty() || !buildingRepo.existsById(buildingId)) return;
+        double totalGfa = floorRepo.findAll().stream()
+                .filter(f -> buildingId.equals(f.getBlId()))
+                .mapToDouble(f -> f.getGfa() != null ? f.getGfa() : 0.0).sum();
+        buildingRepo.findById(buildingId).ifPresent(b -> {
+            b.setAreaGrossInt(totalGfa);
+            b.setAreaGrossExt(totalGfa);
+            buildingRepo.save(b);
+        });
+    }
+
     // ================= SITE API =================
     @GetMapping("/sites")
     public ResponseEntity<?> getAllSites() {
@@ -118,14 +149,18 @@ public class PropertyController {
         if (!buildingRepo.existsById(req.getBlId())) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("error", "Building ID not found in the system!"));
         }
-        return ResponseEntity.ok(floorRepo.save(req));
+        Floor saved = floorRepo.save(req);
+        syncBuildingArea(saved.getBlId());
+        return ResponseEntity.ok(saved);
     }
 
     @PutMapping("/floors/{id}")
     public ResponseEntity<?> updateFloor(@PathVariable String id, @RequestBody Floor req) {
         if (!floorRepo.existsById(id)) return ResponseEntity.badRequest().body(Collections.singletonMap("error", "Floor not found!"));
         req.setFlId(id);
-        return ResponseEntity.ok(floorRepo.save(req));
+        Floor saved = floorRepo.save(req);
+        syncBuildingArea(saved.getBlId());
+        return ResponseEntity.ok(saved);
     }
     
     @GetMapping("/rooms")
@@ -155,12 +190,14 @@ public class PropertyController {
     @DeleteMapping("/floors/{id}")
     @Transactional
     public ResponseEntity<?> deleteFloor(@PathVariable String id) {
+        Floor floor = floorRepo.findById(id).orElse(null);
+        String blId = floor != null ? floor.getBlId() : null;
         
         roomRepo.deleteByFlId(id);
         suiteRepo.deleteByFlId(id);
-
         floorRepo.deleteById(id);
         
+        if (blId != null) syncBuildingArea(blId);
         return ResponseEntity.ok(Collections.singletonMap("message", "Floor and its associated Rooms/Suites deleted successfully!"));
     }
 
@@ -169,7 +206,18 @@ public class PropertyController {
     public ResponseEntity<?> updateRoom(@PathVariable String id, @RequestBody Room req) {
         if (!roomRepo.existsById(id)) return ResponseEntity.badRequest().body(Collections.singletonMap("error", "Room not found!"));
         req.setRoomId(id);
-        return ResponseEntity.ok(roomRepo.save(req));
+        Room saved = roomRepo.save(req);
+        syncFloorArea(saved.getFlId());
+        return ResponseEntity.ok(saved);
+    }
+
+    @DeleteMapping("/rooms/{id}")
+    public ResponseEntity<?> deleteRoom(@PathVariable String id) {
+        Room room = roomRepo.findById(id).orElse(null);
+        String flId = room != null ? room.getFlId() : null;
+        roomRepo.deleteById(id);
+        if (flId != null) syncFloorArea(flId);
+        return ResponseEntity.ok(Collections.singletonMap("message", "Room deleted successfully!"));
     }
 
     // ================= SỬA SUITE =================
@@ -177,6 +225,17 @@ public class PropertyController {
     public ResponseEntity<?> updateSuite(@PathVariable String id, @RequestBody Suite req) {
         if (!suiteRepo.existsById(id)) return ResponseEntity.badRequest().body(Collections.singletonMap("error", "Suite not found!"));
         req.setSuiteId(id);
-        return ResponseEntity.ok(suiteRepo.save(req));
+        Suite saved = suiteRepo.save(req);
+        syncFloorArea(saved.getFlId());
+        return ResponseEntity.ok(saved);
+    }
+
+    @DeleteMapping("/suites/{id}")
+    public ResponseEntity<?> deleteSuite(@PathVariable String id) {
+        Suite suite = suiteRepo.findById(id).orElse(null);
+        String flId = suite != null ? suite.getFlId() : null;
+        suiteRepo.deleteById(id);
+        if (flId != null) syncFloorArea(flId);
+        return ResponseEntity.ok(Collections.singletonMap("message", "Suite deleted successfully!"));
     }
 }

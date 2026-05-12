@@ -174,7 +174,15 @@ const LeaseAlerts = ({ alerts, charts, onChartClick }) => {
               >
                 {data.map((entry, index) => {
                   let fillColor = CHART_COLORS[index % CHART_COLORS.length];
-                  if (entry.name && entry.name.toLowerCase().includes('paid late')) fillColor = '#EF4444';
+                  
+                  if (title === "Price Overdue Payment") {
+                    if (entry.name === "Paid Late") fillColor = '#9CA3AF'; // Xám
+                    else if (entry.name === "< 270 Days") fillColor = '#EAB308'; // Vàng
+                    else if (entry.name === "> 270 Days") fillColor = '#EF4444'; // Đỏ
+                  } else {
+                    if (entry.name && entry.name.toLowerCase().includes('paid late')) fillColor = '#EF4444';
+                  }
+
                   return (
                     <Cell 
                       key={`cell-${index}`} 
@@ -442,24 +450,35 @@ export default function LeaseDashboard() {
             
             <div className="p-0 overflow-auto flex-1">
               {chartDetailModal.list && chartDetailModal.list.length > 0 ? (
-                <table className="w-full text-left text-[12px] whitespace-nowrap">
-                  <thead className="sticky top-0 bg-gray-100 shadow-sm border-b border-gray-200">
-                    <tr>
-                      <th className="px-4 py-3 font-bold text-gray-700 uppercase tracking-wide">ID</th>
-                      <th className="px-4 py-3 font-bold text-gray-700 uppercase tracking-wide">Details / Name</th>
-                      <th className="px-4 py-3 font-bold text-gray-700 uppercase tracking-wide text-right">Status / Value</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {chartDetailModal.list.map((item, idx) => (
-                      <tr key={idx} className="hover:bg-blue-50/50 transition-colors">
-                        <td className="px-4 py-2.5 font-semibold text-blue-600">{item.id || item.lsId || item.code || `Item-${idx+1}`}</td>
-                        <td className="px-4 py-2.5 text-gray-700">{item.name || item.description || item.partyName || item.title || "-"}</td>
-                        <td className="px-4 py-2.5 text-gray-700 text-right font-medium">{item.status || item.value || item.amount || "-"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                (() => {
+                  const hasRecurringCostId = chartDetailModal.list.some(i => i.recurringCostId !== undefined);
+                  const hasDueDate = chartDetailModal.list.some(i => i.dueDate !== undefined);
+                  
+                  return (
+                    <table className="w-full text-left text-[12px] whitespace-nowrap">
+                      <thead className="sticky top-0 bg-gray-100 shadow-sm border-b border-gray-200">
+                        <tr>
+                          <th className="px-4 py-3 font-bold text-gray-700 uppercase tracking-wide">ID</th>
+                          <th className="px-4 py-3 font-bold text-gray-700 uppercase tracking-wide">Details / Name</th>
+                          {hasRecurringCostId && <th className="px-4 py-3 font-bold text-gray-700 uppercase tracking-wide">Recurring Cost ID</th>}
+                          {hasDueDate && <th className="px-4 py-3 font-bold text-gray-700 uppercase tracking-wide">Due Date</th>}
+                          <th className="px-4 py-3 font-bold text-gray-700 uppercase tracking-wide text-right">Status / Value</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {chartDetailModal.list.map((item, idx) => (
+                          <tr key={idx} className="hover:bg-blue-50/50 transition-colors">
+                            <td className="px-4 py-2.5 font-semibold text-blue-600">{item.id || item.lsId || item.code || `Item-${idx+1}`}</td>
+                            <td className="px-4 py-2.5 text-gray-700">{item.name || item.description || item.partyName || item.title || "-"}</td>
+                            {hasRecurringCostId && <td className="px-4 py-2.5 text-gray-700">{item.recurringCostId !== "N/A" ? item.recurringCostId : "-"}</td>}
+                            {hasDueDate && <td className="px-4 py-2.5 text-gray-700">{item.dueDate !== "N/A" ? item.dueDate : "-"}</td>}
+                            <td className="px-4 py-2.5 text-gray-700 text-right font-medium">{item.status || item.value || item.amount || "-"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  );
+                })()
               ) : (
                  <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
                     <svg className="w-12 h-12 text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">

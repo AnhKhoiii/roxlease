@@ -5,6 +5,7 @@ import com.roxlease.cost.model.Enum.PaymentStatus;
 import com.roxlease.lease.model.Enum.ClauseType;
 import com.roxlease.cost.model.Enum.ScheduleStatus;
 import com.roxlease.cost.model.Enum.Category;
+import com.roxlease.cost.model.Enum.Period;
 import com.roxlease.cost.model.PlannedRevenue;
 import com.roxlease.cost.model.RecurringCost;
 import com.roxlease.cost.model.RecurringCostSchedule;
@@ -15,6 +16,7 @@ import com.roxlease.space.model.Amenity;
 import com.roxlease.space.model.Building;
 import com.roxlease.space.model.Enum.AmenityType;
 import com.roxlease.space.model.Room;
+import com.roxlease.space.model.Floor;
 import com.roxlease.space.model.Suite;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -33,6 +35,10 @@ public class LeaseDashboardService {
 
     private final MongoTemplate mongoTemplate;
 
+    private static final String KEY_RENT = "RENT";
+    private static final String KEY_SERVICE = "SERVICE";
+    private static final String STATUS_SCHEDULED = "SCHEDULE";
+
     public LeaseDashboardService(MongoTemplate mongoTemplate) {
         this.mongoTemplate = mongoTemplate;
     }
@@ -41,37 +47,61 @@ public class LeaseDashboardService {
         LocalDate finalToDate = (toDate != null) ? toDate : LocalDate.now();
         LocalDate finalFromDate = (fromDate != null) ? fromDate : finalToDate.minusYears(1);
 
-        Query spaceQuery = new Query();
-        if (siteId != null && !siteId.isEmpty()) spaceQuery.addCriteria(Criteria.where("siteId").is(siteId));
-        if (buildingId != null && !buildingId.isEmpty()) spaceQuery.addCriteria(Criteria.where("buildingId").is(buildingId));
+        Query buildingQuery = new Query();
+        if (siteId != null && !siteId.isEmpty()) buildingQuery.addCriteria(Criteria.where("siteId").is(siteId));
+        if (buildingId != null && !buildingId.isEmpty()) buildingQuery.addCriteria(Criteria.where("blId").is(buildingId));
+
+        List<Building> buildings = mongoTemplate.find(buildingQuery, Building.class);
+        List<String> bIds = buildings.stream().map(Building::getBlId).collect(Collectors.toList());
+
+        Query floorQuery = new Query();
+        if (!bIds.isEmpty()) {
+            floorQuery.addCriteria(Criteria.where("blId").in(bIds));
+        } else if (siteId != null || buildingId != null) {
+            floorQuery.addCriteria(Criteria.where("blId").is("NO_MATCH"));
+        }
+        List<Floor> floors = mongoTemplate.find(floorQuery, Floor.class);
+        List<String> fIds = floors.stream().map(Floor::getFlId).collect(Collectors.toList());
+
+        Query spaceSubQuery = new Query();
+        if (!fIds.isEmpty()) {
+            spaceSubQuery.addCriteria(Criteria.where("flId").in(fIds));
+        } else if (siteId != null || buildingId != null) {
+            spaceSubQuery.addCriteria(Criteria.where("flId").is("NO_MATCH"));
+        }
+
+        List<Room> rooms = mongoTemplate.find(spaceSubQuery, Room.class);
+        List<Suite> suites = mongoTemplate.find(spaceSubQuery, Suite.class);
 
         return DashboardResponse.builder()
-                .overview(buildOverview(spaceQuery))
-                .amenity(buildAmenity(spaceQuery))
+                .overview(buildOverview(buildings, floors, rooms, suites))
+                .amenity(buildAmenity(siteId, buildingId, bIds))
                 .leaseAlerts(buildLeaseAlerts(finalFromDate, finalToDate))
                 .charts(buildCharts(finalToDate))
-                .revenue(buildRevenueMetrics(finalFromDate, finalToDate, spaceQuery))
+                .revenue(buildRevenueMetrics(finalFromDate, finalToDate, rooms, suites))
                 .build();
     }
 
     // =========================================================
     // OVERVIEW
     // =========================================================
-    private DashboardResponse.Overview buildOverview(Query query) {
-        List<Building> buildings = mongoTemplate.find(query, Building.class);
-        List<Room> rooms = mongoTemplate.find(query, Room.class);
-        List<Suite> suites = mongoTemplate.find(query, Suite.class);
+    private DashboardResponse.Overview buildOverview(List<Building> buildings, List<Floor> floors, List<Room> rooms, List<Suite> suites) {
         List<LeaseSuite> leaseSuites = mongoTemplate.findAll(LeaseSuite.class);
 
         long totalSites = buildings.stream().map(Building::getSiteId).filter(Objects::nonNull).distinct().count();
 
-        BigDecimal gfa = buildings.stream()
-                .map(b -> b.getAreaGrossInt() != null ? BigDecimal.valueOf(b.getAreaGrossInt()) : BigDecimal.ZERO)
+        // 🚀 Cập nhật GFA: Tính bằng tổng GFA của các Floor thay vì Building để tránh sai lệch
+        BigDecimal gfa = floors.stream()
+                .map(f -> f.getGfa() != null ? BigDecimal.valueOf(f.getGfa()) : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal nfa = rooms.stream()
                 .map(r -> r.getArea() != null ? BigDecimal.valueOf(r.getArea()) : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal suitesNfa = suites.stream()
+                .map(s -> s.getArea() != null ? BigDecimal.valueOf(s.getArea()) : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        nfa = nfa.add(suitesNfa);
 
         Set<String> leasedSuiteIds = leaseSuites.stream().map(LeaseSuite::getSuId).collect(Collectors.toSet());
         BigDecimal leasedNfa = suites.stream()
@@ -96,8 +126,25 @@ public class LeaseDashboardService {
     // =========================================================
     // AMENITIES
     // =========================================================
-    private DashboardResponse.AmenityMetrics buildAmenity(Query query) {
-        List<Amenity> amenities = mongoTemplate.find(query, Amenity.class);
+    private DashboardResponse.AmenityMetrics buildAmenity(String siteId, String buildingId, List<String> bIds) {
+        Query amenityQuery = new Query();
+        if (buildingId != null && !buildingId.isEmpty()) {
+            amenityQuery.addCriteria(new Criteria().orOperator(
+                Criteria.where("buildingId").is(buildingId),
+                Criteria.where("blId").is(buildingId)
+            ));
+        } else if (siteId != null && !siteId.isEmpty()) {
+            if (bIds != null && !bIds.isEmpty()) {
+                amenityQuery.addCriteria(new Criteria().orOperator(
+                    Criteria.where("siteId").is(siteId),
+                    Criteria.where("buildingId").in(bIds),
+                    Criteria.where("blId").in(bIds)
+                ));
+            } else {
+                amenityQuery.addCriteria(Criteria.where("siteId").is(siteId));
+            }
+        }
+        List<Amenity> amenities = mongoTemplate.find(amenityQuery, Amenity.class);
         List<LeaseAmenity> leaseAmenities = mongoTemplate.findAll(LeaseAmenity.class);
 
         long totalAmenities = amenities.size();
@@ -172,6 +219,35 @@ public class LeaseDashboardService {
     }
 
     // =========================================================
+    // HELPER: Tính toán ngày kết thúc hợp đồng thực tế (Đã trừ hao Options)
+    // =========================================================
+    private LocalDate getEffectiveEndDate(Lease lease, List<LeaseOption> lsOps) {
+        LocalDate effectiveEnd = lease.getEndDate();
+
+        LocalDate maxExtension = lsOps.stream()
+                .filter(o -> o.getOpType() == OptionType.EXTENSION || o.getOpType() == OptionType.RENEWAL)
+                .map(LeaseOption::getEndDate)
+                .filter(Objects::nonNull)
+                .max(LocalDate::compareTo)
+                .orElse(null);
+
+        LocalDate minTermination = lsOps.stream()
+                .filter(o -> o.getOpType() == OptionType.EARLY_TERMINATION)
+                .map(o -> o.getEndDate() != null ? o.getEndDate() : o.getStartDate())
+                .filter(Objects::nonNull)
+                .min(LocalDate::compareTo)
+                .orElse(null);
+
+        if (maxExtension != null && (effectiveEnd == null || maxExtension.isAfter(effectiveEnd))) {
+            effectiveEnd = maxExtension;
+        }
+        if (minTermination != null && (effectiveEnd == null || minTermination.isBefore(effectiveEnd))) {
+            effectiveEnd = minTermination;
+        }
+        return effectiveEnd;
+    }
+
+    // =========================================================
     // CHARTS
     // =========================================================
     private DashboardResponse.Charts buildCharts(LocalDate toDate) {
@@ -193,18 +269,10 @@ public class LeaseDashboardService {
             List<LeaseOption> lsOps = options.stream().filter(o -> o.getLsId().equals(ls.getLsId()) && Boolean.TRUE.equals(o.getActive())).collect(Collectors.toList());
             if (lsOps.stream().anyMatch(o -> o.getOpType() == OptionType.LEASE_END)) continue; 
 
-            LocalDate effectiveEnd = ls.getEndDate();
-            LeaseOption lastExtOrTerm = lsOps.stream()
-                    .filter(o -> o.getOpType() == OptionType.EXTENSION || o.getOpType() == OptionType.EARLY_TERMINATION)
-                    .max(Comparator.comparing(LeaseOption::getEndDate, Comparator.nullsFirst(Comparator.naturalOrder())))
-                    .orElse(null);
-
-            if (lastExtOrTerm != null && lastExtOrTerm.getEndDate() != null) {
-                effectiveEnd = lastExtOrTerm.getEndDate();
-            }
+            LocalDate effectiveEnd = getEffectiveEndDate(ls, lsOps);
 
             if (effectiveEnd != null) {
-                long daysLeft = ChronoUnit.DAYS.between(LocalDate.now(), effectiveEnd); 
+                long daysLeft = ChronoUnit.DAYS.between(toDate, effectiveEnd); 
                 Map<String, Object> detail = new HashMap<>();
                 detail.put("id", ls.getLsId());
                 detail.put("name", ls.getPartyId() != null ? ls.getPartyId() : "N/A");
@@ -225,13 +293,29 @@ public class LeaseDashboardService {
         for (RecurringCostSchedule sch : schedules) {
             if (sch.getDueDate() == null) continue;
             
+            Lease lease = leases.stream()
+                .filter(ls -> ls.getLsId().equals(sch.getLeaseId()) && Boolean.TRUE.equals(ls.getActive()))
+                .findFirst().orElse(null);
+            if (lease == null) continue;
+
+            List<LeaseOption> lsOps = options.stream()
+                    .filter(o -> o.getLsId().equals(lease.getLsId()) && Boolean.TRUE.equals(o.getActive()))
+                    .collect(Collectors.toList());
+
+            LocalDate effectiveEnd = getEffectiveEndDate(lease, lsOps);
+            if (effectiveEnd != null && effectiveEnd.isBefore(toDate)) {
+                continue; // Hợp đồng đã hết hạn thực tế thì không tính nợ quá hạn
+            }
+
             if (sch.getPaymentStatus() == PaymentStatus.PENDING || sch.getPaymentStatus() == null) { 
-                long delay = ChronoUnit.DAYS.between(sch.getDueDate(), LocalDate.now()); 
+                long delay = ChronoUnit.DAYS.between(sch.getDueDate(), toDate); 
                 if (delay > 0) {
                     Map<String, Object> detail = new HashMap<>();
                     detail.put("id", sch.getLeaseId() != null ? sch.getLeaseId() : "N/A");
                     detail.put("name", sch.getCostType() != null ? sch.getCostType().name() : "N/A");
                     detail.put("value", (sch.getAmountInBase() != null ? sch.getAmountInBase() : "0") + " VND");
+                    detail.put("recurringCostId", sch.getRecurringCostId() != null ? sch.getRecurringCostId() : "N/A");
+                    detail.put("dueDate", sch.getDueDate() != null ? sch.getDueDate().toString() : "N/A");
 
                     if (delay <= 270) { overdue270++; overdue270List.add(detail); }
                     else { overdueMore270++; overdueMore270List.add(detail); }
@@ -242,6 +326,8 @@ public class LeaseDashboardService {
                     detail.put("id", sch.getLeaseId() != null ? sch.getLeaseId() : "N/A");
                     detail.put("name", sch.getCostType() != null ? sch.getCostType().name() : "N/A");
                     detail.put("value", (sch.getAmountInBase() != null ? sch.getAmountInBase() : "0") + " VND");
+                    detail.put("recurringCostId", sch.getRecurringCostId() != null ? sch.getRecurringCostId() : "N/A");
+                    detail.put("dueDate", sch.getDueDate() != null ? sch.getDueDate().toString() : "N/A");
 
                     paidLate++; paidLateList.add(detail);
                 }
@@ -262,6 +348,20 @@ public class LeaseDashboardService {
                 ls.getLsId().equals(clause.getLeaseId()) && Boolean.TRUE.equals(ls.getActive())
             );
             if (!isLeaseActive) continue;
+            Lease lease = leases.stream()
+                .filter(ls -> ls.getLsId().equals(clause.getLeaseId()) && Boolean.TRUE.equals(ls.getActive()))
+                .findFirst().orElse(null);
+            if (lease == null) continue;
+
+            List<LeaseOption> lsOps = options.stream()
+                    .filter(o -> o.getLsId().equals(lease.getLsId()) && Boolean.TRUE.equals(o.getActive()))
+                    .collect(Collectors.toList());
+
+            LocalDate effectiveEnd = getEffectiveEndDate(lease, lsOps);
+
+            if (effectiveEnd != null && effectiveEnd.isBefore(toDate)) {
+                continue; // Hợp đồng đã hết hạn thực tế thì không tính
+            }
 
             boolean hasMatchingCost = recurringCosts.stream().anyMatch(rc -> 
                 Boolean.TRUE.equals(rc.getActive()) &&
@@ -305,101 +405,351 @@ public class LeaseDashboardService {
     // =========================================================
     // 5. REVENUE & OCC KPIs VÀ DỮ LIỆU BIỂU ĐỒ 12 THÁNG
     // =========================================================
-    private DashboardResponse.RevenueMetrics buildRevenueMetrics(LocalDate fromDate, LocalDate toDate, Query spaceQuery) {
+    
+    private enum RevenueCategory {
+        CONTRACT, SERVICE, AMENITY
+    }
+
+    private DashboardResponse.RevenueMetrics buildRevenueMetrics(LocalDate fromDate, LocalDate toDate, List<Room> rooms, List<Suite> suites) {
         List<Lease> allLeases = mongoTemplate.findAll(Lease.class);
         List<LeaseAmenity> leaseAmenities = mongoTemplate.findAll(LeaseAmenity.class);
         List<RecurringCostSchedule> schedules = mongoTemplate.findAll(RecurringCostSchedule.class);
+        List<LeaseOption> allOptions = mongoTemplate.findAll(LeaseOption.class);
+        List<RecurringCost> allRecurringCosts = mongoTemplate.findAll(RecurringCost.class);
         
-        // 🚀 ĐÃ FIX: Dùng Document để lấy dữ liệu tránh lỗi MappingException từ Enum Category
+        Map<String, String> costTypeMap = allRecurringCosts.stream()
+                .filter(c -> c.getRecurringCostId() != null && c.getCostType() != null)
+                .collect(Collectors.toMap(RecurringCost::getRecurringCostId, RecurringCost::getCostType, (e1, e2) -> e1));
+
+        Map<String, Lease> leaseMap = allLeases.stream()
+                .collect(Collectors.toMap(Lease::getLsId, l -> l, (l1, l2) -> l1));
+        Map<String, RecurringCost> costMap = allRecurringCosts.stream()
+                .filter(c -> c.getRecurringCostId() != null)
+                .collect(Collectors.toMap(RecurringCost::getRecurringCostId, c -> c, (c1, c2) -> c1));
+
         List<org.bson.Document> allPlans = mongoTemplate.find(new Query(), org.bson.Document.class, "planned_revenues");
 
-        List<Room> rooms = mongoTemplate.find(spaceQuery, Room.class);
         BigDecimal nfa = rooms.stream().map(r -> r.getArea() != null ? BigDecimal.valueOf(r.getArea()) : BigDecimal.ZERO).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal suitesNfa = suites.stream().map(s -> s.getArea() != null ? BigDecimal.valueOf(s.getArea()) : BigDecimal.ZERO).reduce(BigDecimal.ZERO, BigDecimal::add);
+        nfa = nfa.add(suitesNfa);
         BigDecimal safeNfa = nfa.compareTo(BigDecimal.ZERO) == 0 ? BigDecimal.ONE : nfa;
 
-        Set<String> leasesWithAmenity = leaseAmenities.stream().map(LeaseAmenity::getLsId).collect(Collectors.toSet());
-        List<Lease> nonAmenityLeases = allLeases.stream().filter(l -> !leasesWithAmenity.contains(l.getLsId())).collect(Collectors.toList());
-
-        List<org.bson.Document> contractPlans = new ArrayList<>();
-        List<org.bson.Document> servicePlans = new ArrayList<>();
-        List<org.bson.Document> amenityPlans = new ArrayList<>();
-
-        for (org.bson.Document p : allPlans) {
-            String catStr = p.getString("category");
-            if (catStr == null) continue;
-            String catUpper = catStr.toUpperCase().replace(" ", "_");
-            
-            if (catUpper.contains("RENTAL") || catUpper.contains("INCOME_BASE_RENT")) {
-                contractPlans.add(p);
-            } else if (catUpper.contains("SERVICE") || catUpper.contains("INCOME_BASE_SERVICE")) {
-                servicePlans.add(p);
-            } else {
-                amenityPlans.add(p);
-            }
-        }
-
-        // Lấy KPI Cards
-        DashboardResponse.KPICards contractKpi = calculateRevenueKPI(schedules.stream().filter(s -> !leasesWithAmenity.contains(s.getLeaseId()) && s.getCostType() == CostType.BASERENT).collect(Collectors.toList()), contractPlans, toDate, 0, 0);
+        Set<String> amenityLeaseIds = leaseAmenities.stream().map(LeaseAmenity::getLsId).collect(Collectors.toSet());
 
         int currentYear = toDate.getYear();
-        List<DashboardResponse.MonthlyRevenue> contractChart = buildMonthlyChart(schedules, contractPlans, CostType.BASERENT, currentYear, nonAmenityLeases, safeNfa);
-        List<DashboardResponse.MonthlyRevenue> serviceChart = buildMonthlyChart(schedules, servicePlans, CostType.BASESERVICE, currentYear, nonAmenityLeases, safeNfa);
-        List<DashboardResponse.AmenityRevenueData> amenityChart = buildAmenityChart(schedules, amenityPlans, currentYear, leasesWithAmenity);
+        int currentMonth = toDate.getMonthValue();
+
+        DashboardResponse.KPICards contractKpi = buildKPICards(schedules, allPlans, currentYear, currentMonth, toDate, RevenueCategory.CONTRACT, amenityLeaseIds, costTypeMap, allRecurringCosts, allLeases, allOptions, safeNfa, leaseMap, costMap);
+        DashboardResponse.KPICards serviceKpi = buildKPICards(schedules, allPlans, currentYear, currentMonth, toDate, RevenueCategory.SERVICE, amenityLeaseIds, costTypeMap, allRecurringCosts, allLeases, allOptions, safeNfa, leaseMap, costMap);
+        DashboardResponse.KPICards amenityKpi = buildKPICards(schedules, allPlans, currentYear, currentMonth, toDate, RevenueCategory.AMENITY, amenityLeaseIds, costTypeMap, allRecurringCosts, allLeases, allOptions, safeNfa, leaseMap, costMap);
+
+        DashboardResponse.KPICards totalKpi = mergeKPICards(contractKpi, serviceKpi, amenityKpi);
+
+        List<DashboardResponse.MonthlyRevenue> contractChart = buildMonthlyChart(schedules, allPlans, currentYear, toDate, RevenueCategory.CONTRACT, amenityLeaseIds, costTypeMap, allRecurringCosts, allLeases, allOptions, safeNfa, leaseMap, costMap);
+        List<DashboardResponse.MonthlyRevenue> serviceChart = buildMonthlyChart(schedules, allPlans, currentYear, toDate, RevenueCategory.SERVICE, amenityLeaseIds, costTypeMap, allRecurringCosts, allLeases, allOptions, safeNfa, leaseMap, costMap);
+        List<DashboardResponse.AmenityRevenueData> amenityChart = buildAmenityChartRefactored(schedules, allPlans, currentYear, amenityLeaseIds, costTypeMap, leaseMap, costMap);
 
         return DashboardResponse.RevenueMetrics.builder()
                 .contract(contractChart)
                 .serviceFee(serviceChart)
                 .amenity(amenityChart)
-                .kpi(contractKpi) 
+                .kpi(totalKpi)
                 .build();
     }
 
-    private List<DashboardResponse.MonthlyRevenue> buildMonthlyChart(List<RecurringCostSchedule> allSchedules, List<org.bson.Document> plans, CostType costType, int year, List<Lease> leases, BigDecimal safeNfa) {
+    // =========================================================
+    // KPI CALCULATION HELPER
+    // =========================================================
+    private DashboardResponse.KPICards buildKPICards(
+            List<RecurringCostSchedule> schedules, List<org.bson.Document> plans,
+            int year, int month, LocalDate toDate,
+            RevenueCategory category, Set<String> amenityLeaseIds, Map<String, String> costTypeMap,
+            List<RecurringCost> allCosts, List<Lease> leases, List<LeaseOption> options, BigDecimal safeNfa,
+            Map<String, Lease> leaseMap, Map<String, RecurringCost> costMap) {
+        
+        // 1. Annual Plan: SUM(plan_cost) của năm filter
+        BigDecimal annualPlan = plans.stream()
+            .filter(p -> getYearFromDoc(p) == year && isMatchingPlanCategory(p, category))
+            .map(p -> getCostFromDoc(p, "plannedCost", "planCost", "plan_cost", "planned_cost", "cost", "amount"))
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
+        // 2. Plan To Date: SUM(plan_cost) từ đầu năm đến month
+        BigDecimal planToDate = plans.stream()
+            .filter(p -> getYearFromDoc(p) == year && getMonthFromDoc(p) > 0 && getMonthFromDoc(p) <= month && isMatchingPlanCategory(p, category))
+            .map(p -> getCostFromDoc(p, "plannedCost", "planCost", "plan_cost", "planned_cost", "cost", "amount"))
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // 3. Actual To Date: Doanh thu thực tế (payment_status = PAID) trong khoảng thời gian đến toDate
+        BigDecimal actualToDate = calculateActualToDate(schedules, year, toDate, category, amenityLeaseIds, costTypeMap, leaseMap, costMap);
+        
+        // 4. Annual Forecast: Bằng sum(chưa huỷ) + sum(extrapolate nếu có assume_renewal)
+        BigDecimal annualForecast = calculateAnnualForecast(schedules, year, category, amenityLeaseIds, costTypeMap, allCosts, leaseMap, costMap);
+        BigDecimal hiddenAnnualForecast = BigDecimal.ZERO;
+        for (int m = 1; m <= 12; m++) {
+            hiddenAnnualForecast = hiddenAnnualForecast.add(calculateHiddenForecastTotal(leases, options, schedules, allCosts, category, amenityLeaseIds, costTypeMap, year, m, leaseMap, costMap));
+        }
+        annualForecast = annualForecast.add(hiddenAnnualForecast);
+
+        // 5. Achievement Calculations (bảo vệ khỏi lỗi Divide by Zero)
+        double planAchievement = calculatePercentage(actualToDate, annualPlan);
+        double forecastAchievement = calculatePercentage(annualForecast, annualPlan);
+        double ytdAchievement = calculatePercentage(actualToDate, planToDate);
+
+        // 6. OCC: Chỉ tính cho Contract (Loại trừ các hợp đồng Amenity)
+        double actualOcc = 0.0;
+        double forecastOcc = 0.0;
+        if (category == RevenueCategory.CONTRACT) {
+            actualOcc = calculateActualOCC(leases, options, safeNfa, year, month, amenityLeaseIds);
+            forecastOcc = calculateForecastOCC(leases, options, safeNfa, year, month, toDate, amenityLeaseIds);
+        }
+
+        return DashboardResponse.KPICards.builder()
+                .annualPlan(annualPlan).planToDate(planToDate).actualToDate(actualToDate).annualForecast(annualForecast)
+                .planAchievement(planAchievement).forecastAchievement(forecastAchievement).ytdAchievement(ytdAchievement)
+                .actualOcc(actualOcc).forecastOcc(forecastOcc)
+                .build();
+    }
+
+    private DashboardResponse.KPICards mergeKPICards(DashboardResponse.KPICards c1, DashboardResponse.KPICards c2, DashboardResponse.KPICards c3) {
+        BigDecimal annualPlan = c1.getAnnualPlan().add(c2.getAnnualPlan()).add(c3.getAnnualPlan());
+        BigDecimal planToDate = c1.getPlanToDate().add(c2.getPlanToDate()).add(c3.getPlanToDate());
+        BigDecimal actualToDate = c1.getActualToDate().add(c2.getActualToDate()).add(c3.getActualToDate());
+        BigDecimal annualForecast = c1.getAnnualForecast().add(c2.getAnnualForecast()).add(c3.getAnnualForecast());
+
+        double planAchievement = calculatePercentage(actualToDate, annualPlan);
+        double forecastAchievement = calculatePercentage(annualForecast, annualPlan);
+        double ytdAchievement = calculatePercentage(actualToDate, planToDate);
+
+        return DashboardResponse.KPICards.builder()
+                .annualPlan(annualPlan).planToDate(planToDate).actualToDate(actualToDate).annualForecast(annualForecast)
+                .planAchievement(planAchievement).forecastAchievement(forecastAchievement).ytdAchievement(ytdAchievement)
+                .actualOcc(c1.getActualOcc()).forecastOcc(c1.getForecastOcc())
+                .build();
+    }
+
+    private List<DashboardResponse.MonthlyRevenue> buildMonthlyChart(
+            List<RecurringCostSchedule> schedules, List<org.bson.Document> plans,
+            int year, LocalDate toDate,
+            RevenueCategory category, Set<String> amenityLeaseIds, Map<String, String> costTypeMap,
+            List<RecurringCost> allCosts, List<Lease> leases, List<LeaseOption> options, BigDecimal safeNfa,
+            Map<String, Lease> leaseMap, Map<String, RecurringCost> costMap) {
+        
         List<DashboardResponse.MonthlyRevenue> monthlyData = new ArrayList<>();
         
         for (int m = 1; m <= 12; m++) {
-            final int month = m;
+            BigDecimal actual = calculateActualRevenue(schedules, year, m, category, amenityLeaseIds, costTypeMap, leaseMap, costMap);
             
-            BigDecimal actual = allSchedules.stream()
-                .filter(s -> s.getCostType() == costType && s.getPaymentStatus() == PaymentStatus.PAID && s.getDueDate() != null && s.getDueDate().getYear() == year && s.getDueDate().getMonthValue() == month)
-                .map(s -> s.getAmountInBase() != null ? s.getAmountInBase() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            BigDecimal forecast = allSchedules.stream()
-                .filter(s -> s.getCostType() == costType && s.getPaymentStatus() != PaymentStatus.REJECTED && s.getDueDate() != null && s.getDueDate().getYear() == year && s.getDueDate().getMonthValue() == month)
-                .map(s -> s.getAmountInBase() != null ? s.getAmountInBase() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
+            BigDecimal forecast = calculateForecastRevenue(schedules, year, m, category, amenityLeaseIds, costTypeMap, leaseMap, costMap);
+            forecast = forecast.add(calculateHiddenForecastTotal(leases, options, schedules, allCosts, category, amenityLeaseIds, costTypeMap, year, m, leaseMap, costMap));
+            
+            final int monthFilter = m;
             BigDecimal planned = plans.stream()
-                .filter(p -> getYearFromDoc(p) == year && getMonthFromDoc(p) == month)
-                .map(p -> getCostFromDoc(p, "plannedCost", "plan_cost", "planned_cost"))
+                .filter(p -> getYearFromDoc(p) == year && getMonthFromDoc(p) == monthFilter && isMatchingPlanCategory(p, category))
+                .map(p -> getCostFromDoc(p, "plannedCost", "planCost", "plan_cost", "planned_cost", "cost", "amount"))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-            // 🚀 Lấy Planned OCC Nhập tay từ DB
             double plannedOcc = plans.stream()
-                .filter(p -> getYearFromDoc(p) == year && getMonthFromDoc(p) == month && getCostFromDoc(p, "plannedOcc", "planned_occ").compareTo(BigDecimal.ZERO) > 0)
-                .mapToDouble(p -> getCostFromDoc(p, "plannedOcc", "planned_occ").doubleValue())
+                .filter(p -> getYearFromDoc(p) == year && getMonthFromDoc(p) == monthFilter && getCostFromDoc(p, "plannedOcc", "planOcc", "planned_occ").compareTo(BigDecimal.ZERO) > 0 && isMatchingPlanCategory(p, category))
+                .mapToDouble(p -> getCostFromDoc(p, "plannedOcc", "planOcc", "planned_occ").doubleValue())
                 .findFirst().orElse(0.0);
 
-            double actualOcc = 0;
-            if (costType == CostType.BASERENT) {
-                BigDecimal occSum = leases.stream().filter(l -> Boolean.TRUE.equals(l.getActive()))
-                        .map(l -> l.getAreaNegotiated() != null ? BigDecimal.valueOf(l.getAreaNegotiated()) : BigDecimal.ZERO)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add);
-                actualOcc = occSum.divide(safeNfa, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100")).doubleValue();
+            double actualOcc = 0.0;
+            double forecastOcc = 0.0;
+            
+            if (category == RevenueCategory.CONTRACT) {
+                actualOcc = calculateActualOCC(leases, options, safeNfa, year, m, amenityLeaseIds);
+                forecastOcc = calculateForecastOCC(leases, options, safeNfa, year, m, toDate, amenityLeaseIds);
             }
 
             monthlyData.add(DashboardResponse.MonthlyRevenue.builder()
-                .month("T" + month)
+                .month("T" + m)
                 .actual(actual).planned(planned).forecast(forecast)
-                .actualOcc(actualOcc).plannedOcc(plannedOcc).forecastOcc(actualOcc + 2)
+                .actualOcc(actualOcc).plannedOcc(plannedOcc).forecastOcc(forecastOcc)
                 .build());
         }
         return monthlyData;
     }
 
-    // 🚀 HÀM PHÂN LOẠI CATEGORY CHO AMENITY DÙNG PLAN THEO CATEGORY
-    private List<DashboardResponse.AmenityRevenueData> buildAmenityChart(List<RecurringCostSchedule> schedules, List<org.bson.Document> plans, int year, Set<String> amenityLeaseIds) {
+    // =========================================================
+    // CORE CALCULATIONS
+    // =========================================================
+
+    private BigDecimal calculateActualRevenue(List<RecurringCostSchedule> schedules, int year, int month, RevenueCategory category, Set<String> amenityLeaseIds, Map<String, String> costTypeMap, Map<String, Lease> leaseMap, Map<String, RecurringCost> costMap) {
+        return schedules.stream()
+            .filter(s -> s.getDueDate() != null && s.getDueDate().getYear() == year && s.getDueDate().getMonthValue() == month)
+            .filter(s -> s.getPaymentStatus() == PaymentStatus.PAID)
+            .filter(s -> isMatchingCategory(s, category, amenityLeaseIds, costTypeMap))
+            .map(s -> getSafeAmount(s, leaseMap, costMap))
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private BigDecimal calculateActualToDate(List<RecurringCostSchedule> schedules, int year, LocalDate toDate, RevenueCategory category, Set<String> amenityLeaseIds, Map<String, String> costTypeMap, Map<String, Lease> leaseMap, Map<String, RecurringCost> costMap) {
+        return schedules.stream()
+            .filter(s -> s.getDueDate() != null && s.getDueDate().getYear() == year && !s.getDueDate().isAfter(toDate))
+            .filter(s -> s.getPaymentStatus() == PaymentStatus.PAID)
+            .filter(s -> isMatchingCategory(s, category, amenityLeaseIds, costTypeMap))
+            .map(s -> getSafeAmount(s, leaseMap, costMap))
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private BigDecimal calculateForecastRevenue(List<RecurringCostSchedule> schedules, int year, int month, RevenueCategory category, Set<String> amenityLeaseIds, Map<String, String> costTypeMap, Map<String, Lease> leaseMap, Map<String, RecurringCost> costMap) {
+        return schedules.stream()
+            .filter(s -> s.getDueDate() != null && s.getDueDate().getYear() == year && s.getDueDate().getMonthValue() == month)
+            .filter(s -> s.getPaymentStatus() != PaymentStatus.REJECTED)
+            .filter(s -> {
+                if (s.getRecurringCostId() == null) return true;
+                RecurringCost cost = costMap.get(s.getRecurringCostId());
+                return cost == null || cost.getScheduleStatus() == null || !cost.getScheduleStatus().toUpperCase().contains("CANCEL");
+            })
+            .filter(s -> isMatchingCategory(s, category, amenityLeaseIds, costTypeMap))
+            .map(s -> getSafeAmount(s, leaseMap, costMap))
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private BigDecimal calculateAnnualForecast(List<RecurringCostSchedule> schedules, int year, RevenueCategory category, Set<String> amenityLeaseIds, Map<String, String> costTypeMap, List<RecurringCost> allCosts, Map<String, Lease> leaseMap, Map<String, RecurringCost> costMap) {
+        Set<String> scheduledCostIds = allCosts.stream()
+            .filter(c -> c.getScheduleStatus() != null && c.getScheduleStatus().toUpperCase().contains(STATUS_SCHEDULED))
+            .map(RecurringCost::getRecurringCostId)
+            .collect(Collectors.toSet());
+
+        return schedules.stream()
+            .filter(s -> s.getDueDate() != null && s.getDueDate().getYear() == year)
+            .filter(s -> s.getPaymentStatus() != PaymentStatus.REJECTED)
+            .filter(s -> scheduledCostIds.contains(s.getRecurringCostId())) // 🚀 FIX: Bắt buộc CPĐK phải là SCHEDULED, không được cộng dồn hàng loạt Draft Schedules
+            .filter(s -> isMatchingCategory(s, category, amenityLeaseIds, costTypeMap))
+            .map(s -> getSafeAmount(s, leaseMap, costMap))
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private double calculateActualOCC(List<Lease> leases, List<LeaseOption> options, BigDecimal safeNfa, int year, int month, Set<String> amenityLeaseIds) {
+        BigDecimal occSum = leases.stream()
+            .filter(l -> !amenityLeaseIds.contains(l.getLsId()))
+            .filter(l -> isLeaseActiveInMonth(l, options, year, month))
+            .map(l -> l.getAreaNegotiated() != null ? BigDecimal.valueOf(l.getAreaNegotiated()) : BigDecimal.ZERO)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
+        return calculatePercentage(occSum, safeNfa);
+    }
+
+    private double calculateForecastOCC(List<Lease> leases, List<LeaseOption> options, BigDecimal safeNfa, int year, int month, LocalDate toDate, Set<String> amenityLeaseIds) {
+        LocalDate targetDate = LocalDate.of(year, month, 1);
+        LocalDate currentDateStartOfMonth = LocalDate.of(toDate.getYear(), toDate.getMonthValue(), 1);
+        
+        // KHÔNG hiển thị Forecast OCC cho các tháng quá khứ
+        if (targetDate.isBefore(currentDateStartOfMonth)) {
+            return 0.0;
+        }
+
+        BigDecimal occSum = leases.stream()
+            .filter(l -> !amenityLeaseIds.contains(l.getLsId()))
+            .filter(l -> isLeaseForecastActiveInMonth(l, options, year, month))
+            .map(l -> l.getAreaNegotiated() != null ? BigDecimal.valueOf(l.getAreaNegotiated()) : BigDecimal.ZERO)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
+        return calculatePercentage(occSum, safeNfa);
+    }
+
+    // =========================================================
+    // RENEWAL EXTRAPOLATION
+    // =========================================================
+    private BigDecimal calculateHiddenForecastTotal(
+            List<Lease> leases, List<LeaseOption> options, List<RecurringCostSchedule> schedules,
+            List<RecurringCost> allCosts, RevenueCategory category, Set<String> amenityLeaseIds,
+            Map<String, String> costTypeMap, int year, int month,
+            Map<String, Lease> leaseMap, Map<String, RecurringCost> costMap) {
+        
+        BigDecimal total = BigDecimal.ZERO;
+        for (Lease lease : leases) {
+            if (category == RevenueCategory.CONTRACT && amenityLeaseIds.contains(lease.getLsId())) continue;
+            if (category == RevenueCategory.AMENITY && !amenityLeaseIds.contains(lease.getLsId())) continue;
+            
+            total = total.add(calculateRenewalForecast(lease, options, schedules, allCosts, category, amenityLeaseIds, costTypeMap, year, month, leaseMap, costMap));
+        }
+        return total;
+    }
+
+    private BigDecimal calculateRenewalForecast(
+            Lease lease, List<LeaseOption> lsOps, List<RecurringCostSchedule> allSchedules,
+            List<RecurringCost> allRecurringCosts, RevenueCategory category, Set<String> amenityLeaseIds,
+            Map<String, String> costTypeMap, int targetYear, int targetMonth,
+            Map<String, Lease> leaseMap, Map<String, RecurringCost> costMap) {
+        
+            if (!Boolean.TRUE.equals(lease.getActive())) return BigDecimal.ZERO;
+            if (!Boolean.TRUE.equals(lease.getAssumeRenewal())) return BigDecimal.ZERO;
+
+            List<LeaseOption> leaseOptions = lsOps.stream()
+                    .filter(o -> o.getLsId().equals(lease.getLsId()) && Boolean.TRUE.equals(o.getActive()))
+                    .collect(Collectors.toList());
+
+            boolean hasTermination = leaseOptions.stream().anyMatch(o -> o.getOpType() == OptionType.LEASE_END || o.getOpType() == OptionType.EARLY_TERMINATION);
+            if (hasTermination) return BigDecimal.ZERO;
+
+            LocalDate effectiveEnd = getEffectiveEndDate(lease, leaseOptions);
+            LocalDate targetStart = LocalDate.of(targetYear, targetMonth, 1);
+            LocalDate targetEnd = targetStart.withDayOfMonth(targetStart.lengthOfMonth());
+            
+            // Tránh double counting: Nếu lease đã có schedule (mà chưa cancel) ở month này thì không extrapolate renewal
+            boolean hasScheduleInTargetMonth = allSchedules.stream()
+                .anyMatch(s -> s.getLeaseId() != null && s.getLeaseId().equals(lease.getLsId()) 
+                    && isMatchingCategory(s, category, amenityLeaseIds, costTypeMap) 
+                    && s.getDueDate() != null 
+                    && s.getDueDate().getYear() == targetYear 
+                    && s.getDueDate().getMonthValue() == targetMonth
+                    && s.getPaymentStatus() != PaymentStatus.REJECTED);
+
+            if (hasScheduleInTargetMonth) return BigDecimal.ZERO;
+
+            BigDecimal hiddenTotal = BigDecimal.ZERO;
+            
+            if (effectiveEnd != null && effectiveEnd.isBefore(targetEnd)) {
+                List<RecurringCost> leaseCosts = allRecurringCosts.stream()
+                        .filter(c -> c.getLsId().equals(lease.getLsId()) && Boolean.TRUE.equals(c.getActive()))
+                        .filter(c -> {
+                            String cType = c.getCostType() != null ? c.getCostType() : "";
+                            String cUpper = cType.toUpperCase().replace("_", "");
+                            boolean isRent = cUpper.contains(KEY_RENT) || cUpper.contains("BASERENT");
+                            boolean isService = cUpper.contains(KEY_SERVICE) || cUpper.contains("BASESERVICE");
+                            
+                            if (category == RevenueCategory.CONTRACT) return isRent;
+                            if (category == RevenueCategory.SERVICE) return isService;
+                            if (category == RevenueCategory.AMENITY) return !isRent && !isService;
+                            return false;
+                        })
+                        .collect(Collectors.toList());
+                
+                for (RecurringCost cost : leaseCosts) {
+                    RecurringCostSchedule lastSchedule = allSchedules.stream()
+                            .filter(s -> s.getRecurringCostId() != null && s.getRecurringCostId().equals(cost.getRecurringCostId()) && s.getPaymentStatus() != PaymentStatus.REJECTED)
+                            .max(Comparator.comparing(RecurringCostSchedule::getDueDate, Comparator.nullsFirst(Comparator.naturalOrder())))
+                            .orElse(null);
+                    
+                    if (lastSchedule != null && lastSchedule.getDueDate() != null) {
+                        LocalDate lastDue = lastSchedule.getDueDate();
+                        int interval = (cost.getInterval() != null && cost.getInterval() > 0) ? cost.getInterval() : 1;
+                        Period period = cost.getPeriod();
+                        
+                        LocalDate nextDue = lastDue;
+                        int safetyCounter = 0;
+                        while (nextDue != null && nextDue.isBefore(targetEnd.plusMonths(1)) && safetyCounter < 1200) {
+                            safetyCounter++;
+                            if (nextDue.getYear() == targetYear && nextDue.getMonthValue() == targetMonth && nextDue.isAfter(effectiveEnd)) {
+                                hiddenTotal = hiddenTotal.add(getSafeAmount(lastSchedule, leaseMap, costMap));
+                            }
+                            
+                            if (period == Period.MONTHLY) nextDue = nextDue.plusMonths(interval);
+                            else if (period == Period.QUARTERLY) nextDue = nextDue.plusMonths(interval * 3L);
+                            else if (period == Period.YEARLY) nextDue = nextDue.plusYears(interval);
+                            else if (period == Period.WEEKLY) nextDue = nextDue.plusWeeks(interval);
+                            else if (period == Period.DAILY) nextDue = nextDue.plusDays(interval);
+                            else break;
+                        }
+                    }
+                }
+            }
+            return hiddenTotal;
+    }
+
+    private List<DashboardResponse.AmenityRevenueData> buildAmenityChartRefactored(List<RecurringCostSchedule> schedules, List<org.bson.Document> plans, int year, Set<String> amenityLeaseIds, Map<String, String> costTypeMap, Map<String, Lease> leaseMap, Map<String, RecurringCost> costMap) {
         List<Amenity> allAmenities = mongoTemplate.findAll(Amenity.class);
         List<LeaseAmenity> allLeaseAmenities = mongoTemplate.findAll(LeaseAmenity.class);
 
@@ -431,24 +781,30 @@ public class LeaseDashboardService {
             return "Other";
         };
 
-        // Actual Revenue (Từ Schedule chứa LeaseId)
-        for (RecurringCostSchedule s : schedules) {
-            if (amenityLeaseIds.contains(s.getLeaseId()) && s.getPaymentStatus() == PaymentStatus.PAID && s.getDueDate() != null && s.getDueDate().getYear() == year) {
-                BigDecimal amount = s.getAmountInBase() != null ? s.getAmountInBase() : BigDecimal.ZERO;
-                List<AmenityType> types = leaseToAmenityTypes.get(s.getLeaseId());
-                if (types != null && !types.isEmpty()) {
-                    BigDecimal splitAmount = amount.divide(new BigDecimal(types.size()), 2, RoundingMode.HALF_UP);
-                    for (AmenityType type : types) {
-                        String cat = mapTypeToStr.apply(type);
-                        actualMap.put(cat, actualMap.get(cat).add(splitAmount));
+        for (int m = 1; m <= 12; m++) {
+            final int month = m;
+            schedules.stream()
+                .filter(s -> s.getDueDate() != null && s.getDueDate().getYear() == year && s.getDueDate().getMonthValue() == month)
+                .filter(s -> s.getPaymentStatus() == PaymentStatus.PAID)
+                .filter(s -> isMatchingCategory(s, RevenueCategory.AMENITY, amenityLeaseIds, costTypeMap))
+                .forEach(s -> {
+                    BigDecimal amount = getSafeAmount(s, leaseMap, costMap);
+                    List<AmenityType> types = leaseToAmenityTypes.get(s.getLeaseId());
+                    if (types != null && !types.isEmpty()) {
+                        BigDecimal splitAmount = amount.divide(new BigDecimal(types.size()), 2, RoundingMode.HALF_UP);
+                        for (AmenityType type : types) {
+                            String cat = mapTypeToStr.apply(type);
+                            actualMap.put(cat, actualMap.get(cat).add(splitAmount));
+                        }
+                    } else {
+                        actualMap.put("Other", actualMap.get("Other").add(amount));
                     }
-                }
-            }
+                });
         }
 
         for (org.bson.Document p : plans) {
-            if (getYearFromDoc(p) == year) {
-                BigDecimal cost = getCostFromDoc(p, "plannedCost", "plan_cost", "planned_cost");
+            if (getYearFromDoc(p) == year && isMatchingPlanCategory(p, RevenueCategory.AMENITY)) {
+                BigDecimal cost = getCostFromDoc(p, "plannedCost", "planCost", "plan_cost", "planned_cost", "cost", "amount");
                 if (cost.compareTo(BigDecimal.ZERO) > 0) {
                     String catName = p.getString("category");
                     if (catName == null) catName = "Other";
@@ -474,67 +830,168 @@ public class LeaseDashboardService {
         return list;
     }
 
-    private DashboardResponse.KPICards calculateRevenueKPI(List<RecurringCostSchedule> schedules, List<org.bson.Document> plans, LocalDate toDate, double actualOcc, double forecastOcc) {
-        int currentYear = toDate.getYear();
-        int currentMonth = toDate.getMonthValue();
+    // =========================================================
+    // UTILITIES
+    // =========================================================
 
-        BigDecimal actualToDate = schedules.stream()
-                .filter(s -> s.getPaymentStatus() == PaymentStatus.PAID && s.getDueDate() != null && s.getDueDate().getYear() == currentYear && !s.getDueDate().isAfter(toDate))
-                .map(s -> s.getAmountInBase() != null ? s.getAmountInBase() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        BigDecimal annualForecast = schedules.stream()
-                .filter(s -> s.getPaymentStatus() != PaymentStatus.REJECTED && s.getDueDate() != null && s.getDueDate().getYear() == currentYear)
-                .map(s -> s.getAmountInBase() != null ? s.getAmountInBase() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        BigDecimal annualPlan = BigDecimal.ZERO;
-        BigDecimal planToDate = BigDecimal.ZERO;
-        for (org.bson.Document p : plans) {
-            if (getYearFromDoc(p) == currentYear) {
-                BigDecimal cost = getCostFromDoc(p, "plannedCost", "plan_cost", "planned_cost");
-                annualPlan = annualPlan.add(cost);
-                
-                int m = getMonthFromDoc(p);
-                if (m > 0 && m <= currentMonth) {
-                    planToDate = planToDate.add(cost);
-                }
-            }
+    private boolean isMatchingCategory(RecurringCostSchedule s, RevenueCategory cat, Set<String> amenityLeaseIds, Map<String, String> costTypeMap) {
+        String cType = costTypeMap.get(s.getRecurringCostId());
+        if (cType == null && s.getCostType() != null) cType = s.getCostType().name();
+        if (cType == null) return false;
+        
+        String cUpper = cType.toUpperCase().replace("_", "");
+        boolean isRent = cUpper.contains(KEY_RENT) || cUpper.contains("BASERENT");
+        boolean isService = cUpper.contains(KEY_SERVICE) || cUpper.contains("BASESERVICE");
+        
+        if (cat == RevenueCategory.CONTRACT) {
+            return isRent && !amenityLeaseIds.contains(s.getLeaseId());
+        } else if (cat == RevenueCategory.SERVICE) {
+            return isService; 
+        } else if (cat == RevenueCategory.AMENITY) {
+            return !isRent && !isService && amenityLeaseIds.contains(s.getLeaseId());
         }
-
-        BigDecimal safeAnnualPlan = annualPlan.compareTo(BigDecimal.ZERO) == 0 ? BigDecimal.ONE : annualPlan;
-        BigDecimal safePlanToDate = planToDate.compareTo(BigDecimal.ZERO) == 0 ? BigDecimal.ONE : planToDate;
-
-        double planAchievement = actualToDate.divide(safeAnnualPlan, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100")).doubleValue();
-        double forecastAchievement = annualForecast.divide(safeAnnualPlan, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100")).doubleValue();
-        double ytdAchievement = actualToDate.divide(safePlanToDate, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100")).doubleValue();
-
-        return DashboardResponse.KPICards.builder()
-                .annualPlan(annualPlan).planToDate(planToDate).actualToDate(actualToDate).annualForecast(annualForecast)
-                .planAchievement(planAchievement).forecastAchievement(forecastAchievement).ytdAchievement(ytdAchievement)
-                .actualOcc(actualOcc).forecastOcc(forecastOcc)
-                .build();
+        return false;
     }
 
-    // --- Helper methods for safe mapping ---
+    private boolean isMatchingPlanCategory(org.bson.Document p, RevenueCategory category) {
+        String catStr = p.getString("category");
+        if (catStr == null) catStr = p.getString("costType");
+        if (catStr == null) catStr = p.getString("type");
+        if (catStr == null) return false;
+        
+        String cUpper = catStr.toUpperCase().replace(" ", "_");
+        boolean isRent = cUpper.contains(KEY_RENT);
+        boolean isService = cUpper.contains(KEY_SERVICE);
+        
+        if (category == RevenueCategory.CONTRACT) return isRent;
+        if (category == RevenueCategory.SERVICE) return isService;
+        if (category == RevenueCategory.AMENITY) return !isRent && !isService;
+        return false;
+    }
+
+    private boolean isLeaseActiveInMonth(Lease lease, List<LeaseOption> lsOps, int year, int month) {
+        if (!Boolean.TRUE.equals(lease.getActive())) return false;
+        
+        LocalDate startOfMonth = LocalDate.of(year, month, 1);
+        LocalDate endOfMonth = startOfMonth.withDayOfMonth(startOfMonth.lengthOfMonth());
+        
+        if (lease.getStartDate() == null || lease.getStartDate().isAfter(endOfMonth)) return false;
+        
+        LocalDate effectiveEnd = getEffectiveEndDate(lease, lsOps);
+        if (effectiveEnd != null && effectiveEnd.isBefore(startOfMonth)) return false;
+        return true;
+    }
+
+    private boolean isLeaseForecastActiveInMonth(Lease lease, List<LeaseOption> lsOps, int year, int month) {
+        if (!Boolean.TRUE.equals(lease.getActive())) return false;
+        
+        LocalDate startOfMonth = LocalDate.of(year, month, 1);
+        LocalDate endOfMonth = startOfMonth.withDayOfMonth(startOfMonth.lengthOfMonth());
+        
+        if (lease.getStartDate() == null || lease.getStartDate().isAfter(endOfMonth)) return false;
+        
+        LocalDate effectiveEnd = getEffectiveEndDate(lease, lsOps);
+        if (effectiveEnd != null && effectiveEnd.isBefore(startOfMonth)) {
+            if (Boolean.TRUE.equals(lease.getAssumeRenewal())) {
+                boolean hasTermination = lsOps.stream().anyMatch(o -> o.getOpType() == OptionType.LEASE_END || o.getOpType() == OptionType.EARLY_TERMINATION);
+                if (!hasTermination) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return true;
+    }
+
+    private double calculatePercentage(BigDecimal part, BigDecimal total) {
+        if (total == null || total.compareTo(BigDecimal.ZERO) == 0) return 0.0;
+        return part.divide(total, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100")).doubleValue();
+    }
+
+    private BigDecimal getSafeAmount(RecurringCostSchedule s, Map<String, Lease> leaseMap, Map<String, RecurringCost> costMap) {
+        BigDecimal amount = BigDecimal.ZERO;
+        if (s.getAmountInBase() != null && s.getAmountInBase().compareTo(BigDecimal.ZERO) > 0) {
+            amount = s.getAmountInBase();
+        } else if (s.getAmountInTotal() != null) {
+            amount = s.getAmountInTotal();
+        }
+
+        if (amount.compareTo(BigDecimal.ZERO) > 0 && s.getRecurringCostId() != null) {
+            RecurringCost cost = costMap.get(s.getRecurringCostId());
+            Lease lease = s.getLeaseId() != null ? leaseMap.get(s.getLeaseId()) : null;
+            
+            BigDecimal exchangeRate = BigDecimal.ONE;
+            if (cost != null) {
+                if (Boolean.TRUE.equals(cost.getOverrideExchangeRate()) && cost.getExchangeRate() != null && cost.getExchangeRate().compareTo(BigDecimal.ZERO) > 0) {
+                    exchangeRate = cost.getExchangeRate();
+                } else if (lease != null && lease.getBaseExchangeRate() != null && lease.getBaseExchangeRate().compareTo(BigDecimal.ZERO) > 0) {
+                    exchangeRate = lease.getBaseExchangeRate();
+                }
+            } else if (lease != null && lease.getBaseExchangeRate() != null && lease.getBaseExchangeRate().compareTo(BigDecimal.ZERO) > 0) {
+                exchangeRate = lease.getBaseExchangeRate();
+            }
+
+            // BẢO VỆ DOUBLE-CONVERSION: Tránh nhân đúp tỷ giá khi người dùng vô tình nhập tiền VND nhưng vẫn gắn tỷ giá lớn
+            boolean isAlreadyVND = amount.compareTo(new BigDecimal("100000")) >= 0 && exchangeRate.compareTo(new BigDecimal("10000")) >= 0;
+            if (exchangeRate.compareTo(BigDecimal.ONE) > 0 && !isAlreadyVND) {
+                amount = amount.multiply(exchangeRate);
+            }
+        }
+        return amount;
+    }
+
     private int getYearFromDoc(org.bson.Document p) {
-        if (p.get("year") != null) return Integer.parseInt(p.get("year").toString());
-        java.util.Date d = p.getDate("end_date");
-        if (d != null) return d.toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate().getYear();
+        if (p.get("year") != null) {
+            try { return (int) Double.parseDouble(p.get("year").toString()); } catch (Exception e) {}
+        }
+        Object dObj = p.get("end_date");
+        if (dObj instanceof java.util.Date) {
+            return ((java.util.Date) dObj).toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate().getYear();
+        } else if (dObj instanceof String) {
+            try { return LocalDate.parse((String) dObj).getYear(); } catch (Exception e) {}
+            try { return LocalDate.parse((String) dObj, java.time.format.DateTimeFormatter.ISO_DATE_TIME).getYear(); } catch (Exception e) {}
+        }
+        
+        Object sObj = p.get("start_date");
+        if (sObj instanceof java.util.Date) {
+            return ((java.util.Date) sObj).toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate().getYear();
+        } else if (sObj instanceof String) {
+            try { return LocalDate.parse((String) sObj).getYear(); } catch (Exception e) {}
+            try { return LocalDate.parse((String) sObj, java.time.format.DateTimeFormatter.ISO_DATE_TIME).getYear(); } catch (Exception e) {}
+        }
         return -1;
     }
 
     private int getMonthFromDoc(org.bson.Document p) {
-        if (p.get("month") != null) return Integer.parseInt(p.get("month").toString());
-        java.util.Date d = p.getDate("end_date");
-        if (d != null) return d.toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate().getMonthValue();
+        if (p.get("month") != null) {
+            try { return (int) Double.parseDouble(p.get("month").toString()); } catch (Exception e) {}
+        }
+        Object dObj = p.get("end_date");
+        if (dObj instanceof java.util.Date) {
+            return ((java.util.Date) dObj).toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate().getMonthValue();
+        } else if (dObj instanceof String) {
+            try { return LocalDate.parse((String) dObj).getMonthValue(); } catch (Exception e) {}
+            try { return LocalDate.parse((String) dObj, java.time.format.DateTimeFormatter.ISO_DATE_TIME).getMonthValue(); } catch (Exception e) {}
+        }
+        
+        Object sObj = p.get("start_date");
+        if (sObj instanceof java.util.Date) {
+            return ((java.util.Date) sObj).toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate().getMonthValue();
+        } else if (sObj instanceof String) {
+            try { return LocalDate.parse((String) sObj).getMonthValue(); } catch (Exception e) {}
+            try { return LocalDate.parse((String) sObj, java.time.format.DateTimeFormatter.ISO_DATE_TIME).getMonthValue(); } catch (Exception e) {}
+        }
         return -1;
     }
 
     private BigDecimal getCostFromDoc(org.bson.Document p, String... keys) {
         for (String k : keys) {
             Object val = p.get(k);
-            if (val != null) return new BigDecimal(val.toString());
+            if (val != null) {
+                try {
+                    return new BigDecimal(val.toString());
+                } catch (Exception e) {}
+            }
         }
         return BigDecimal.ZERO;
     }

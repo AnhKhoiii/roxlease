@@ -114,12 +114,12 @@ public class CostWizardService {
             // 🚀 BẢO VỆ 2: Giới hạn tối đa 120 kỳ (10 năm) để chống treo Database
             if (generatedCount >= 120) break;
 
-            // Tịnh tiến ngày chuẩn xác theo Enum Period
-            if (period == Period.DAILY) currentDue = currentDue.plusDays(interval);
-            else if (period == Period.WEEKLY) currentDue = currentDue.plusWeeks(interval);
-            else if (period == Period.MONTHLY) currentDue = currentDue.plusMonths(interval);
-            else if (period == Period.QUARTERLY) currentDue = currentDue.plusMonths(interval * 3L);
-            else if (period == Period.YEARLY) currentDue = currentDue.plusYears(interval);
+            // Tịnh tiến ngày chuẩn xác theo Enum Period (Tính từ ngày bắt đầu gốc để tránh lệch ngày cuối tháng)
+            if (period == Period.DAILY) currentDue = cost.getStartDate().plusDays((long) generatedCount * interval);
+            else if (period == Period.WEEKLY) currentDue = cost.getStartDate().plusWeeks((long) generatedCount * interval);
+            else if (period == Period.MONTHLY) currentDue = cost.getStartDate().plusMonths((long) generatedCount * interval);
+            else if (period == Period.QUARTERLY) currentDue = cost.getStartDate().plusMonths((long) generatedCount * interval * 3L);
+            else if (period == Period.YEARLY) currentDue = cost.getStartDate().plusYears((long) generatedCount * interval);
             else break; 
         }
 
