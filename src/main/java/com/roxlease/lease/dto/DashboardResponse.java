@@ -55,6 +55,9 @@ public class DashboardResponse {
         private List<MonthlyRevenue> serviceFee;   
         private List<AmenityRevenueData> amenity;  
         private KPICards kpi;
+        private KPICards contractKpi;
+        private KPICards serviceFeeKpi;
+        private KPICards amenityKpi;
     }
 
     @Data @Builder public static class MonthlyRevenue {
@@ -62,15 +65,16 @@ public class DashboardResponse {
         private BigDecimal actual;
         private BigDecimal planned;
         private BigDecimal forecast;
-        private double actualOcc;
-        private double plannedOcc;
-        private double forecastOcc;
+        private Double actualOcc;
+        private Double plannedOcc;
+        private Double forecastOcc;
     }
 
     @Data @Builder public static class AmenityRevenueData {
         private String category;
         private BigDecimal actual;
         private BigDecimal planned;
+        private BigDecimal forecast;
     }
 
     @Data @Builder public static class KPICards {
@@ -81,7 +85,10 @@ public class DashboardResponse {
         private double planAchievement;
         private double forecastAchievement;
         private double ytdAchievement;
-        private double actualOcc;
-        private double forecastOcc;
+        private Double actualOcc;
+        private Double forecastOcc;
+        private Double occAchievement;
+        private Double forecastOccAchievement;
+        private Double ytdOccAchievement;
     }
 }

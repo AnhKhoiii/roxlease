@@ -7,6 +7,7 @@ import com.roxlease.cost.model.RecurringCostSchedule;
 import com.roxlease.cost.model.RecurringCost;
 import com.roxlease.lease.model.Lease;
 import com.roxlease.lease.model.LeaseOption;
+import com.roxlease.lease.model.LeaseAmenity;
 import com.roxlease.lease.model.Enum.OptionType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -50,6 +51,9 @@ public class LeaseAnalyticsService {
         List<RecurringCost> allCosts = mongoTemplate.findAll(RecurringCost.class);
         List<RecurringCostSchedule> allSchedules = mongoTemplate.findAll(RecurringCostSchedule.class);
         
+        List<LeaseAmenity> allLeaseAmenities = mongoTemplate.findAll(LeaseAmenity.class);
+        Set<String> amenityLeaseIds = allLeaseAmenities.stream().map(LeaseAmenity::getLsId).filter(Objects::nonNull).collect(Collectors.toSet());
+
         // Map category & trạng thái của từng RecurringCost cho các Schedule
         Map<String, String> costCategoryMap = new HashMap<>();
         Set<String> scheduledCostIds = new HashSet<>();
@@ -81,26 +85,43 @@ public class LeaseAnalyticsService {
             String cat = plan.getString("category");
             if (cat == null) continue;
 
-            java.util.Date rawDate = plan.getDate("end_date");
-            if (rawDate == null) continue;
+            String cUpper = cat.toUpperCase().replace(" ", "").replace("_", "");
             
-            LocalDate endDate = rawDate.toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate();
-            Object planCostObj = plan.get("plan_cost");
-            BigDecimal planCost = planCostObj != null ? new BigDecimal(planCostObj.toString()) : BigDecimal.ZERO;
+            int year = -1;
+            int month = -1;
+            if (plan.get("year") != null) {
+                try { year = (int) Double.parseDouble(plan.get("year").toString()); } catch(Exception e){}
+            }
+            if (plan.get("month") != null) {
+                try { month = (int) Double.parseDouble(plan.get("month").toString()); } catch(Exception e){}
+            }
 
-            if (endDate.getYear() == targetYear) {
+            Object planRevObj = plan.get("plannedRevenue");
+            if (planRevObj == null) planRevObj = plan.get("planned_revenue");
+            if (planRevObj == null) planRevObj = plan.get("plan_cost");
+            BigDecimal planRev = planRevObj != null ? new BigDecimal(planRevObj.toString()) : BigDecimal.ZERO;
+
+            if (year == targetYear) {
+                boolean isServicePlan = cUpper.equals("BASESERVICE") || cUpper.contains("INCOMEBASESERVICE") || cUpper.equals("SERVICE");
+                
+                String[] amenityCats = {"PARKING", "BILLBOARD", "POOL", "EVENT", "OTHER"};
+                boolean isAmenityPlan = false;
+                for (String a : amenityCats) {
+                    if (cUpper.contains(a)) { isAmenityPlan = true; break; }
+                }
+
                 // Dành cho Service
-                if (serviceCategory.equalsIgnoreCase(cat) || "Income_Base service".equalsIgnoreCase(cat)) {
-                    svcAnnualPlan = svcAnnualPlan.add(planCost);
-                    if (endDate.getMonthValue() <= targetMonth) {
-                        svcPlanToDate = svcPlanToDate.add(planCost); // KH Lũy kế đến thời điểm báo cáo
+                if (isServicePlan) {
+                    svcAnnualPlan = svcAnnualPlan.add(planRev);
+                    if (month > 0 && month <= targetMonth) {
+                        svcPlanToDate = svcPlanToDate.add(planRev); // KH Lũy kế đến thời điểm báo cáo
                     }
                 }
                 // Dành cho Amenity (Trừ Rental & Service)
-                else if (amenityCategories.contains(cat)) {
-                    amAnnualPlan = amAnnualPlan.add(planCost);
-                    if (endDate.getMonthValue() <= targetMonth) {
-                        amPlanToDate = amPlanToDate.add(planCost);
+                if (!isServicePlan && isAmenityPlan) {
+                    amAnnualPlan = amAnnualPlan.add(planRev);
+                    if (month > 0 && month <= targetMonth) {
+                        amPlanToDate = amPlanToDate.add(planRev);
                     }
                 }
             }
@@ -109,6 +130,7 @@ public class LeaseAnalyticsService {
         // 3. TÍNH CHỈ SỐ ACTUAL & FORECAST (THỰC TẾ & DỰ BÁO)
         for (RecurringCostSchedule sch : allSchedules) {
             String cat = costCategoryMap.get(sch.getRecurringCostId());
+            boolean isAmenityLease = sch.getLeaseId() != null && amenityLeaseIds.contains(sch.getLeaseId());
             if (cat == null) continue;
 
             LocalDate due = sch.getDueDate();
@@ -118,9 +140,10 @@ public class LeaseAnalyticsService {
             boolean isPaid = sch.getPaymentStatus() == PaymentStatus.PAID;
             boolean isNotCancelled = sch.getPaymentStatus() != PaymentStatus.REJECTED; // Tương đương != CANCELLED
             boolean isScheduledPlan = scheduledCostIds.contains(sch.getRecurringCostId()); // CPĐK có Schedule_Status = Schedule
+            boolean isServiceSch = serviceCategory.equalsIgnoreCase(cat) || "Income_Base service".equalsIgnoreCase(cat) || "BASESERVICE".equalsIgnoreCase(cat);
 
             // --- LOGIC CHO SERVICE ---
-            if (serviceCategory.equalsIgnoreCase(cat) || "Income_Base service".equalsIgnoreCase(cat) || "BASESERVICE".equalsIgnoreCase(cat)) {
+            if (isServiceSch) {
                 if (isPaid && !due.isAfter(toDate)) {
                     svcActualToDate = svcActualToDate.add(amt);
                 }
@@ -130,11 +153,11 @@ public class LeaseAnalyticsService {
             }
             
             // --- LOGIC CHO AMENITY ---
-            else if (amenityCategories.contains(cat)) {
+            if (!isServiceSch && isAmenityLease) {
                 // Các chỉ số tính theo đúng Tháng (Monthly)
                 if (due.getMonthValue() == targetMonth) {
                     if (isPaid) amActualRev = amActualRev.add(amt);
-                    if (isNotCancelled) amForecastRev = amForecastRev.add(amt); // Dự báo tiện ích theo tháng
+                    amForecastRev = amForecastRev.add(amt); // Dự báo tiện ích theo tháng
                 }
 
                 // Lũy kế đến thời điểm báo cáo & Dự báo năm

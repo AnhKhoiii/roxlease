@@ -432,8 +432,10 @@ export default function AmendmentsTab({ lease }) {
                 
                 <div className="flex gap-2">
                   <button onClick={() => setModalConfig({ ...modalConfig, isOpen: false })} className="px-5 py-2 text-xs font-bold text-gray-600 bg-white border border-gray-300 rounded hover:bg-gray-100 shadow-sm transition-colors">Cancel</button>
-                  <button onClick={handleSaveDraft} disabled={!isFormValid || loading} className="px-5 py-2 text-xs font-bold text-gray-800 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50 shadow-sm transition-colors">Save as Draft</button>
-                  
+                  {!formData.active && (
+                    <button onClick={handleSaveDraft} disabled={!isFormValid || loading} className="px-5 py-2 text-xs font-bold text-gray-800 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50 shadow-sm transition-colors">Save as Draft</button>
+                  )}
+
                   {/* 🚀 KHÓA NÚT NÀY NẾU CHƯA ACTIVE HOẶC INVALID */}
                   <button 
                     onClick={() => handleSubmitRequest(modalConfig.mode === "ADD" ? "CREATE" : "UPDATE", formData)} 

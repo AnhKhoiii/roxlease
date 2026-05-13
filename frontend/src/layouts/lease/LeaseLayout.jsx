@@ -26,20 +26,6 @@ export default function LeaseLayout() {
         </div>
         
         <div className="flex flex-col gap-1">
-          
-          {/* Lease Dashboard */}
-          {hasAppAccess('DASHBOARD') && (
-            <NavLink 
-              to="/lease/dashboard" 
-              className={`px-4 py-3 rounded text-[15px] font-semibold transition-all ${
-                isMenuActive('/lease/dashboard') 
-                  ? 'bg-white text-red-500 border-l-4 border-red-500 shadow-sm' 
-                  : 'text-gray-700 hover:text-red-500 hover:bg-gray-200 border-l-4 border-transparent'
-              }`}
-            >
-              Lease Dashboard
-            </NavLink>
-          )}
 
           {/* Lease Console */}
           {hasAppAccess('CONSOLE') && (

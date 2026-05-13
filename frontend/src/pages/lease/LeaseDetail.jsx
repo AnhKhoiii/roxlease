@@ -20,7 +20,13 @@ export default function LeaseDetail() {
   // State quản lý Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const tabs = ["Contacts", "Recurring Costs", "Clauses", "Options", "Amendments", "Suites"];
+  // Kiểm tra xem Lease có gắn Amenity hay không
+  const isAmenityLease = lease?.assocAmenity === true || !!lease?.amenityId || !!lease?.amenityID || (lease?.amenityIds && lease.amenityIds.length > 0);
+
+  const tabs = ["Contacts", "Recurring Costs", "Clauses", "Options", "Amendments"];
+  if (lease && !isAmenityLease) {
+    tabs.push("Suites");
+  }
 
   useEffect(() => {
     fetchLeaseDetail();
@@ -180,7 +186,7 @@ export default function LeaseDetail() {
           {activeTab === "Clauses" && <ClausesTab lease={lease} />}
           {activeTab === "Options" && <OptionsTab lease={lease} />}
           {activeTab === "Amendments" && <AmendmentsTab lease={lease} />}
-          {activeTab === "Suites" && <LeaseSuitesTab lease={lease} />}
+          {activeTab === "Suites" && !isAmenityLease && <LeaseSuitesTab lease={lease} />}
           {activeTab === "Recurring Costs" && <RecurringCostsTab lease={lease} />}
         </div>    
       </div>

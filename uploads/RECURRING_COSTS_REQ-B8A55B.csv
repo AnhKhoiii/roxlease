@@ -1,0 +1,21 @@
+﻿Field Name,New Value
+recurringCostId,hjk
+description,
+costType,BASERENT
+vatCountry,
+dateMatchLs,true
+overrideExchangeRate,false
+active,false
+startDate,2026-05-01
+endDate,2028-12-31
+period,QUARTERLY
+interval,3
+amountInBase,0
+amountOutBase,0
+amountInVat,0
+amountInTotal,0
+amountOutVat,0
+amountOutTotal,0
+exchangeRate,1
+currVat,0
+overrideVat,false

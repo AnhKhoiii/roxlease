@@ -11,8 +11,17 @@ import {
 const formatNum = (num) => Number(num || 0).toLocaleString(undefined, { maximumFractionDigits: 1 });
 const formatCurrency = (num) => {
   if (!num) return "0";
-  const inBillion = Number(num) / 1000000000;
-  return inBillion >= 1 ? `${inBillion.toLocaleString(undefined, { maximumFractionDigits: 2 })}B` : Number(num).toLocaleString();
+  const numValue = Number(num);
+  const inBillion = numValue / 1000000000;
+  if (inBillion >= 1) return `${inBillion.toLocaleString(undefined, { maximumFractionDigits: 2 })}B`;
+  const inMillion = numValue / 1000000;
+  if (inMillion >= 1) return `${inMillion.toLocaleString(undefined, { maximumFractionDigits: 2 })}M`;
+  return numValue.toLocaleString();
+};
+
+const displayOccPercent = (val) => {
+  if (val === null || val === undefined) return "0.00";
+  return Number(val).toFixed(2);
 };
 
 const CHART_COLORS = ['#EAB308', '#3B82F6', '#22C55E', '#EF4444', '#8B5CF6'];
@@ -43,7 +52,7 @@ const ProgressBar = ({ label, value, color = "bg-green-500" }) => (
   <div className="mb-3">
     <div className="flex justify-between text-[11px] font-bold mb-1 uppercase tracking-tighter">
       <span className="text-gray-600">{label}</span>
-      <span className={color.replace('bg-', 'text-')}>{formatNum(value)}%</span>
+      <span className={color.replace('bg-', 'text-')}>{label.includes('OCC') ? displayOccPercent(value) : formatNum(value)}%</span>
     </div>
     <div className="w-full bg-gray-200 rounded-full h-2">
       <div className={`${color} h-2 rounded-full transition-all duration-700`} style={{ width: `${Math.min(value || 0, 100)}%` }}></div>
@@ -58,8 +67,27 @@ const KpiCard = ({ label, value, color="text-gray-800" }) => (
   </div>
 );
 
-const KpiGrid = ({ kpi }) => {
+const KpiGrid = ({ kpi, showOcc = true }) => {
   if (!kpi) return null;
+  
+  if (!showOcc) {
+    return (
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <KpiCard label="Annual Plan" value={`${formatCurrency(kpi.annualPlan)} VND`} />
+          <KpiCard label="Plan to Date" value={`${formatCurrency(kpi.planToDate)} VND`} />
+          <KpiCard label="Actual to Date" value={`${formatCurrency(kpi.actualToDate)} VND`} color="text-green-600" />
+          <KpiCard label="Annual Forecast" value={`${formatCurrency(kpi.annualForecast)} VND`} color="text-blue-600" />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <KpiCard label="Plan Achievement" value={`${formatNum(kpi.planAchievement)}%`} color="text-orange-500" />
+          <KpiCard label="Forecast Achievement" value={`${formatNum(kpi.forecastAchievement)}%`} />
+          <KpiCard label="YTD Achievement" value={`${formatNum(kpi.ytdAchievement)}%`} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4 mb-6">
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -72,9 +100,9 @@ const KpiGrid = ({ kpi }) => {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <KpiCard label="Forecast Achievement" value={`${formatNum(kpi.forecastAchievement)}%`} />
         <KpiCard label="YTD Achievement" value={`${formatNum(kpi.ytdAchievement)}%`} />
-        <KpiCard label="OCC Achievement" value={`${formatNum(kpi.actualOcc)}%`} />
-        <KpiCard label="Forecast OCC Achiev." value={`${formatNum(kpi.forecastOcc)}%`} />
-        <KpiCard label="YTD OCC Achiev." value={`${formatNum(kpi.actualOcc)}%`} />
+        <KpiCard label="OCC Achievement" value={`${displayOccPercent(kpi.occAchievement)}%`} />
+        <KpiCard label="Forecast OCC Achiev." value={`${displayOccPercent(kpi.forecastOccAchievement)}%`} />
+        <KpiCard label="YTD OCC Achiev." value={`${displayOccPercent(kpi.ytdOccAchievement)}%`} />
       </div>
     </div>
   );
@@ -238,7 +266,7 @@ const ContractRevenueSection = ({ revenue }) => {
   return (
     <SectionContainer>
       <SectionTitle title="CONTRACT REVENUE & OCCUPANCY" />
-      <KpiGrid kpi={revenue?.kpi} />
+      <KpiGrid kpi={revenue?.contractKpi} />
       
       {/* KHỐI PROGRESS BAR CỦA OCC VÀ REVENUE */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10 bg-gray-50 p-6 rounded border border-gray-100 mb-8">
@@ -250,8 +278,8 @@ const ContractRevenueSection = ({ revenue }) => {
         </div>
         <div>
           <h4 className="text-[10px] font-black text-gray-400 uppercase mb-4">Space Utilization (OCC)</h4>
-          <ProgressBar label="Actual OCC" value={revenue?.kpi?.actualOcc} color="bg-[#D68910]" />
-          <ProgressBar label="Forecast OCC" value={revenue?.kpi?.forecastOcc} color="bg-[#F39C12]" />
+          <ProgressBar label="Actual OCC" value={revenue?.kpi?.occAchievement} color="bg-[#D68910]" />
+          <ProgressBar label="Forecast OCC" value={revenue?.kpi?.forecastOccAchievement} color="bg-[#F39C12]" />
         </div>
       </div>
 
@@ -261,13 +289,13 @@ const ContractRevenueSection = ({ revenue }) => {
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
             <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280', fontWeight: 'bold' }} />
             <YAxis yAxisId="left" orientation="left" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280', fontWeight: 'bold' }} tickFormatter={(val) => formatCurrency(val)} />
-            <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280', fontWeight: 'bold' }} />
-            <Tooltip cursor={{ fill: '#F3F4F6' }} formatter={(val, name) => [name.includes('OCC') ? `${formatNum(val)}%` : `${formatNum(val)} VND`, name]} />
+            <YAxis yAxisId="right" orientation="right" domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280', fontWeight: 'bold' }} tickFormatter={(val) => `${val}%`} />
+            <Tooltip cursor={{ fill: '#F3F4F6' }} formatter={(val, name) => [name.includes('OCC') ? `${displayOccPercent(val)}%` : `${formatNum(val)} VND`, name]} />
             <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: '20px', fontSize: '11px', fontWeight: 'bold' }} />
             
-            <Bar yAxisId="left" dataKey="actual" name="Actual Revenue" fill="#10B981" radius={[4, 4, 0, 0]} maxBarSize={30} />
             <Bar yAxisId="left" dataKey="planned" name="Planned Revenue" fill="#1E3A8A" radius={[4, 4, 0, 0]} maxBarSize={30} />
             <Bar yAxisId="left" dataKey="forecast" name="Forecast Revenue" fill="#93C5FD" radius={[4, 4, 0, 0]} maxBarSize={30} />
+            <Bar yAxisId="left" dataKey="actual" name="Actual Revenue" fill="#10B981" radius={[4, 4, 0, 0]} maxBarSize={30} />
             
             <Line yAxisId="right" type="monotone" dataKey="plannedOcc" name="Planned OCC" stroke="#1E3A8A" strokeWidth={2} dot={{ r: 3 }} />
             <Line yAxisId="right" type="monotone" dataKey="forecastOcc" name="Forecast OCC" stroke="#06B6D4" strokeWidth={2} dot={{ r: 3 }} />
@@ -286,20 +314,20 @@ const ServiceFeeSection = ({ revenue }) => {
   return (
     <SectionContainer>
       <SectionTitle title="SERVICE FEE REVENUE" />
-      <KpiGrid kpi={revenue?.kpi} />
+      <KpiGrid kpi={revenue?.serviceFeeKpi} showOcc={false} />
       <div className="h-[350px] w-full mt-8">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={revenue?.serviceFee || []} margin={{ top: 20, right: 0, bottom: 20, left: 0 }}>
+          <ComposedChart data={revenue?.serviceFee || []} margin={{ top: 20, right: 0, bottom: 20, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
             <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280', fontWeight: 'bold' }} />
-            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280', fontWeight: 'bold' }} tickFormatter={(val) => formatCurrency(val)} />
-            <Tooltip cursor={{ fill: '#F3F4F6' }} formatter={(val) => `${formatNum(val)} VND`} />
+            <YAxis yAxisId="left" orientation="left" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280', fontWeight: 'bold' }} tickFormatter={(val) => formatCurrency(val)} />
+            <Tooltip cursor={{ fill: '#F3F4F6' }} formatter={(val, name) => [`${formatNum(val)} VND`, name]} />
             <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: '20px', fontSize: '11px', fontWeight: 'bold' }} />
             
-            <Bar dataKey="actual" name="Actual Revenue" fill="#10B981" radius={[4, 4, 0, 0]} maxBarSize={40} />
-            <Bar dataKey="planned" name="Planned Revenue" fill="#1E3A8A" radius={[4, 4, 0, 0]} maxBarSize={40} />
-            <Bar dataKey="forecast" name="Forecast Revenue" fill="#93C5FD" radius={[4, 4, 0, 0]} maxBarSize={40} />
-          </BarChart>
+            <Bar yAxisId="left" dataKey="planned" name="Planned Revenue" fill="#1E3A8A" radius={[4, 4, 0, 0]} maxBarSize={40} />
+            <Bar yAxisId="left" dataKey="forecast" name="Forecast Revenue" fill="#93C5FD" radius={[4, 4, 0, 0]} maxBarSize={40} />
+            <Bar yAxisId="left" dataKey="actual" name="Actual Revenue" fill="#10B981" radius={[4, 4, 0, 0]} maxBarSize={40} />
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
     </SectionContainer>
@@ -313,19 +341,20 @@ const AmenityRevenueSection = ({ revenue }) => {
   return (
     <SectionContainer>
       <SectionTitle title="AMENITY REVENUE" />
-      <KpiGrid kpi={revenue?.kpi} />
+      <KpiGrid kpi={revenue?.amenityKpi} showOcc={false} />
       <div className="h-[350px] w-full mt-8">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={revenue?.amenity || []} margin={{ top: 20, right: 0, bottom: 20, left: 0 }}>
+          <ComposedChart data={revenue?.amenity || []} margin={{ top: 20, right: 0, bottom: 20, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
             <XAxis dataKey="category" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280', fontWeight: 'bold' }} />
-            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280', fontWeight: 'bold' }} tickFormatter={(val) => formatCurrency(val)} />
-            <Tooltip cursor={{ fill: '#F3F4F6' }} formatter={(val) => `${formatNum(val)} VND`} />
+            <YAxis yAxisId="left" orientation="left" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280', fontWeight: 'bold' }} tickFormatter={(val) => formatCurrency(val)} />
+            <Tooltip cursor={{ fill: '#F3F4F6' }} formatter={(val, name) => [`${formatNum(val)} VND`, name]} />
             <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: '20px', fontSize: '11px', fontWeight: 'bold' }} />
             
-            <Bar dataKey="actual" name="Actual Revenue" fill="#10B981" radius={[4, 4, 0, 0]} maxBarSize={60} />
-            <Bar dataKey="planned" name="Planned Revenue" fill="#1E3A8A" radius={[4, 4, 0, 0]} maxBarSize={60} />
-          </BarChart>
+            <Bar yAxisId="left" dataKey="planned" name="Planned Revenue" fill="#1E3A8A" radius={[4, 4, 0, 0]} maxBarSize={60} />
+            <Bar yAxisId="left" dataKey="forecast" name="Forecast Revenue" fill="#93C5FD" radius={[4, 4, 0, 0]} maxBarSize={60} />
+            <Bar yAxisId="left" dataKey="actual" name="Actual Revenue" fill="#10B981" radius={[4, 4, 0, 0]} maxBarSize={60} />
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
     </SectionContainer>

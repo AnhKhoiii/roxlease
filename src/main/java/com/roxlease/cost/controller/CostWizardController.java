@@ -67,7 +67,7 @@ public class CostWizardController {
         try {
             String reason = payload.get("reason");
             service.cancelSchedule(id, reason);
-            return ResponseEntity.ok(Collections.singletonMap("message", "Hủy kỳ chi phí thành công!"));
+            return ResponseEntity.ok(Collections.singletonMap("message", "Đã xóa kỳ chi phí thành công khỏi hệ thống!"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("error", e.getMessage()));
         }

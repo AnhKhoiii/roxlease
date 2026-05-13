@@ -450,6 +450,7 @@ export default function RecurringCostTab({ lease }) {
                 {/* ---------------- CỘT 3 ---------------- */}
                 <div className="flex flex-col gap-4 bg-white p-4 rounded shadow-sm border border-gray-200">
                   <Select label="Period" value={formData.period} onChange={v => setFormData({...formData, period: v})} 
+                    disabled={formData.active}
                     options={[
                       {value: 'DAILY', label: 'Daily'},      
                       {value: 'WEEKLY', label: 'Weekly'}, 
@@ -459,7 +460,7 @@ export default function RecurringCostTab({ lease }) {
                     ]} 
                   />
                   
-                  <Input type="number" label="Interval" value={formData.interval} onChange={v => setFormData({...formData, interval: v})} />
+                  <Input type="number" label="Interval" value={formData.interval} onChange={v => setFormData({...formData, interval: v})} disabled={formData.active} />
                   
                   <div className="bg-gray-50 border border-gray-200 p-2 rounded -mt-2 mb-2">
                     <Checkbox label="Active Status (Auto via Approval)" checked={formData.active} disabled={true} onChange={() => {}} />
@@ -479,7 +480,9 @@ export default function RecurringCostTab({ lease }) {
               <div className="flex justify-end items-center mt-6 pt-4 border-t border-gray-200">
                 <div className="flex gap-2">
                   <button onClick={() => setModal({ ...modal, isOpen: false })} className="px-5 py-2 text-xs font-bold text-gray-600 bg-gray-200 hover:bg-gray-300 rounded transition-colors">Cancel</button>
-                  <button onClick={handleSaveDraft} disabled={!isFormValid} className="px-4 py-2 text-xs font-bold text-blue-600 bg-blue-50 rounded hover:bg-blue-100 disabled:opacity-50 transition-colors">Save as Draft</button>
+                  {!formData.active && (
+                    <button onClick={handleSaveDraft} disabled={!isFormValid} className="px-4 py-2 text-xs font-bold text-blue-600 bg-blue-50 rounded hover:bg-blue-100 disabled:opacity-50 transition-colors">Save as Draft</button>
+                  )}
                   <button 
                     onClick={() => handleSubmitRequest(modal.mode === "ADD" ? "CREATE" : "UPDATE", formData)} 
                     disabled={!isFormValid || !isActive} 

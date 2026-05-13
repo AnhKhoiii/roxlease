@@ -55,7 +55,6 @@ function App() {
           </Route>
 
           <Route path="lease" element={<LeaseLayout />}>
-            <Route path="dashboard" element={<LeaseDashBoard />} />
             <Route path="console" element={<LeaseConsole />} />
               <Route path="console/:id" element={<LeaseDetail />} />
             <Route path="request" element={<Request />} />

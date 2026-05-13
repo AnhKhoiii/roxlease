@@ -1,0 +1,12 @@
+﻿Field Name,New Value
+clauseId,TEST 01
+clauseType,RENT_ESCALATION
+description,Ní hảo
+startDate,2026-05-01
+endDate,2026-05-10
+dateMatchLs,true
+responsibleParty,
+exercisedBy,
+documentUrl,
+active,false
+leaseId,LEASE01
