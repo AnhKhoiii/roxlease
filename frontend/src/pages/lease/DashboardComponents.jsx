@@ -272,14 +272,14 @@ const ContractRevenueSection = ({ revenue }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10 bg-gray-50 p-6 rounded border border-gray-100 mb-8">
         <div>
           <h4 className="text-[10px] font-black text-gray-400 uppercase mb-4">Financial Progress</h4>
-          <ProgressBar label="Plan Achievement" value={revenue?.kpi?.planAchievement} color="bg-orange-500" />
-          <ProgressBar label="Forecast Achievement" value={revenue?.kpi?.forecastAchievement} color="bg-blue-500" />
-          <ProgressBar label="YTD Achievement" value={revenue?.kpi?.ytdAchievement} color="bg-green-500" />
+          <ProgressBar label="Plan Achievement" value={revenue?.contractKpi?.planAchievement} color="bg-orange-500" />
+          <ProgressBar label="Forecast Achievement" value={revenue?.contractKpi?.forecastAchievement} color="bg-blue-500" />
+          <ProgressBar label="YTD Achievement" value={revenue?.contractKpi?.ytdAchievement} color="bg-green-500" />
         </div>
         <div>
           <h4 className="text-[10px] font-black text-gray-400 uppercase mb-4">Space Utilization (OCC)</h4>
-          <ProgressBar label="Actual OCC" value={revenue?.kpi?.occAchievement} color="bg-[#D68910]" />
-          <ProgressBar label="Forecast OCC" value={revenue?.kpi?.forecastOccAchievement} color="bg-[#F39C12]" />
+          <ProgressBar label="Actual OCC" value={revenue?.contractKpi?.occAchievement} color="bg-[#D68910]" />
+          <ProgressBar label="Forecast OCC" value={revenue?.contractKpi?.forecastOccAchievement} color="bg-[#F39C12]" />
         </div>
       </div>
 

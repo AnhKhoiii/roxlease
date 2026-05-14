@@ -215,6 +215,16 @@ public class RequestService {
             }
             update.set("active", true);
             mongoTemplate.updateFirst(query, update, entityClass);
+            
+            if (entityClass == RecurringCost.class) {
+                RecurringCost updatedCost = mongoTemplate.findById(req.getTargetId(), RecurringCost.class);
+                if (updatedCost != null && updatedCost.getEndDate() != null) {
+                    Query schQuery = new Query(Criteria.where("recurringCostId").is(updatedCost.getRecurringCostId())
+                            .and("dueDate").gt(updatedCost.getEndDate()));
+                    Update schUpdate = new Update().set("paymentStatus", PaymentStatus.PENDING);
+                    mongoTemplate.updateMulti(schQuery, schUpdate, RecurringCostSchedule.class);
+                }
+            }
         } else if ("DELETE".equals(req.getAction())) {
             mongoTemplate.remove(query, entityClass);
         }

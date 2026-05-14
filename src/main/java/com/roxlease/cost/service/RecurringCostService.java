@@ -2,11 +2,13 @@ package com.roxlease.cost.service;
 
 import com.roxlease.cost.model.RecurringCost;
 import com.roxlease.cost.model.RecurringCostSchedule;
+import com.roxlease.cost.model.Enum.PaymentStatus;
 import com.roxlease.cost.repository.RecurringCostRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -29,6 +31,14 @@ public class RecurringCostService {
         cost.setUpdatedAt(LocalDateTime.now());
         if (cost.getRecurringCostId() == null || cost.getRecurringCostId().isEmpty()) {
             cost.setCreatedAt(LocalDateTime.now());
+        } else {
+            // Khi update End Date giảm xuống: chuyển các lịch nằm ngoài End Date về PENDING
+            if (cost.getEndDate() != null) {
+                Query query = new Query(Criteria.where("recurringCostId").is(cost.getRecurringCostId())
+                        .and("dueDate").gt(cost.getEndDate()));
+                Update update = new Update().set("paymentStatus", PaymentStatus.PENDING);
+                mongoTemplate.updateMulti(query, update, RecurringCostSchedule.class);
+            }
         }
         return repository.save(cost);
     }

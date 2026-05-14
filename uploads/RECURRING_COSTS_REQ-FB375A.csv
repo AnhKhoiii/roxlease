@@ -1,0 +1,26 @@
+﻿Field Name,New Value
+recurringCostId,hehheheh
+lsId,LEASE01
+costType,BASERENT
+vatCountry,Vietnam
+currVat,0
+amountInBase,123
+amountInVat,12.3
+amountInTotal,135.3
+overrideExchangeRate,false
+exchangeRate,1
+amountOutBase,0
+amountOutVat,0
+amountOutTotal,0
+overrideVat,false
+manualBase,null
+scheduleStatus,SCHEDULED
+dateMatchLs,false
+period,DAILY
+interval,1
+startDate,2026-05-14
+endDate,2026-05-20
+active,true
+description,he
+createdAt,null
+updatedAt,2026-05-14T18:41:45.925

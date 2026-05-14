@@ -443,10 +443,24 @@ public class LeaseDashboardService {
 
         List<org.bson.Document> allPlans = mongoTemplate.find(new Query(), org.bson.Document.class, "planned_revenues");
 
-        BigDecimal nfa = rooms.stream().map(r -> r.getArea() != null ? BigDecimal.valueOf(r.getArea()) : BigDecimal.ZERO).reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal suitesNfa = suites.stream().map(s -> s.getArea() != null ? BigDecimal.valueOf(s.getArea()) : BigDecimal.ZERO).reduce(BigDecimal.ZERO, BigDecimal::add);
-        nfa = nfa.add(suitesNfa);
-        BigDecimal safeNfa = nfa;
+        // --- FIX: Tính NFA từ Floor records thay vì rooms/suites ---
+        List<Floor> allFloors = mongoTemplate.findAll(Floor.class);
+        
+        // Lọc floors theo cùng bộ lọc site/building nếu có
+        BigDecimal safeNfa = allFloors.stream()
+            .map(f -> f.getNfa() != null ? BigDecimal.valueOf(f.getNfa()) : BigDecimal.ZERO)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        // Fallback: nếu floor chưa có NFA (chưa upload DXF), tính từ rooms/suites
+        if (safeNfa.compareTo(BigDecimal.ZERO) == 0) {
+            BigDecimal roomNfa = rooms.stream()
+                .map(r -> r.getArea() != null ? BigDecimal.valueOf(r.getArea()) : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal suiteNfa = suites.stream()
+                .map(s -> s.getArea() != null ? BigDecimal.valueOf(s.getArea()) : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+            safeNfa = roomNfa.add(suiteNfa);
+        }
 
         Set<String> amenityLeaseIds = leaseAmenities.stream().map(LeaseAmenity::getLsId).collect(Collectors.toSet());
 
@@ -463,6 +477,22 @@ public class LeaseDashboardService {
                     || doc.get("amenityIds") != null || doc.get("amenity_ids") != null;
             if (isAmenity) {
                 amenityLeaseIds.add(lsId);
+            }
+        }
+        
+        // Nếu vẫn = 0, lấy NFA từ area_negotiated của các lease đang active
+        // (emergency fallback theo đúng công thức PDF)
+        if (safeNfa.compareTo(BigDecimal.ZERO) == 0) {
+            safeNfa = allLeases.stream()
+                .filter(l -> Boolean.TRUE.equals(l.getActive()))
+                .filter(l -> !amenityLeaseIds.contains(l.getLsId()))
+                .map(l -> l.getAreaNegotiated() != null 
+                    ? BigDecimal.valueOf(l.getAreaNegotiated()) 
+                    : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+            // Thêm hệ số ước tính NFA = tổng area_negotiated / 0.7 (NFA thường ~70% tổng)
+            if (safeNfa.compareTo(BigDecimal.ZERO) > 0) {
+                safeNfa = safeNfa.divide(new BigDecimal("0.7"), 2, RoundingMode.HALF_UP);
             }
         }
 
@@ -671,19 +701,26 @@ public class LeaseDashboardService {
             .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private Double calculateActualOCC(List<Lease> leases, List<LeaseOption> options, BigDecimal safeNfa, int year, int month, Set<String> amenityLeaseIds, Map<String, org.bson.Document> leaseDocMap) {
+    private Double calculateActualOCC(List<Lease> leases, List<LeaseOption> allOptions, BigDecimal safeNfa, int year, int month, Set<String> amenityLeaseIds, Map<String, org.bson.Document> leaseDocMap) {
         if (safeNfa == null || safeNfa.compareTo(BigDecimal.ZERO) == 0) return 0.0;
 
         BigDecimal occSum = leases.stream()
             .filter(l -> !amenityLeaseIds.contains(l.getLsId()))
-            .filter(l -> isLeaseActiveInMonth(l, options, year, month, leaseDocMap))
+            .filter(l -> {
+                // FIX: Lọc options chỉ của lease này
+                List<LeaseOption> leaseOps = allOptions.stream()
+                    .filter(o -> l.getLsId() != null && l.getLsId().equals(o.getLsId())
+                        && Boolean.TRUE.equals(o.getActive()))
+                    .collect(Collectors.toList());
+                return isLeaseActiveInMonth(l, leaseOps, year, month, leaseDocMap);
+            })
             .map(l -> {
                 org.bson.Document d = leaseDocMap.get(l.getLsId());
                 if (d != null) {
                     Object areaObj = d.get("area_negotiated");
                     if (areaObj == null) areaObj = d.get("areaNegotiated");
                     if (areaObj != null) {
-                        try { return new BigDecimal(areaObj.toString()); } catch(Exception e){}
+                        try { return new BigDecimal(areaObj.toString()); } catch(Exception ignored){}
                     }
                 }
                 return l.getAreaNegotiated() != null ? BigDecimal.valueOf(l.getAreaNegotiated()) : BigDecimal.ZERO;
@@ -693,27 +730,34 @@ public class LeaseDashboardService {
         return calculatePercentage(occSum, safeNfa);
     }
 
-    private Double calculateForecastOCC(List<Lease> leases, List<LeaseOption> options, BigDecimal safeNfa, int year, int month, LocalDate toDate, Set<String> amenityLeaseIds, Map<String, org.bson.Document> leaseDocMap) {
+    private Double calculateForecastOCC(List<Lease> leases, List<LeaseOption> allOptions, BigDecimal safeNfa, int year, int month, LocalDate toDate, Set<String> amenityLeaseIds, Map<String, org.bson.Document> leaseDocMap) {
         if (safeNfa == null || safeNfa.compareTo(BigDecimal.ZERO) == 0) return 0.0;
 
         LocalDate targetDate = LocalDate.of(year, month, 1);
-        LocalDate currentDateStartOfMonth = LocalDate.of(toDate.getYear(), toDate.getMonthValue(), 1);
+        LocalDate currentMonthStart = LocalDate.of(toDate.getYear(), toDate.getMonthValue(), 1);
         
         // KHÔNG hiển thị Forecast OCC cho các tháng quá khứ
-        if (targetDate.isBefore(currentDateStartOfMonth)) {
+        if (targetDate.isBefore(currentMonthStart)) {
             return null;
         }
 
         BigDecimal occSum = leases.stream()
             .filter(l -> !amenityLeaseIds.contains(l.getLsId()))
-            .filter(l -> isLeaseForecastActiveInMonth(l, options, year, month, leaseDocMap))
+            .filter(l -> {
+                // FIX: Lọc options chỉ của lease này
+                List<LeaseOption> leaseOps = allOptions.stream()
+                    .filter(o -> l.getLsId() != null && l.getLsId().equals(o.getLsId())
+                        && Boolean.TRUE.equals(o.getActive()))
+                    .collect(Collectors.toList());
+                return isLeaseForecastActiveInMonth(l, leaseOps, year, month, leaseDocMap);
+            })
             .map(l -> {
                 org.bson.Document d = leaseDocMap.get(l.getLsId());
                 if (d != null) {
                     Object areaObj = d.get("area_negotiated");
                     if (areaObj == null) areaObj = d.get("areaNegotiated");
                     if (areaObj != null) {
-                        try { return new BigDecimal(areaObj.toString()); } catch(Exception e){}
+                        try { return new BigDecimal(areaObj.toString()); } catch(Exception ignored){}
                     }
                 }
                 return l.getAreaNegotiated() != null ? BigDecimal.valueOf(l.getAreaNegotiated()) : BigDecimal.ZERO;

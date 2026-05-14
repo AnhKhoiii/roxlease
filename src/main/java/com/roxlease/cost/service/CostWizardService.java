@@ -15,6 +15,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -141,8 +142,20 @@ public class CostWizardService {
     public List<RecurringCostSchedule> getPendingSchedules() {
         LocalDate cutoffDate = LocalDate.now().plusDays(45); // Tương lai 45 ngày
         
+        // Lấy thông tin End Date của Recurring Cost để lọc
+        Map<String, LocalDate> costEndDateMap = recurringCostRepo.findAll().stream()
+                .filter(c -> c.getRecurringCostId() != null && c.getEndDate() != null)
+                .collect(Collectors.toMap(RecurringCost::getRecurringCostId, RecurringCost::getEndDate, (o, n) -> n));
+        
         return scheduleRepo.findByPaymentStatus(PaymentStatus.PENDING).stream()
                 .filter(s -> s.getDueDate() != null && !s.getDueDate().isAfter(cutoffDate))
+                .filter(s -> {
+                    if (s.getRecurringCostId() != null && costEndDateMap.containsKey(s.getRecurringCostId())) {
+                        LocalDate endDate = costEndDateMap.get(s.getRecurringCostId());
+                        return !s.getDueDate().isAfter(endDate); // Ẩn nếu dueDate > endDate
+                    }
+                    return true;
+                })
                 .sorted(Comparator.comparing(RecurringCostSchedule::getDueDate)) // Sắp xếp tăng dần
                 .collect(Collectors.toList());
     }
