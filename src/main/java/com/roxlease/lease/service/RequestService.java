@@ -59,6 +59,12 @@ public class RequestService {
         request.setCompletedBy(user);
         request.setCompletedDate(LocalDateTime.now());
 
+        // Trích xuất thông tin Lease ID trước khi apply changes (đề phòng bản ghi bị xoá mất do action DELETE)
+        String lsIdForSuite = null;
+        if (request.getRequestType() == RQType.SUITE_ASSIGNMENT) {
+            lsIdForSuite = extractLeaseIdFromRequest(request);
+        }
+
         // 1. Áp dụng data vào bảng LeaseSuite, Option, Clause...
         applyRequestChanges(request);
 
@@ -67,29 +73,38 @@ public class RequestService {
             String approvedSuId = extractSuiteIdFromRequest(request);
 
             if (approvedSuId != null) {
-                // Đổi trạng thái mặt bằng ở bảng Master (Space) thành OCCUPIED để không ai add được nữa
-                Query updateSuiteStatus = new Query(Criteria.where("suiteId").is(approvedSuId));
-                mongoTemplate.updateFirst(updateSuiteStatus, new Update().set("status", "OCCUPIED"), "suites");
+                if (!"DELETE".equalsIgnoreCase(request.getAction()) && !"REMOVE".equalsIgnoreCase(request.getAction())) {
+                    // Đổi trạng thái mặt bằng ở bảng Master (Space) thành OCCUPIED để không ai add được nữa
+                    Query updateSuiteStatus = new Query(Criteria.where("suiteId").is(approvedSuId));
+                    mongoTemplate.updateFirst(updateSuiteStatus, new Update().set("status", "OCCUPIED"), "suites");
 
-                // Tìm tất cả các Request PENDING khác có cùng mã Suite này
-                Query pendingQuery = new Query(Criteria.where("status").is(RQStatus.PENDING)
+                    // Tìm tất cả các Request PENDING khác có cùng mã Suite này
+                    Query pendingQuery = new Query(Criteria.where("status").is(RQStatus.PENDING)
                                                 .and("requestType").is(RQType.SUITE_ASSIGNMENT));
-                List<Request> pendingReqs = mongoTemplate.find(pendingQuery, Request.class);
+                    List<Request> pendingReqs = mongoTemplate.find(pendingQuery, Request.class);
 
-                for (Request pReq : pendingReqs) {
-                    if (pReq.getId().equals(request.getId())) continue; // Bỏ qua request đang duyệt
-                    
-                    String pSuId = extractSuiteIdFromRequest(pReq);
-                    if (approvedSuId.equals(pSuId)) {
-                        // Tự động Reject
-                        pReq.setStatus(RQStatus.REJECTED);
-                        pReq.setCompletedBy("System Auto-Reject");
-                        pReq.setCompletedDate(LocalDateTime.now());
-                        pReq.setComment("Tự động từ chối: Mặt bằng " + approvedSuId + " đã được cấp phát cho một hợp đồng khác.");
-                        repository.save(pReq);
+                    for (Request pReq : pendingReqs) {
+                        if (pReq.getId().equals(request.getId())) continue; // Bỏ qua request đang duyệt
+                        
+                        String pSuId = extractSuiteIdFromRequest(pReq);
+                        if (approvedSuId.equals(pSuId)) {
+                            // Tự động Reject
+                            pReq.setStatus(RQStatus.REJECTED);
+                            pReq.setCompletedBy("System Auto-Reject");
+                            pReq.setCompletedDate(LocalDateTime.now());
+                            pReq.setComment("Tự động từ chối: Mặt bằng " + approvedSuId + " đã được cấp phát cho một hợp đồng khác.");
+                            repository.save(pReq);
+                        }
                     }
+                } else {
+                    // Nếu là hành động DELETE mặt bằng, nhả lại trạng thái AVAILABLE
+                    Query updateSuiteStatus = new Query(Criteria.where("suiteId").is(approvedSuId));
+                    mongoTemplate.updateFirst(updateSuiteStatus, new Update().set("status", "AVAILABLE"), "suites");
                 }
             }
+            
+            // TỰ ĐỘNG TÍNH LẠI DIỆN TÍCH CHO THUÊ (AREA_NEGOTIATED) BẰNG TỔNG DIỆN TÍCH CÁC SUITE
+            recalculateLeaseArea(lsIdForSuite);
         }
 
         // 3. LOGIC ĐẶC BIỆT CHO EARLY TERMINATION: TỰ ĐỘNG HỦY CÁC KỲ CHI PHÍ TRONG TƯƠNG LAI
@@ -157,11 +172,69 @@ public class RequestService {
         return false;
     }
 
+    private String extractLeaseIdFromRequest(Request req) {
+        if (req.getRequestData() != null) {
+            if (req.getRequestData().containsKey("lsId")) return req.getRequestData().get("lsId").toString();
+            if (req.getRequestData().containsKey("leaseId")) return req.getRequestData().get("leaseId").toString();
+            if (req.getRequestData().containsKey("ls_id")) return req.getRequestData().get("ls_id").toString();
+        }
+        if (req.getTargetId() != null && !req.getTargetId().equals("NEW")) {
+            LeaseSuite ls = mongoTemplate.findById(req.getTargetId(), LeaseSuite.class);
+            if (ls != null) return ls.getLsId();
+        }
+        return null;
+    }
+
+    private void recalculateLeaseArea(String lsId) {
+        if (lsId == null) {
+            System.out.println("[recalculateLeaseArea] lsId is null, skipping.");
+            return;
+        }
+        System.out.println("[recalculateLeaseArea] Starting area calculation for Lease ID: " + lsId);
+        Query query = new Query(Criteria.where("lsId").is(lsId).and("active").is(true));
+        List<LeaseSuite> activeSuites = mongoTemplate.find(query, LeaseSuite.class);
+        
+        System.out.println("[recalculateLeaseArea] Found active suites: " + activeSuites.size());
+        double totalArea = 0.0;
+        for (LeaseSuite ls : activeSuites) {
+            if (ls.getSuId() != null) {
+                org.bson.Document suiteDoc = mongoTemplate.findOne(
+                        new Query(new Criteria().orOperator(
+                            Criteria.where("suiteId").is(ls.getSuId()), Criteria.where("_id").is(ls.getSuId()))), 
+                        org.bson.Document.class, "suites");
+                if (suiteDoc != null && suiteDoc.get("area") != null) {
+                    try { totalArea += Double.parseDouble(suiteDoc.get("area").toString()); } catch (Exception ignored) {}
+                } else {
+                    org.bson.Document roomDoc = mongoTemplate.findOne(
+                            new Query(new Criteria().orOperator(
+                                Criteria.where("roomId").is(ls.getSuId()), Criteria.where("_id").is(ls.getSuId()))), 
+                            org.bson.Document.class, "rooms");
+                    if (roomDoc != null && roomDoc.get("area") != null) {
+                        try { totalArea += Double.parseDouble(roomDoc.get("area").toString()); } catch (Exception ignored) {}
+                    }
+                }
+            }
+        }
+        
+        System.out.println("[recalculateLeaseArea] Total Area Calculated: " + totalArea);
+        Query leaseQuery = new Query(new Criteria().orOperator(
+            Criteria.where("_id").is(lsId),
+            Criteria.where("lsId").is(lsId),
+            Criteria.where("ls_id").is(lsId)
+        ));
+        Update update = new Update().set("areaNegotiated", totalArea).set("area_negotiated", totalArea);
+        var result = mongoTemplate.updateFirst(leaseQuery, update, "leases");
+        System.out.println("[recalculateLeaseArea] Update leases collection match: " + result.getMatchedCount() + ", modified: " + result.getModifiedCount());
+    }
+
     // Hàm phụ trợ để lấy mã Suite an toàn từ Request
     private String extractSuiteIdFromRequest(Request req) {
-        if (req.getRequestData() != null && req.getRequestData().containsKey("suId")) {
-            return req.getRequestData().get("suId").toString();
-        } else if (req.getTargetId() != null && !req.getTargetId().equals("NEW")) {
+        if (req.getRequestData() != null) {
+            if (req.getRequestData().containsKey("suId")) return req.getRequestData().get("suId").toString();
+            if (req.getRequestData().containsKey("suiteId")) return req.getRequestData().get("suiteId").toString();
+            if (req.getRequestData().containsKey("roomId")) return req.getRequestData().get("roomId").toString();
+        }
+        if (req.getTargetId() != null && !req.getTargetId().equals("NEW")) {
             LeaseSuite ls = mongoTemplate.findById(req.getTargetId(), LeaseSuite.class);
             if (ls != null) return ls.getSuId();
         }
@@ -183,9 +256,12 @@ public class RequestService {
             default: return;
         }
 
-        if ("CREATE".equals(req.getAction())) {
+        String action = req.getAction();
+        if (action == null) action = "UPDATE"; // fallback
+
+        if ("CREATE".equalsIgnoreCase(action) || "ADD".equalsIgnoreCase(action)) {
             mongoTemplate.updateFirst(query, new Update().set("active", true), entityClass);
-        } else if ("UPDATE".equals(req.getAction())) {
+        } else if ("UPDATE".equalsIgnoreCase(action) || "EDIT".equalsIgnoreCase(action)) {
             Update update = new Update();
             if (req.getRequestData() != null) {
                 for (Map.Entry<String, Object> entry : req.getRequestData().entrySet()) {
@@ -225,7 +301,7 @@ public class RequestService {
                     mongoTemplate.updateMulti(schQuery, schUpdate, RecurringCostSchedule.class);
                 }
             }
-        } else if ("DELETE".equals(req.getAction())) {
+        } else if ("DELETE".equalsIgnoreCase(action) || "REMOVE".equalsIgnoreCase(action)) {
             mongoTemplate.remove(query, entityClass);
         }
     }

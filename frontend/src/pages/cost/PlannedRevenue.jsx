@@ -247,7 +247,7 @@ export default function PlannedRevenue() {
     setSelectedIds(prev => e.target.checked ? [...prev, id] : prev.filter(x => x !== id));
   };
 
-  const isFormValid = formData.plannedRevenue && formData.year && formData.month && 
+  const isFormValid = (formData.category === "OCC" ? formData.plannedOcc !== "" && formData.plannedOcc !== null : formData.plannedRevenue !== "" && formData.plannedRevenue !== null) && formData.year && formData.month && 
                       formData.category && formData.siteId && formData.plannedCost !== "";
 
   return (
@@ -310,7 +310,7 @@ export default function PlannedRevenue() {
                 <th className="px-4 py-3 font-semibold tracking-wide border-b border-[#D68910]">Category</th>
                 <th className="px-4 py-3 font-semibold tracking-wide border-b border-[#D68910] text-center">Year</th>
                 <th className="px-4 py-3 font-semibold tracking-wide border-b border-[#D68910]">Month</th>
-                <th className="px-4 py-3 font-semibold tracking-wide border-b border-[#D68910] text-right">Planned Revenue</th>
+                <th className="px-4 py-3 font-semibold tracking-wide border-b border-[#D68910] text-right">Planned Rev / OCC</th>
                 <th className="px-4 py-3 font-semibold tracking-wide border-b border-[#D68910] text-right">Planned Cost</th>
               </tr>
             </thead>
@@ -333,7 +333,9 @@ export default function PlannedRevenue() {
                     <td className="px-4 py-2.5 text-gray-700 border-r border-gray-50">{item.category || ""}</td>
                     <td className="px-4 py-2.5 text-center text-gray-700 border-r border-gray-50">{item.year}</td>
                     <td className="px-4 py-2.5 text-gray-700 border-r border-gray-50 font-medium">{monthNames[item.month - 1] || item.month}</td>
-                    <td className="px-4 py-2.5 text-right font-mono font-bold text-green-600 border-r border-gray-50">{item.plannedRevenue?.toLocaleString()}</td>
+                    <td className="px-4 py-2.5 text-right font-mono font-bold text-green-600 border-r border-gray-50">
+                      {item.category === "OCC" ? `${item.plannedOcc || 0}%` : item.plannedRevenue?.toLocaleString()}
+                    </td>
                     <td className="px-4 py-2.5 text-right font-mono font-bold text-red-600">{item.plannedCost?.toLocaleString()}</td>
                   </tr>
                 ))
@@ -365,10 +367,17 @@ export default function PlannedRevenue() {
               )}
 
               <div className="grid grid-cols-3 gap-6 bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-                <Input 
-                  type="number" label="Planned Revenue" required 
-                  value={formData.plannedRevenue} onChange={v => setFormData({...formData, plannedRevenue: v})} 
-                />
+                {formData.category === "OCC" ? (
+                  <Input 
+                    type="number" label="Planned OCC (%)" required 
+                    value={formData.plannedOcc} onChange={v => setFormData({...formData, plannedOcc: v})} 
+                  />
+                ) : (
+                  <Input 
+                    type="number" label="Planned Revenue" required 
+                    value={formData.plannedRevenue} onChange={v => setFormData({...formData, plannedRevenue: v})} 
+                  />
+                )}
                 <Input 
                   type="number" label="Year" required placeholder="e.g. 2026"
                   value={formData.year} onChange={v => setFormData({...formData, year: v})} 

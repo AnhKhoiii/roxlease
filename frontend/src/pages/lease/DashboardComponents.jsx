@@ -276,11 +276,6 @@ const ContractRevenueSection = ({ revenue }) => {
           <ProgressBar label="Forecast Achievement" value={revenue?.contractKpi?.forecastAchievement} color="bg-blue-500" />
           <ProgressBar label="YTD Achievement" value={revenue?.contractKpi?.ytdAchievement} color="bg-green-500" />
         </div>
-        <div>
-          <h4 className="text-[10px] font-black text-gray-400 uppercase mb-4">Space Utilization (OCC)</h4>
-          <ProgressBar label="Actual OCC" value={revenue?.contractKpi?.occAchievement} color="bg-[#D68910]" />
-          <ProgressBar label="Forecast OCC" value={revenue?.contractKpi?.forecastOccAchievement} color="bg-[#F39C12]" />
-        </div>
       </div>
 
       <div className="h-[400px] w-full mt-4">

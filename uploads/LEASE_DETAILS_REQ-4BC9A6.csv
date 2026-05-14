@@ -1,0 +1,20 @@
+﻿Field Name,New Value
+active,false
+lsId,LEASE01
+description,test
+signedDate,2026-05-01T00:00:00.000Z
+handoverDate,2026-05-01
+startDate,2026-05-01
+endDate,2027-05-01
+lsType,EXTERNAL
+spaceUse,OFFICE
+siteId,HN_S
+buildingId,FL_ZEN
+leaseSublease,LEASE
+amountDeposit,0
+currency,VND
+rentType,GROSS_RENT
+isSign,true
+assumeRenewal,true
+partyId,TE-001
+action,CREATE

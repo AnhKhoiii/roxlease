@@ -76,9 +76,9 @@ public class LeaseDashboardService {
         return DashboardResponse.builder()
                 .overview(buildOverview(buildings, floors, rooms, suites))
                 .amenity(buildAmenity(siteId, buildingId, bIds))
-                .leaseAlerts(buildLeaseAlerts(finalFromDate, finalToDate))
-                .charts(buildCharts(finalToDate))
-                .revenue(buildRevenueMetrics(finalFromDate, finalToDate, rooms, suites))
+                .leaseAlerts(buildLeaseAlerts(finalFromDate, finalToDate, siteId, buildingId))
+                .charts(buildCharts(finalToDate, siteId, buildingId))
+                .revenue(buildRevenueMetrics(finalFromDate, finalToDate, floors, rooms, suites, siteId, buildingId))
                 .build();
     }
 
@@ -178,8 +178,16 @@ public class LeaseDashboardService {
     // =========================================================
     // LEASE ALERTS
     // =========================================================
-    private DashboardResponse.LeaseAlerts buildLeaseAlerts(LocalDate fromDate, LocalDate toDate) {
-        List<Lease> leases = mongoTemplate.findAll(Lease.class);
+    private DashboardResponse.LeaseAlerts buildLeaseAlerts(LocalDate fromDate, LocalDate toDate, String siteId, String buildingId) {
+        Query leaseQuery = new Query();
+        if (siteId != null && !siteId.isEmpty()) leaseQuery.addCriteria(Criteria.where("siteId").is(siteId));
+        if (buildingId != null && !buildingId.isEmpty()) {
+            leaseQuery.addCriteria(new Criteria().orOperator(
+                Criteria.where("blId").is(buildingId),
+                Criteria.where("buildingId").is(buildingId)
+            ));
+        }
+        List<Lease> leases = mongoTemplate.find(leaseQuery, Lease.class);
         List<LeaseOption> options = mongoTemplate.findAll(LeaseOption.class);
 
         long totalActive = 0, newLeases = 0, leaseEndCount = 0, extendedCount = 0;
@@ -264,12 +272,25 @@ public class LeaseDashboardService {
     // =========================================================
     // CHARTS
     // =========================================================
-    private DashboardResponse.Charts buildCharts(LocalDate toDate) {
-        List<Lease> leases = mongoTemplate.findAll(Lease.class);
+    private DashboardResponse.Charts buildCharts(LocalDate toDate, String siteId, String buildingId) {
+        Query leaseQuery = new Query();
+        if (siteId != null && !siteId.isEmpty()) leaseQuery.addCriteria(Criteria.where("siteId").is(siteId));
+        if (buildingId != null && !buildingId.isEmpty()) {
+            leaseQuery.addCriteria(new Criteria().orOperator(
+                Criteria.where("blId").is(buildingId),
+                Criteria.where("buildingId").is(buildingId)
+            ));
+        }
+        List<Lease> leases = mongoTemplate.find(leaseQuery, Lease.class);
+        Set<String> validLeaseIds = leases.stream().map(Lease::getLsId).collect(Collectors.toSet());
+
         List<LeaseOption> options = mongoTemplate.findAll(LeaseOption.class);
-        List<RecurringCostSchedule> schedules = mongoTemplate.findAll(RecurringCostSchedule.class);
-        List<Clause> clauses = mongoTemplate.findAll(Clause.class);
-        List<RecurringCost> recurringCosts = mongoTemplate.findAll(RecurringCost.class);
+        List<RecurringCostSchedule> schedules = mongoTemplate.findAll(RecurringCostSchedule.class)
+            .stream().filter(s -> validLeaseIds.contains(s.getLeaseId())).collect(Collectors.toList());
+        List<Clause> clauses = mongoTemplate.findAll(Clause.class)
+            .stream().filter(c -> validLeaseIds.contains(c.getLeaseId())).collect(Collectors.toList());
+        List<RecurringCost> recurringCosts = mongoTemplate.findAll(RecurringCost.class)
+            .stream().filter(c -> validLeaseIds.contains(c.getLsId())).collect(Collectors.toList());
         
         List<Map<String, Object>> exp1MList = new ArrayList<>();
         List<Map<String, Object>> exp3MList = new ArrayList<>();
@@ -424,12 +445,26 @@ public class LeaseDashboardService {
         CONTRACT, SERVICE, AMENITY, TOTAL
     }
 
-    private DashboardResponse.RevenueMetrics buildRevenueMetrics(LocalDate fromDate, LocalDate toDate, List<Room> rooms, List<Suite> suites) {
-        List<Lease> allLeases = mongoTemplate.findAll(Lease.class);
+    private DashboardResponse.RevenueMetrics buildRevenueMetrics(LocalDate fromDate, LocalDate toDate, List<Floor> floors, List<Room> rooms, List<Suite> suites, String siteId, String buildingId) {
+        Query leaseQuery = new Query();
+        if (siteId != null && !siteId.isEmpty()) leaseQuery.addCriteria(Criteria.where("siteId").is(siteId));
+        if (buildingId != null && !buildingId.isEmpty()) {
+            leaseQuery.addCriteria(new Criteria().orOperator(
+                Criteria.where("blId").is(buildingId),
+                Criteria.where("buildingId").is(buildingId)
+            ));
+        }
+        List<Lease> allLeases = mongoTemplate.find(leaseQuery, Lease.class);
+        Set<String> validLeaseIds = allLeases.stream().map(Lease::getLsId).collect(Collectors.toSet());
+
         List<LeaseAmenity> leaseAmenities = mongoTemplate.findAll(LeaseAmenity.class);
-        List<RecurringCostSchedule> schedules = mongoTemplate.findAll(RecurringCostSchedule.class);
+        List<RecurringCostSchedule> schedules = mongoTemplate.findAll(RecurringCostSchedule.class)
+            .stream().filter(s -> s.getLeaseId() != null && validLeaseIds.contains(s.getLeaseId())).collect(Collectors.toList());
+
         List<LeaseOption> allOptions = mongoTemplate.findAll(LeaseOption.class);
-        List<RecurringCost> allRecurringCosts = mongoTemplate.findAll(RecurringCost.class);
+        
+        List<RecurringCost> allRecurringCosts = mongoTemplate.findAll(RecurringCost.class)
+            .stream().filter(c -> c.getLsId() != null && validLeaseIds.contains(c.getLsId())).collect(Collectors.toList());
         
         Map<String, String> costTypeMap = allRecurringCosts.stream()
                 .filter(c -> c.getRecurringCostId() != null && c.getCostType() != null)
@@ -441,13 +476,12 @@ public class LeaseDashboardService {
                 .filter(c -> c.getRecurringCostId() != null)
                 .collect(Collectors.toMap(RecurringCost::getRecurringCostId, c -> c, (c1, c2) -> c1));
 
-        List<org.bson.Document> allPlans = mongoTemplate.find(new Query(), org.bson.Document.class, "planned_revenues");
-
-        // --- FIX: Tính NFA từ Floor records thay vì rooms/suites ---
-        List<Floor> allFloors = mongoTemplate.findAll(Floor.class);
+        Query planQuery = new Query();
+        if (siteId != null && !siteId.isEmpty()) planQuery.addCriteria(Criteria.where("siteId").is(siteId));
+        List<org.bson.Document> allPlans = mongoTemplate.find(planQuery, org.bson.Document.class, "planned_revenues");
         
-        // Lọc floors theo cùng bộ lọc site/building nếu có
-        BigDecimal safeNfa = allFloors.stream()
+        // --- FIX: Tính NFA từ Floor records đã được lọc theo Site/Building ---
+        BigDecimal safeNfa = floors.stream()
             .map(f -> f.getNfa() != null ? BigDecimal.valueOf(f.getNfa()) : BigDecimal.ZERO)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
         
@@ -464,7 +498,7 @@ public class LeaseDashboardService {
 
         Set<String> amenityLeaseIds = leaseAmenities.stream().map(LeaseAmenity::getLsId).collect(Collectors.toSet());
 
-        List<org.bson.Document> leaseDocs = mongoTemplate.findAll(org.bson.Document.class, "leases");
+        List<org.bson.Document> leaseDocs = mongoTemplate.find(leaseQuery, org.bson.Document.class, "leases");
         Map<String, org.bson.Document> leaseDocMap = new HashMap<>();
         for (org.bson.Document doc : leaseDocs) {
             String lsId = doc.getString("_id") != null ? doc.getString("_id") : doc.getString("ls_id");
@@ -1205,7 +1239,6 @@ public class LeaseDashboardService {
     private Double formatOccPercentAllowNull(Double value) {
         if (value == null) return null;
         if (Double.isNaN(value) || Double.isInfinite(value)) return 0.0;
-        double clamped = Math.max(0.0, Math.min(100.0, value));
-        return BigDecimal.valueOf(clamped).setScale(2, RoundingMode.HALF_UP).doubleValue();
+        return BigDecimal.valueOf(value).setScale(2, RoundingMode.HALF_UP).doubleValue();
     }
 }
