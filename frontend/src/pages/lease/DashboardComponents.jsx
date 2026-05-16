@@ -262,25 +262,63 @@ const LeaseAlerts = ({ alerts, charts, onChartClick }) => {
 // ==================================================
 // 3. CONTRACT REVENUE SECTION
 // ==================================================
-const ContractRevenueSection = ({ revenue }) => {
+const ContractRevenueSection = ({ revenue, filters }) => {
+  const filteredData = React.useMemo(() => {
+    let list = revenue?.contract || [];
+    if (!filters) return list;
+
+    // 1. Lọc theo filter
+    let filtered = list.filter(item => {
+      if (filters.siteId && item.siteId && !item.siteId.includes(filters.siteId)) return false;
+      if (filters.buildingId && item.buildingId && !item.buildingId.includes(filters.buildingId)) return false;
+      if (filters.fromDate && item.date && new Date(item.date) < new Date(filters.fromDate)) return false;
+      if (filters.toDate && item.date && new Date(item.date) > new Date(filters.toDate)) return false;
+      return true;
+    });
+
+    // 2. Group by month và tính tổng
+    const grouped = {};
+    filtered.forEach(item => {
+      const month = item.month || 'Unknown';
+      if (!grouped[month]) {
+        grouped[month] = { 
+          month, 
+          planned: 0, forecast: 0, actual: 0,
+          plannedOcc: 0, forecastOcc: 0, actualOcc: 0,
+          count: 0
+        };
+      }
+      grouped[month].planned += Number(item.planned || 0);
+      grouped[month].forecast += Number(item.forecast || 0);
+      grouped[month].actual += Number(item.actual || 0);
+      grouped[month].plannedOcc += Number(item.plannedOcc || 0);
+      grouped[month].forecastOcc += Number(item.forecastOcc || 0);
+      grouped[month].actualOcc += Number(item.actualOcc || 0);
+      grouped[month].count += 1;
+    });
+
+    // Tính trung bình cho OCC
+    Object.values(grouped).forEach(g => {
+      if (g.count > 0) {
+        g.plannedOcc = g.plannedOcc / g.count;
+        g.forecastOcc = g.forecastOcc / g.count;
+        g.actualOcc = g.actualOcc / g.count;
+      }
+    });
+
+    return Object.values(grouped);
+  }, [revenue?.contract, filters]);
+
   return (
     <SectionContainer>
       <SectionTitle title="CONTRACT REVENUE & OCCUPANCY" />
       <KpiGrid kpi={revenue?.contractKpi} />
       
       {/* KHỐI PROGRESS BAR CỦA OCC VÀ REVENUE */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-10 bg-gray-50 p-6 rounded border border-gray-100 mb-8">
-        <div>
-          <h4 className="text-[10px] font-black text-gray-400 uppercase mb-4">Financial Progress</h4>
-          <ProgressBar label="Plan Achievement" value={revenue?.contractKpi?.planAchievement} color="bg-orange-500" />
-          <ProgressBar label="Forecast Achievement" value={revenue?.contractKpi?.forecastAchievement} color="bg-blue-500" />
-          <ProgressBar label="YTD Achievement" value={revenue?.contractKpi?.ytdAchievement} color="bg-green-500" />
-        </div>
-      </div>
 
       <div className="h-[400px] w-full mt-4">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={revenue?.contract || []} margin={{ top: 20, right: 0, bottom: 20, left: 0 }}>
+          <ComposedChart data={filteredData} margin={{ top: 20, right: 0, bottom: 20, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
             <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280', fontWeight: 'bold' }} />
             <YAxis yAxisId="left" orientation="left" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280', fontWeight: 'bold' }} tickFormatter={(val) => formatCurrency(val)} />
@@ -305,14 +343,40 @@ const ContractRevenueSection = ({ revenue }) => {
 // ==================================================
 // 4. SERVICE FEE REVENUE SECTION
 // ==================================================
-const ServiceFeeSection = ({ revenue }) => {
+const ServiceFeeSection = ({ revenue, filters }) => {
+  const filteredData = React.useMemo(() => {
+    let list = revenue?.serviceFee || [];
+    if (!filters) return list;
+    
+    let filtered = list.filter(item => {
+      if (filters.siteId && item.siteId && !item.siteId.includes(filters.siteId)) return false;
+      if (filters.buildingId && item.buildingId && !item.buildingId.includes(filters.buildingId)) return false;
+      if (filters.fromDate && item.date && new Date(item.date) < new Date(filters.fromDate)) return false;
+      if (filters.toDate && item.date && new Date(item.date) > new Date(filters.toDate)) return false;
+      return true;
+    });
+
+    const grouped = {};
+    filtered.forEach(item => {
+      const month = item.month || 'Unknown';
+      if (!grouped[month]) {
+        grouped[month] = { month, planned: 0, forecast: 0, actual: 0 };
+      }
+      grouped[month].planned += Number(item.planned || 0);
+      grouped[month].forecast += Number(item.forecast || 0);
+      grouped[month].actual += Number(item.actual || 0);
+    });
+
+    return Object.values(grouped);
+  }, [revenue?.serviceFee, filters]);
+
   return (
     <SectionContainer>
       <SectionTitle title="SERVICE FEE REVENUE" />
       <KpiGrid kpi={revenue?.serviceFeeKpi} showOcc={false} />
       <div className="h-[350px] w-full mt-8">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={revenue?.serviceFee || []} margin={{ top: 20, right: 0, bottom: 20, left: 0 }}>
+          <ComposedChart data={filteredData} margin={{ top: 20, right: 0, bottom: 20, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
             <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280', fontWeight: 'bold' }} />
             <YAxis yAxisId="left" orientation="left" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280', fontWeight: 'bold' }} tickFormatter={(val) => formatCurrency(val)} />
@@ -332,14 +396,40 @@ const ServiceFeeSection = ({ revenue }) => {
 // ==================================================
 // 5. AMENITY REVENUE SECTION
 // ==================================================
-const AmenityRevenueSection = ({ revenue }) => {
+const AmenityRevenueSection = ({ revenue, filters }) => {
+  const filteredData = React.useMemo(() => {
+    let list = revenue?.amenity || [];
+    if (!filters) return list;
+    
+    let filtered = list.filter(item => {
+      if (filters.siteId && item.siteId && !item.siteId.includes(filters.siteId)) return false;
+      if (filters.buildingId && item.buildingId && !item.buildingId.includes(filters.buildingId)) return false;
+      if (filters.fromDate && item.date && new Date(item.date) < new Date(filters.fromDate)) return false;
+      if (filters.toDate && item.date && new Date(item.date) > new Date(filters.toDate)) return false;
+      return true;
+    });
+
+    const grouped = {};
+    filtered.forEach(item => {
+      const category = item.category || 'Unknown';
+      if (!grouped[category]) {
+        grouped[category] = { category, planned: 0, forecast: 0, actual: 0 };
+      }
+      grouped[category].planned += Number(item.planned || 0);
+      grouped[category].forecast += Number(item.forecast || 0);
+      grouped[category].actual += Number(item.actual || 0);
+    });
+
+    return Object.values(grouped);
+  }, [revenue?.amenity, filters]);
+
   return (
     <SectionContainer>
       <SectionTitle title="AMENITY REVENUE" />
       <KpiGrid kpi={revenue?.amenityKpi} showOcc={false} />
       <div className="h-[350px] w-full mt-8">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={revenue?.amenity || []} margin={{ top: 20, right: 0, bottom: 20, left: 0 }}>
+          <ComposedChart data={filteredData} margin={{ top: 20, right: 0, bottom: 20, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
             <XAxis dataKey="category" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280', fontWeight: 'bold' }} />
             <YAxis yAxisId="left" orientation="left" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280', fontWeight: 'bold' }} tickFormatter={(val) => formatCurrency(val)} />
@@ -448,9 +538,9 @@ export default function LeaseDashboard() {
         {/* CÁC SECTION DỮ LIỆU */}
         <OverviewSection overview={data?.overview} amenity={data?.amenity} />
         <LeaseAlerts alerts={data?.leaseAlerts} charts={data?.charts} onChartClick={handleChartClick} />
-        <ContractRevenueSection revenue={data?.revenue} />
-        <ServiceFeeSection revenue={data?.revenue} />
-        <AmenityRevenueSection revenue={data?.revenue} />
+        <ContractRevenueSection revenue={data?.revenue} filters={filters} />
+        <ServiceFeeSection revenue={data?.revenue} filters={filters} />
+        <AmenityRevenueSection revenue={data?.revenue} filters={filters} />
 
       </div>
 

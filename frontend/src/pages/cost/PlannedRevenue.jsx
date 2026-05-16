@@ -128,7 +128,7 @@ export default function PlannedRevenue() {
 
   const initialForm = {
     id: "", plannedRevenue: "", year: "", month: "", 
-    category: "", siteId: "", plannedCost: "", plannedOcc: ""
+    category: "", siteId: "", plannedOcc: ""
   };
   const [formData, setFormData] = useState(initialForm);
 
@@ -187,7 +187,6 @@ export default function PlannedRevenue() {
         year: Number(formData.year),
         month: Number(formData.month),
         plannedRevenue: Number(formData.plannedRevenue),
-        plannedCost: Number(formData.plannedCost),
         plannedOcc: Number(formData.plannedOcc || 0)
       };
 
@@ -248,7 +247,7 @@ export default function PlannedRevenue() {
   };
 
   const isFormValid = (formData.category === "OCC" ? formData.plannedOcc !== "" && formData.plannedOcc !== null : formData.plannedRevenue !== "" && formData.plannedRevenue !== null) && formData.year && formData.month && 
-                      formData.category && formData.siteId && formData.plannedCost !== "";
+                      formData.category && formData.siteId ;
 
   return (
     <div className="p-6 bg-gray-50 h-full flex flex-col min-h-screen animate-[fadeIn_0.2s_ease-out]">
@@ -336,7 +335,7 @@ export default function PlannedRevenue() {
                     <td className="px-4 py-2.5 text-right font-mono font-bold text-green-600 border-r border-gray-50">
                       {item.category === "OCC" ? `${item.plannedOcc || 0}%` : item.plannedRevenue?.toLocaleString()}
                     </td>
-                    <td className="px-4 py-2.5 text-right font-mono font-bold text-red-600">{item.plannedCost?.toLocaleString()}</td>
+                    
                   </tr>
                 ))
               )}
@@ -374,7 +373,7 @@ export default function PlannedRevenue() {
                   />
                 ) : (
                   <Input 
-                    type="number" label="Planned Revenue" required 
+                    type="number" label="Planned Cost" required 
                     value={formData.plannedRevenue} onChange={v => setFormData({...formData, plannedRevenue: v})} 
                   />
                 )}
@@ -413,10 +412,6 @@ export default function PlannedRevenue() {
                   options={sitesList}
                 />
                 
-                <Input 
-                  type="number" label="Planned Cost" required 
-                  value={formData.plannedCost} onChange={v => setFormData({...formData, plannedCost: v})} 
-                />
               </div>
 
             </div>

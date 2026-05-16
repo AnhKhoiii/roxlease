@@ -291,6 +291,9 @@ public class LeaseDashboardService {
             .stream().filter(c -> validLeaseIds.contains(c.getLeaseId())).collect(Collectors.toList());
         List<RecurringCost> recurringCosts = mongoTemplate.findAll(RecurringCost.class)
             .stream().filter(c -> validLeaseIds.contains(c.getLsId())).collect(Collectors.toList());
+            
+        Map<String, Lease> leaseMap = leases.stream().collect(Collectors.toMap(Lease::getLsId, l -> l, (l1, l2) -> l1));
+        Map<String, RecurringCost> costMap = recurringCosts.stream().filter(c -> c.getRecurringCostId() != null).collect(Collectors.toMap(RecurringCost::getRecurringCostId, c -> c, (c1, c2) -> c1));
         
         List<Map<String, Object>> exp1MList = new ArrayList<>();
         List<Map<String, Object>> exp3MList = new ArrayList<>();
@@ -348,7 +351,7 @@ public class LeaseDashboardService {
                     Map<String, Object> detail = new HashMap<>();
                     detail.put("id", sch.getLeaseId() != null ? sch.getLeaseId() : "N/A");
                     detail.put("name", sch.getCostType() != null ? sch.getCostType().name() : "N/A");
-                    detail.put("value", (sch.getAmountInBase() != null ? sch.getAmountInBase() : "0") + " VND");
+                    detail.put("value", String.format("%,.0f VND", getSafeAmount(sch, leaseMap, costMap)));
                     detail.put("recurringCostId", sch.getRecurringCostId() != null ? sch.getRecurringCostId() : "N/A");
                     detail.put("dueDate", sch.getDueDate() != null ? sch.getDueDate().toString() : "N/A");
 
@@ -360,7 +363,7 @@ public class LeaseDashboardService {
                     Map<String, Object> detail = new HashMap<>();
                     detail.put("id", sch.getLeaseId() != null ? sch.getLeaseId() : "N/A");
                     detail.put("name", sch.getCostType() != null ? sch.getCostType().name() : "N/A");
-                    detail.put("value", (sch.getAmountInBase() != null ? sch.getAmountInBase() : "0") + " VND");
+                    detail.put("value", String.format("%,.0f VND", getSafeAmount(sch, leaseMap, costMap)));
                     detail.put("recurringCostId", sch.getRecurringCostId() != null ? sch.getRecurringCostId() : "N/A");
                     detail.put("dueDate", sch.getDueDate() != null ? sch.getDueDate().toString() : "N/A");
 

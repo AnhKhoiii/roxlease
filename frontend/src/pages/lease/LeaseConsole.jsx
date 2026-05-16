@@ -151,15 +151,19 @@ export default function LeaseConsole() {
   const handleSaveModal = async (incomingData, isSendRequest) => {
     try {
       // 1. Lấy dữ liệu hợp đồng thực sự (nằm trong requestData nếu là Send Request)
-      const actualLeaseData = isSendRequest ? incomingData.requestData : incomingData;
+      const actualLeaseData = incomingData.requestData || incomingData;
+
+      const payload = { ...actualLeaseData };
+      if (!payload.lsId || String(payload.lsId).trim() === "") delete payload.lsId;
+      if (!payload.id || String(payload.id).trim() === "") delete payload.id;
 
       let savedLease;
       // 2. Xử lý lưu/cập nhật hợp đồng trước (Draft)
       if (modalMode === "EDIT") {
-        const res = await axiosInstance.put(`/lease/leases/${actualLeaseData.lsId}`, actualLeaseData);
+        const res = await axiosInstance.put(`/lease/leases/${actualLeaseData.lsId}`, payload);
         savedLease = res.data;
       } else {
-        const res = await axiosInstance.post('/lease/leases', actualLeaseData);
+        const res = await axiosInstance.post('/lease/leases', payload);
         savedLease = res.data;
       }
 
@@ -173,7 +177,7 @@ export default function LeaseConsole() {
           action: modalMode === "ADD" ? "CREATE" : "UPDATE",
           requestType: "LEASE_DETAILS", // Map đúng với enum RQType.LEASE_DETAILS
           targetId: targetId,
-          data: actualLeaseData // ⚠️ Chú ý: Backend submit-module dùng key "data"
+          data: payload // ⚠️ Chú ý: Backend submit-module dùng key "data"
         };
         
         await axiosInstance.post("/lease/requests/submit-module", finalRequestPayload);

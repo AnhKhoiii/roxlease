@@ -49,6 +49,15 @@ public class LeaseAnalyticsService {
 
         // Lấy toàn bộ CPĐK và Lịch biểu để check theo đúng công thức
         List<RecurringCost> allCosts = mongoTemplate.findAll(RecurringCost.class);
+        Map<String, RecurringCost> costMap = allCosts.stream()
+            .filter(c -> c.getRecurringCostId() != null)
+            .collect(Collectors.toMap(RecurringCost::getRecurringCostId, c -> c, (c1, c2) -> c1));
+            
+        List<Lease> allLeases = mongoTemplate.findAll(Lease.class);
+        Map<String, Lease> leaseMap = allLeases.stream()
+            .filter(l -> l.getLsId() != null)
+            .collect(Collectors.toMap(Lease::getLsId, l -> l, (l1, l2) -> l1));
+            
         List<RecurringCostSchedule> allSchedules = mongoTemplate.findAll(RecurringCostSchedule.class);
         
         List<LeaseAmenity> allLeaseAmenities = mongoTemplate.findAll(LeaseAmenity.class);
@@ -136,7 +145,7 @@ public class LeaseAnalyticsService {
             LocalDate due = sch.getDueDate();
             if (due == null || due.getYear() != targetYear) continue;
 
-            BigDecimal amt = sch.getAmountInBase() != null ? sch.getAmountInBase() : BigDecimal.ZERO;
+            BigDecimal amt = getSafeAmount(sch, leaseMap, costMap);
             boolean isPaid = sch.getPaymentStatus() == PaymentStatus.PAID;
             boolean isNotCancelled = sch.getPaymentStatus() != PaymentStatus.REJECTED; // Tương đương != CANCELLED
             boolean isScheduledPlan = scheduledCostIds.contains(sch.getRecurringCostId()); // CPĐK có Schedule_Status = Schedule
@@ -217,6 +226,7 @@ public class LeaseAnalyticsService {
         }
 
         List<Lease> leases = mongoTemplate.find(leaseQuery, Lease.class);
+        Map<String, Lease> leaseMap = leases.stream().filter(l -> l.getLsId() != null).collect(Collectors.toMap(Lease::getLsId, l -> l, (l1, l2) -> l1));
         List<LeaseOption> allOptions = mongoTemplate.findAll(LeaseOption.class);
         
         Set<String> validLeaseIds = leases.stream().map(Lease::getLsId).collect(Collectors.toSet());
@@ -225,6 +235,13 @@ public class LeaseAnalyticsService {
             scheduleQuery.addCriteria(Criteria.where("leaseId").in(validLeaseIds));
         }
         List<RecurringCostSchedule> schedules = mongoTemplate.find(scheduleQuery, RecurringCostSchedule.class);
+        
+        Query costQuery = new Query();
+        if (siteId != null && !siteId.isEmpty()) {
+            costQuery.addCriteria(Criteria.where("lsId").in(validLeaseIds));
+        }
+        List<RecurringCost> allCosts = mongoTemplate.find(costQuery, RecurringCost.class);
+        Map<String, RecurringCost> costMap = allCosts.stream().filter(c -> c.getRecurringCostId() != null).collect(Collectors.toMap(RecurringCost::getRecurringCostId, c -> c, (c1, c2) -> c1));
         
         if (fromDate != null || toDate != null) {
             leases = leases.stream().filter(ls -> {
@@ -320,7 +337,7 @@ public class LeaseAnalyticsService {
 
                 for (Map.Entry<String, List<RecurringCostSchedule>> entry : monthlyGroup.entrySet()) {
                     BigDecimal totalAmount = entry.getValue().stream()
-                            .map(s -> s.getAmountInBase() != null ? s.getAmountInBase() : BigDecimal.ZERO)
+                            .map(s -> getSafeAmount(s, leaseMap, costMap))
                             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
                     Map<String, Object> map = new LinkedHashMap<>();
@@ -358,7 +375,7 @@ public class LeaseAnalyticsService {
 
                 for (Map.Entry<String, List<RecurringCostSchedule>> entry : yearlyGroup.entrySet()) {
                     BigDecimal totalAmount = entry.getValue().stream()
-                            .map(s -> s.getAmountInBase() != null ? s.getAmountInBase() : BigDecimal.ZERO)
+                            .map(s -> getSafeAmount(s, leaseMap, costMap))
                             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
                     Map<String, Object> map = new LinkedHashMap<>();
@@ -386,5 +403,37 @@ public class LeaseAnalyticsService {
         if (type == null) return true;
         // Tùy chỉnh theo hệ thống của bạn, thường RENT và SERVICE là Income
         return type == CostType.BASERENT || type == CostType.BASESERVICE;
+    }
+
+    private BigDecimal getSafeAmount(RecurringCostSchedule s, Map<String, Lease> leaseMap, Map<String, RecurringCost> costMap) {
+        BigDecimal amount = BigDecimal.ZERO;
+        if (s.getAmountInBase() != null && s.getAmountInBase().compareTo(BigDecimal.ZERO) > 0) {
+            amount = s.getAmountInBase();
+        } else if (s.getAmountInTotal() != null) {
+            amount = s.getAmountInTotal();
+        }
+
+        if (amount.compareTo(BigDecimal.ZERO) > 0 && s.getRecurringCostId() != null) {
+            RecurringCost cost = costMap.get(s.getRecurringCostId());
+            Lease lease = s.getLeaseId() != null ? leaseMap.get(s.getLeaseId()) : null;
+            
+            BigDecimal exchangeRate = BigDecimal.ONE;
+            if (cost != null) {
+                if (Boolean.TRUE.equals(cost.getOverrideExchangeRate()) && cost.getExchangeRate() != null && cost.getExchangeRate().compareTo(BigDecimal.ZERO) > 0) {
+                    exchangeRate = cost.getExchangeRate();
+                } else if (lease != null && lease.getBaseExchangeRate() != null && lease.getBaseExchangeRate().compareTo(BigDecimal.ZERO) > 0) {
+                    exchangeRate = lease.getBaseExchangeRate();
+                }
+            } else if (lease != null && lease.getBaseExchangeRate() != null && lease.getBaseExchangeRate().compareTo(BigDecimal.ZERO) > 0) {
+                exchangeRate = lease.getBaseExchangeRate();
+            }
+
+            // BẢO VỆ DOUBLE-CONVERSION: Tránh nhân đúp tỷ giá khi người dùng vô tình nhập tiền VND nhưng vẫn gắn tỷ giá lớn
+            boolean isAlreadyVND = amount.compareTo(new BigDecimal("100000")) >= 0 && exchangeRate.compareTo(new BigDecimal("10000")) >= 0;
+            if (exchangeRate.compareTo(BigDecimal.ONE) > 0 && !isAlreadyVND) {
+                amount = amount.multiply(exchangeRate);
+            }
+        }
+        return amount;
     }
 }

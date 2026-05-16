@@ -47,10 +47,14 @@ export default function LeaseDetail() {
   const handleSaveModal = async (incomingData, isSendRequest) => {
     try {
       // 1. Trích xuất dữ liệu Lease thực sự
-      const actualLeaseData = isSendRequest ? incomingData.requestData : incomingData;
+      const actualLeaseData = incomingData.requestData || incomingData;
+
+      const payload = { ...actualLeaseData };
+      if (!payload.lsId || String(payload.lsId).trim() === "") delete payload.lsId;
+      if (!payload.id || String(payload.id).trim() === "") delete payload.id;
 
       // 2. Cập nhật Hợp đồng
-      await axiosInstance.put(`/lease/leases/${actualLeaseData.lsId}`, actualLeaseData);
+      await axiosInstance.put(`/lease/leases/${actualLeaseData.lsId}`, payload);
 
       // 3. Xử lý gửi Request (nếu người dùng bấm nút Send Request)
       if (isSendRequest) {
@@ -59,7 +63,7 @@ export default function LeaseDetail() {
           action: "UPDATE",
           requestType: "LEASE_DETAILS",
           targetId: actualLeaseData.lsId,
-          data: actualLeaseData
+          data: payload
         };
         await axiosInstance.post("/lease/requests/submit-module", finalRequestPayload);
         alert("Lưu và gửi yêu cầu phê duyệt thành công!");

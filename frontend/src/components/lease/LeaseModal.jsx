@@ -117,7 +117,6 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData,
     if (isOpen) {
       setFormData(initialData || {});
       fetchSites();
-      fetchAmenities();
       fetchParties();
     }
   }, [isOpen, initialData]);
@@ -146,11 +145,13 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData,
     } catch { setBuildings([]); }
   };
 
-  const fetchAmenities = async () => {
+  const fetchAmenities = async (buildingId) => {
+    if (!buildingId) return setAmenities([]);
     try {
       const res = await axiosInstance.get('/space/amenities');
       const items = Array.isArray(res.data) ? res.data : (res.data?.content || []);
-      setAmenities(items.filter(Boolean).map(item => ({
+      const filtered = items.filter(item => item && (item.blId === buildingId || item.buildingId === buildingId));
+      setAmenities(filtered.map(item => ({
         value: item.amenityId || item.id || '',
         label: item.amenityName || item.name || item.amenityId || item.id || ''
       })));
@@ -169,6 +170,7 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData,
   };
 
   useEffect(() => { if (formData.siteId) fetchBuildings(formData.siteId); else setBuildings([]); }, [formData.siteId]);
+  useEffect(() => { if (formData.buildingId) fetchAmenities(formData.buildingId); else setAmenities([]); }, [formData.buildingId]);
 
   if (!isOpen) return null;
 
@@ -177,7 +179,13 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData,
     if (['amountDeposit', 'rentUnitCost', 'serviceUnitCost', 'baseExchangeRate', 'areaNegotiated', 'areaCorridor'].includes(field)) {
       updates[field] = value === '' ? null : Number(value);
     }
-    if (field === 'siteId') { updates.buildingId = ''; }
+    if (field === 'siteId') { 
+      updates.buildingId = ''; 
+      updates.amenityId = ''; 
+    }
+    if (field === 'buildingId') {
+      updates.amenityId = '';
+    }
     setFormData(prev => ({ ...prev, ...updates }));
   };
 
@@ -284,7 +292,7 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData,
               <div className="pb-0.5 border-b border-gray-100"><span className="font-bold text-blue-800 text-[9px] uppercase tracking-wider">Location & Structure</span></div>
               <AutocompleteInput label="Site ID" value={formData.siteId} onChange={v => handleChange('siteId', v)} options={sites} placeholder="Search Site ID..." />
               <AutocompleteInput label="Building ID" value={formData.buildingId} onChange={v => handleChange('buildingId', v)} options={buildings} disabled={!formData.siteId} placeholder={!formData.siteId ? "Select Site first..." : "Search Building ID..."} />
-              <AutocompleteInput label="Amenity ID" value={formData.amenityId} onChange={v => handleChange('amenityId', v)} options={amenities} placeholder="Search Amenity ID..." />
+              <AutocompleteInput label="Amenity ID" value={formData.amenityId} onChange={v => handleChange('amenityId', v)} options={amenities} disabled={!formData.buildingId} placeholder={!formData.buildingId ? "Select Building first..." : "Search Amenity ID..."} />
               <Select label="Lease / Sublease" value={formData.leaseSublease} onChange={v => handleChange('leaseSublease', v)} options={['LEASE', 'SUBLEASE']} />
             </div>
 
@@ -308,8 +316,8 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData,
             {/* CỘT 4 */}
             <div className="flex flex-col gap-3">
               <div className="pb-0.5 border-b border-gray-100"><span className="font-bold text-blue-800 text-[9px] uppercase tracking-wider">Parties & Area</span></div>
-              <Input label="Negotiated Area (sqm)" type="number" value={formData.areaNegotiated} onChange={v => handleChange('areaNegotiated', v)} />
-              <Input label="Corridor Area (sqm)" type="number" value={formData.areaCorridor} onChange={v => handleChange('areaCorridor', v)} />
+              <Input label="Negotiated Area" type="number" value={formData.areaNegotiated} onChange={v => handleChange('areaNegotiated', v)} />
+              <Input label="Corridor Area" type="number" value={formData.areaCorridor} onChange={v => handleChange('areaCorridor', v)} />
               <Input label="Parent Lease" value={formData.parentLsId} onChange={v => handleChange('parentLsId', v)} />
               <div className="flex items-end gap-2 mt-0.5">
                 <div className="flex-1">

@@ -196,7 +196,34 @@ public class RequestService {
         
         System.out.println("[recalculateLeaseArea] Found active suites: " + activeSuites.size());
         double totalArea = 0.0;
+        java.time.LocalDate today = java.time.LocalDate.now();
+        
         for (LeaseSuite ls : activeSuites) {
+            boolean isValid = true;
+            try {
+                java.lang.reflect.Method method = ls.getClass().getMethod("getDateEnd");
+                Object dateEndObj = method.invoke(ls);
+                if (dateEndObj != null) {
+                    java.time.LocalDate dateEnd = null;
+                    if (dateEndObj instanceof java.time.LocalDate) {
+                        dateEnd = (java.time.LocalDate) dateEndObj;
+                    } else if (dateEndObj instanceof String) {
+                        dateEnd = java.time.LocalDate.parse((String) dateEndObj);
+                    } else if (dateEndObj instanceof java.util.Date) {
+                        dateEnd = ((java.util.Date) dateEndObj).toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate();
+                    }
+                    if (dateEnd != null && dateEnd.isBefore(today)) {
+                        isValid = false;
+                    }
+                }
+            } catch (Exception ignored) {
+                // Fallback nếu không lấy được dateEnd
+            }
+
+            if (!isValid) {
+                continue; // Bỏ qua nếu suite đã hết hạn
+            }
+
             if (ls.getSuId() != null) {
                 org.bson.Document suiteDoc = mongoTemplate.findOne(
                         new Query(new Criteria().orOperator(

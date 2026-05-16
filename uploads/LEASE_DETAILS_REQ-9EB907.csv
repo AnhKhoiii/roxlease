@@ -1,0 +1,23 @@
+﻿Field Name,New Value
+active,false
+lsId,LEASE02
+signedDate,2026-05-01T00:00:00.000Z
+handoverDate,2026-05-01
+startDate,2026-05-01
+endDate,2026-07-01
+lsType,INTERNAL
+spaceUse,MIXED_USE
+siteId,APR
+buildingId,APR_B
+leaseSublease,LEASE
+amountDeposit,100
+rentUnitCost,100
+serviceUnitCost,5
+currency,USD
+baseExchangeRate,26000
+rentType,GROSS_RENT
+vatExcluded,false
+isSign,true
+assumeRenewal,true
+partyId,TE-001
+action,CREATE

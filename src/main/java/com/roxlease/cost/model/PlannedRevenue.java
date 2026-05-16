@@ -29,7 +29,6 @@ public class PlannedRevenue {
     
     private BigDecimal plannedRevenue;
     private BigDecimal plannedOcc;
-    private BigDecimal plannedCost;
 
     @CreatedDate
     private LocalDateTime createdAt;
