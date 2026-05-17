@@ -157,6 +157,28 @@ export default function LeaseConsole() {
       if (!payload.lsId || String(payload.lsId).trim() === "") delete payload.lsId;
       if (!payload.id || String(payload.id).trim() === "") delete payload.id;
 
+      // XỬ LÝ XÓA
+      if (incomingData.isDelete || actualLeaseData.isDelete) {
+        delete payload.isDelete;
+        if (isSendRequest) {
+          const finalRequestPayload = {
+            siteId: actualLeaseData.siteId || "N/A",
+            action: "DELETE",
+            requestType: "LEASE_DETAILS",
+            targetId: actualLeaseData.lsId,
+            data: payload
+          };
+          await axiosInstance.post("/lease/requests/submit-module", finalRequestPayload);
+          alert("Lưu và gửi yêu cầu xóa thành công!");
+        } else {
+          await axiosInstance.delete(`/lease/leases/${actualLeaseData.lsId}`);
+          alert("Đã xóa nháp hợp đồng thành công!");
+        }
+        setIsModalOpen(false);
+        fetchLeases();
+        return;
+      }
+
       let savedLease;
       // 2. Xử lý lưu/cập nhật hợp đồng trước (Draft)
       if (modalMode === "EDIT") {

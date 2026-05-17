@@ -79,11 +79,14 @@ def parse_dxf(file_path):
         return json.dumps({"error": f"Drawing cannot be rendered: {str(e)}"})
 
     texts = []
+    area_gross_int = 0.0
+    area_gross_ext = 0.0
+    
     for entity in msp.query('TEXT MTEXT'):
         if not hasattr(entity.dxf, 'layer'): continue
         layer_name = str(entity.dxf.layer).strip().upper().replace('$', '')
         
-        if 'TXT' in layer_name or 'TEXT' in layer_name:
+        if 'TXT' in layer_name or 'TEXT' in layer_name or 'GROS' in layer_name or 'GORS' in layer_name:
             if entity.dxftype() == 'MTEXT':
                 try: val = entity.plain_text()
                 except: val = entity.text
@@ -109,10 +112,42 @@ def parse_dxf(file_path):
                 'x': pt[0], 
                 'y': pt[1], 
                 'text': extracted_id,
+                'full_text': val,
                 'area': extracted_area,
                 'layer': layer_name,
                 'used': False 
             })
+
+    for txt in texts:
+        layer_name = txt['layer']
+        if 'GROS' in layer_name or 'GORS' in layer_name or 'TXT' in layer_name or 'TEXT' in layer_name:
+            upper_text = txt['full_text'].upper()
+            if 'EXTERNAL' in upper_text or 'INTERNAL' in upper_text:
+                area_val = txt['area']
+                
+                # Nếu diện tích ở cùng 1 dòng (VD: "EXTERNAL 120m2")
+                if area_val is None:
+                    area_val = extract_area_from_text(upper_text)
+                
+                # Nếu diện tích nằm ở một Object Text ngay phía dưới
+                if area_val is None:
+                    below_texts = [
+                        t for t in texts 
+                        if t != txt and abs(t['x'] - txt['x']) < 50.0 and t['y'] < txt['y']
+                    ]
+                    if below_texts:
+                        best = sorted(below_texts, key=lambda t: txt['y'] - t['y'])[0]
+                        area_val = extract_area_from_text(best['full_text'])
+                        if area_val is not None:
+                            best['used'] = True
+
+                if area_val is not None:
+                    if 'EXTERNAL' in upper_text:
+                        area_gross_ext += area_val
+                    elif 'INTERNAL' in upper_text:
+                        area_gross_int += area_val
+                
+                txt['used'] = True
 
     polygons = []
     for entity in msp.query('LWPOLYLINE POLYLINE'):
@@ -218,7 +253,7 @@ def parse_dxf(file_path):
     # =========================================================================
     # ĐÓNG GÓI JSON
     # =========================================================================
-    result = {"rooms": [], "suites": [], "gross": [], "rf": []}
+    result = {"rooms": [], "suites": [], "gross": [], "rf": [], "area_gross_int": area_gross_int, "area_gross_ext": area_gross_ext}
     for poly in polygons:
         geometry = {"type": "Polygon", "coordinates": [poly['points']]}
         payload = {

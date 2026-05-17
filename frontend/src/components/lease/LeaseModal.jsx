@@ -226,6 +226,31 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData,
     }
   };
 
+  const handleDeleteAction = () => {
+    const activeState = isLeaseActive ?? formData.active;
+    if (!window.confirm(activeState ? "Bạn có chắc muốn gửi yêu cầu XÓA hợp đồng này?" : "Bạn có chắc muốn XÓA vĩnh viễn nháp hợp đồng này?")) return;
+    
+    const payload = { ...formData, isDelete: true };
+    
+    if (activeState) {
+      // Send delete request
+      const requestPayload = {
+        requestType: "LEASE", 
+        siteId: payload.siteId,
+        targetId: payload.lsId,
+        action: "DELETE",
+        comment: `Request to delete Lease: ${payload.lsId}`,
+        document: null,
+        requestData: payload,
+        isDelete: true
+      };
+      onSave(requestPayload, true);
+    } else {
+      // Direct delete draft
+      onSave(payload, false);
+    }
+  };
+
   const isActive = isLeaseActive ?? formData.active;
 
   return (
@@ -252,6 +277,12 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData,
               </>
             ) : (
               <>
+            <button 
+              onClick={handleDeleteAction} 
+              className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${isActive ? 'bg-red-50 text-[#DE3B40] border border-[#DE3B40] hover:bg-red-100' : 'bg-[#DE3B40] hover:bg-[#C11C22] text-white'}`}
+            >
+              {isActive ? "Request Delete" : "Delete Draft"}
+            </button>
                 <button 
                   onClick={() => handleSaveAction(false)} 
                   disabled={isActive}
@@ -316,7 +347,7 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData,
             {/* CỘT 4 */}
             <div className="flex flex-col gap-3">
               <div className="pb-0.5 border-b border-gray-100"><span className="font-bold text-blue-800 text-[9px] uppercase tracking-wider">Parties & Area</span></div>
-              <Input label="Negotiated Area" type="number" value={formData.areaNegotiated} onChange={v => handleChange('areaNegotiated', v)} />
+              <Input label="Negotiated Area" type="number" value={formData.areaNegotiated} disabled={true} placeholder="Auto-calculated from Suites" onChange={() => {}} />
               <Input label="Corridor Area" type="number" value={formData.areaCorridor} onChange={v => handleChange('areaCorridor', v)} />
               <Input label="Parent Lease" value={formData.parentLsId} onChange={v => handleChange('parentLsId', v)} />
               <div className="flex items-end gap-2 mt-0.5">

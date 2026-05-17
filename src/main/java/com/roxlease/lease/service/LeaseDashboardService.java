@@ -589,7 +589,7 @@ public class LeaseDashboardService {
         BigDecimal actualToDate = calculateActualToDate(schedules, year, toDate, category, amenityLeaseIds, costTypeMap, leaseMap, costMap);
         
         // 4. Annual Forecast: Bằng sum(chưa huỷ) + sum(extrapolate nếu có assume_renewal)
-        BigDecimal annualForecast = calculateAnnualForecast(schedules, year, category, amenityLeaseIds, costTypeMap, allCosts, leaseMap, costMap);
+        BigDecimal annualForecast = calculateAnnualForecast(schedules, year, category, amenityLeaseIds, costTypeMap, allCosts, leaseMap, costMap, options);
         BigDecimal hiddenAnnualForecast = BigDecimal.ZERO;
         for (int m = 1; m <= 12; m++) {
             hiddenAnnualForecast = hiddenAnnualForecast.add(calculateHiddenForecastTotal(leases, options, schedules, allCosts, category, amenityLeaseIds, costTypeMap, year, m, leaseMap, costMap, leaseDocMap));
@@ -655,7 +655,7 @@ public class LeaseDashboardService {
         for (int m = 1; m <= 12; m++) {
             BigDecimal actual = calculateActualRevenue(schedules, year, m, category, amenityLeaseIds, costTypeMap, leaseMap, costMap);
             
-            BigDecimal forecast = calculateForecastRevenue(schedules, year, m, category, amenityLeaseIds, costTypeMap, leaseMap, costMap);
+            BigDecimal forecast = calculateForecastRevenue(schedules, year, m, category, amenityLeaseIds, costTypeMap, leaseMap, costMap, options);
             forecast = forecast.add(calculateHiddenForecastTotal(leases, options, schedules, allCosts, category, amenityLeaseIds, costTypeMap, year, m, leaseMap, costMap, leaseDocMap));
             
             final int monthFilter = m;
@@ -711,20 +711,33 @@ public class LeaseDashboardService {
             .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private BigDecimal calculateForecastRevenue(List<RecurringCostSchedule> schedules, int year, int month, RevenueCategory category, Set<String> amenityLeaseIds, Map<String, String> costTypeMap, Map<String, Lease> leaseMap, Map<String, RecurringCost> costMap) {
+    private BigDecimal calculateForecastRevenue(List<RecurringCostSchedule> schedules, int year, int month, RevenueCategory category, Set<String> amenityLeaseIds, Map<String, String> costTypeMap, Map<String, Lease> leaseMap, Map<String, RecurringCost> costMap, List<LeaseOption> allOptions) {
         return schedules.stream()
             .filter(s -> s.getDueDate() != null && s.getDueDate().getYear() == year && s.getDueDate().getMonthValue() == month)
+            .filter(s -> s.getPaymentStatus() != PaymentStatus.REJECTED)
             .filter(s -> {
                 if (s.getRecurringCostId() == null) return true;
                 RecurringCost cost = costMap.get(s.getRecurringCostId());
                 return cost == null || cost.getScheduleStatus() == null || !cost.getScheduleStatus().toUpperCase().contains("CANCEL");
             })
             .filter(s -> isMatchingCategory(s, category, amenityLeaseIds, costTypeMap))
+            .filter(s -> {
+                Lease lease = leaseMap.get(s.getLeaseId());
+                if (lease == null) return true;
+                List<LeaseOption> lsOps = allOptions.stream()
+                        .filter(o -> o.getLsId().equals(lease.getLsId()) && Boolean.TRUE.equals(o.getActive()))
+                        .collect(Collectors.toList());
+                LocalDate effectiveEnd = getEffectiveEndDate(lease, lsOps);
+                if (effectiveEnd != null && s.getDueDate().isAfter(effectiveEnd)) {
+                    return false;
+                }
+                return true;
+            })
             .map(s -> getSafeAmount(s, leaseMap, costMap))
             .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private BigDecimal calculateAnnualForecast(List<RecurringCostSchedule> schedules, int year, RevenueCategory category, Set<String> amenityLeaseIds, Map<String, String> costTypeMap, List<RecurringCost> allCosts, Map<String, Lease> leaseMap, Map<String, RecurringCost> costMap) {
+    private BigDecimal calculateAnnualForecast(List<RecurringCostSchedule> schedules, int year, RevenueCategory category, Set<String> amenityLeaseIds, Map<String, String> costTypeMap, List<RecurringCost> allCosts, Map<String, Lease> leaseMap, Map<String, RecurringCost> costMap, List<LeaseOption> allOptions) {
         Set<String> scheduledCostIds = allCosts.stream()
             .filter(c -> c.getScheduleStatus() != null && c.getScheduleStatus().toUpperCase().contains(STATUS_SCHEDULED))
             .map(RecurringCost::getRecurringCostId)
@@ -732,8 +745,21 @@ public class LeaseDashboardService {
 
         return schedules.stream()
             .filter(s -> s.getDueDate() != null && s.getDueDate().getYear() == year)
+            .filter(s -> s.getPaymentStatus() != PaymentStatus.REJECTED)
             .filter(s -> scheduledCostIds.contains(s.getRecurringCostId())) // 🚀 FIX: Bắt buộc CPĐK phải là SCHEDULED, không được cộng dồn hàng loạt Draft Schedules
             .filter(s -> isMatchingCategory(s, category, amenityLeaseIds, costTypeMap))
+            .filter(s -> {
+                Lease lease = leaseMap.get(s.getLeaseId());
+                if (lease == null) return true;
+                List<LeaseOption> lsOps = allOptions.stream()
+                        .filter(o -> o.getLsId().equals(lease.getLsId()) && Boolean.TRUE.equals(o.getActive()))
+                        .collect(Collectors.toList());
+                LocalDate effectiveEnd = getEffectiveEndDate(lease, lsOps);
+                if (effectiveEnd != null && s.getDueDate().isAfter(effectiveEnd)) {
+                    return false;
+                }
+                return true;
+            })
             .map(s -> getSafeAmount(s, leaseMap, costMap))
             .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
@@ -859,7 +885,8 @@ public class LeaseDashboardService {
                     && isMatchingCategory(s, category, amenityLeaseIds, costTypeMap) 
                     && s.getDueDate() != null 
                     && s.getDueDate().getYear() == targetYear 
-                    && s.getDueDate().getMonthValue() == targetMonth);
+                    && s.getDueDate().getMonthValue() == targetMonth
+                    && s.getPaymentStatus() != PaymentStatus.REJECTED);
 
             if (hasScheduleInTargetMonth) return BigDecimal.ZERO;
 

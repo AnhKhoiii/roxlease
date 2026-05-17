@@ -1,0 +1,12 @@
+﻿Field Name,New Value
+clauseId,CL-01
+clauseType,RENT_ESCALATION
+description,TĂNG GIÁ 2 TUẦN 1 LẦN 
+startDate,2026-05-15
+endDate,2026-05-31
+dateMatchLs,false
+responsibleParty,LANDLORD
+exercisedBy,
+documentUrl,
+active,false
+leaseId,LEASE03

@@ -163,10 +163,22 @@ export default function PropertyConsole() {
           if (updatedFloor && updatedFloor.drawingJson) {
             let calcGfa = 0;
             let calcNfa = 0;
+            let calcGrossInt = 0;
+            let calcGrossExt = 0;
             
             // GFA: Tổng diện tích vùng Gross
             if (updatedFloor.drawingJson.gross) {
               calcGfa = updatedFloor.drawingJson.gross.reduce((sum, item) => sum + (item.area || 0), 0);
+              
+              // Phân loại Ext/Int trực tiếp từ đa giác: Lớn hơn là Ext, bé hơn là Int
+              if (updatedFloor.drawingJson.gross.length === 2) {
+                const area1 = updatedFloor.drawingJson.gross[0].area || 0;
+                const area2 = updatedFloor.drawingJson.gross[1].area || 0;
+                calcGrossExt = Math.max(area1, area2); // Đa giác có diện tích lớn hơn -> Ext
+                calcGrossInt = Math.min(area1, area2); // Đa giác có diện tích bé hơn -> Int
+              } else if (updatedFloor.drawingJson.gross.length === 1) {
+                calcGrossExt = updatedFloor.drawingJson.gross[0].area || 0;
+              }
             }
             // NFA: Tổng diện tích không gian cho thuê (Suites) và các phòng (Rooms)
             if (updatedFloor.drawingJson.suites) {
@@ -181,6 +193,12 @@ export default function PropertyConsole() {
             
             const finalGfa = Number(calcGfa.toFixed(2));
             const finalNfa = Number(calcNfa.toFixed(2));
+            const finalGrossInt = Number(calcGrossInt.toFixed(2));
+            const finalGrossExt = Number(calcGrossExt.toFixed(2));
+
+            // Ghi vào đối tượng drawingJson để backend lưu dưới dạng thuộc tính của đối tượng JSON
+            updatedFloor.drawingJson.area_gross_int = finalGrossInt;
+            updatedFloor.drawingJson.area_gross_ext = finalGrossExt;
 
             // Cập nhật lại GFA/NFA cho Floor
             await axiosInstance.put(`/space/properties/floors/${formData.flId}`, {

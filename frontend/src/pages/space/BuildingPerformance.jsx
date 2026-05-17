@@ -43,24 +43,54 @@ export default function BuildingPerformance() {
 
   useEffect(() => {
     const fetchBuildings = async () => {
-      if (filters.siteId === "ALL") { setBuildings([]); return; }
       try {
-        const res = await axiosInstance.get(`/space/properties/buildings?siteId=${filters.siteId}`);
+        const res = await axiosInstance.get(`/space/properties/buildings`);
         setBuildings(Array.isArray(res.data) ? res.data : (res.data?.content || []));
       } catch (err) { console.error("Error loading buildings", err); }
     };
     fetchBuildings();
-  }, [filters.siteId]);
+  }, []); // Xóa dependency filters.siteId để luôn fetch toàn bộ Buildings 1 lần khi load trang
 
   const fetchPerformanceData = useCallback(async () => {
     setLoading(true);
     try {
       // Đổi query param thành blId
       const res = await axiosInstance.get(`/space/performance?siteId=${filters.siteId}&blId=${filters.blId}`);
-      setData(res.data);
+      const responseData = res.data;
+      
+      // Tự tính Total Interior Area và Total Exterior Area nếu backend không trả về
+      if (responseData && responseData.kpis) {
+        const kpis = responseData.kpis;
+        
+        let beIntArea = kpis.areaGrossInt ?? kpis.area_gross_int;
+        let beExtArea = kpis.areaGrossExt ?? kpis.area_gross_ext;
+        
+        // Nếu API performance không trả về hoặc trả về 0, ta lấy dữ liệu từ mảng buildings dự phòng
+        if (!beIntArea || beIntArea === 0 || !beExtArea || beExtArea === 0) {
+          const relevantBuildings = filters.siteId === "ALL" ? buildings : buildings.filter(b => b.siteId === filters.siteId);
+          if (filters.blId === "ALL") {
+            beIntArea = relevantBuildings.reduce((sum, b) => sum + (b.areaGrossInt || 0), 0);
+            beExtArea = relevantBuildings.reduce((sum, b) => sum + (b.areaGrossExt || 0), 0);
+          } else {
+            const selectedBuilding = buildings.find(b => b.blId === filters.blId || b.id === filters.blId);
+            beIntArea = selectedBuilding?.areaGrossInt || 0;
+            beExtArea = selectedBuilding?.areaGrossExt || 0;
+          }
+        }
+        
+        // Cập nhật giá trị nếu đang hiển thị là 0, null, hoặc undefined
+        if (!kpis.totalInteriorArea || kpis.totalInteriorArea === 0) {
+          kpis.totalInteriorArea = beIntArea || 0;
+        }
+        if (!kpis.totalExteriorArea || kpis.totalExteriorArea === 0) {
+          kpis.totalExteriorArea = beExtArea || 0;
+        }
+      }
+      
+      setData(responseData);
     } catch (error) { console.error("Error fetching performance data", error); }
     finally { setLoading(false); }
-  }, [filters]);
+  }, [filters, buildings]);
 
   useEffect(() => { fetchPerformanceData(); }, [fetchPerformanceData]);
 
@@ -87,7 +117,7 @@ export default function BuildingPerformance() {
             <label className="text-[10px] font-bold text-gray-600 uppercase">Building ID <span className="text-red-500">*</span></label>
             <select value={filters.blId} onChange={e => setFilters({...filters, blId: e.target.value})} disabled={filters.siteId === "ALL"} className="border border-gray-300 rounded px-3 py-1.5 text-[12px] outline-none focus:border-blue-500 bg-white shadow-sm disabled:bg-gray-100 disabled:text-gray-400 cursor-pointer">
               <option value="ALL">ALL BUILDINGS</option>
-              {buildings.filter(Boolean).map((b, idx) => {
+              {buildings.filter(b => b && b.siteId === filters.siteId).map((b, idx) => {
                 // Đọc blId chuẩn
                 const bId = b.blId || b.id || b._id || `Unknown-${idx}`;
                 const bName = b.blName || b.name || "";

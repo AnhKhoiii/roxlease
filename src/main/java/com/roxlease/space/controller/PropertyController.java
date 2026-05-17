@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/space/properties")
@@ -56,12 +57,58 @@ public class PropertyController {
 
     private void syncBuildingArea(String buildingId) {
         if (buildingId == null || buildingId.isEmpty() || !buildingRepo.existsById(buildingId)) return;
-        double totalGfa = floorRepo.findAll().stream()
+        
+        List<Floor> floors = floorRepo.findAll().stream()
                 .filter(f -> buildingId.equals(f.getBlId()))
+                .collect(java.util.stream.Collectors.toList());
+                
+        double totalGfa = floors.stream()
                 .mapToDouble(f -> f.getGfa() != null ? f.getGfa() : 0.0).sum();
+                
+        double totalGrossInt = 0.0;
+        double totalGrossExt = 0.0;
+        
+        for (Floor f : floors) {
+            if (f.getDrawingJson() != null) {
+                try {
+                    boolean hasDirectArea = false;
+                    // Ưu tiên 1: Đọc trực tiếp từ key area_gross_int và area_gross_ext đã có sẵn
+                    if (f.getDrawingJson().containsKey("area_gross_int") && f.getDrawingJson().containsKey("area_gross_ext")) {
+                        totalGrossInt += Double.parseDouble(f.getDrawingJson().get("area_gross_int").toString());
+                        totalGrossExt += Double.parseDouble(f.getDrawingJson().get("area_gross_ext").toString());
+                        hasDirectArea = true;
+                    }
+                    
+                    // Ưu tiên 2: Fallback đọc và tính toán từ mảng đa giác 'gross'
+                    if (!hasDirectArea && f.getDrawingJson().containsKey("gross")) {
+                        Object grossObj = f.getDrawingJson().get("gross");
+                        if (grossObj instanceof List) {
+                            List<?> grossList = (List<?>) grossObj;
+                            if (grossList.size() >= 2) {
+                                java.util.Map<?, ?> p1 = (java.util.Map<?, ?>) grossList.get(0);
+                                java.util.Map<?, ?> p2 = (java.util.Map<?, ?>) grossList.get(1);
+                                double area1 = Double.parseDouble(String.valueOf(p1.get("area")));
+                                double area2 = Double.parseDouble(String.valueOf(p2.get("area")));
+                                totalGrossExt += Math.max(area1, area2);
+                                totalGrossInt += Math.min(area1, area2);
+                            } else if (grossList.size() == 1) {
+                                java.util.Map<?, ?> p1 = (java.util.Map<?, ?>) grossList.get(0);
+                                totalGrossExt += Double.parseDouble(String.valueOf(p1.get("area")));
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("Lỗi khi đọc diện tích Gross từ Drawing JSON: " + e.getMessage());
+                }
+            }
+        }
+        
+        final double finalGrossInt = totalGrossInt;
+        final double finalGrossExt = totalGrossExt;
+
         buildingRepo.findById(buildingId).ifPresent(b -> {
-            b.setAreaGrossInt(totalGfa);
-            b.setAreaGrossExt(totalGfa);
+            b.setAreaGrossInt(finalGrossInt > 0 ? finalGrossInt : totalGfa);
+            b.setAreaGrossExt(finalGrossExt > 0 ? finalGrossExt : totalGfa);
             buildingRepo.save(b);
         });
     }
