@@ -1,0 +1,21 @@
+﻿Field Name,New Value
+recurringCostId,rcr  ppayment
+description,
+costType,BASERENT
+vatCountry,Vietnam
+dateMatchLs,true
+overrideExchangeRate,false
+active,false
+startDate,2026-05-01
+endDate,2026-12-31
+period,MONTHLY
+interval,1
+amountInBase,0
+amountOutBase,0
+amountInVat,0
+amountInTotal,0
+amountOutVat,0
+amountOutTotal,0
+exchangeRate,1
+currVat,0
+overrideVat,false

@@ -50,14 +50,14 @@ public class CostWizardService {
     // ==============================================================================
     public int generateSchedule(String costId) { // 🚀 Đổi từ void sang int để trả về số lượng
         RecurringCost cost = recurringCostRepo.findById(costId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy chi phí định kỳ!"));
+                .orElseThrow(() -> new RuntimeException("Recurring cost not found!"));
 
         if (!Boolean.TRUE.equals(cost.getActive()) || !"NONE".equals(cost.getScheduleStatus())) {
-            throw new RuntimeException("Chi phí này chưa được Active hoặc đã được lập lịch!");
+            throw new RuntimeException("This cost is not active or has already been scheduled!");
         }
 
         if (cost.getStartDate() == null || cost.getPeriod() == null) {
-            throw new RuntimeException("Lỗi: Start Date và Period không được để trống!");
+            throw new RuntimeException("Error: Start Date and Period cannot be empty!");
         }
 
         LocalDate effectiveEndDate = cost.getEndDate();
@@ -126,7 +126,7 @@ public class CostWizardService {
 
         // 🚀 BẢO VỆ 3: Nếu không sinh được kỳ nào, ném lỗi thẳng ra màn hình
         if (generatedCount == 0) {
-            throw new RuntimeException("Không thể sinh lịch! Start Date (" + cost.getStartDate() + ") đang lớn hơn End Date (" + effectiveEndDate + ").");
+            throw new RuntimeException("Cannot generate schedule! Start Date (" + cost.getStartDate() + ") is after End Date (" + effectiveEndDate + ").");
         }
 
         cost.setScheduleStatus("SCHEDULED");
@@ -165,10 +165,10 @@ public class CostWizardService {
     // ==============================================================================
     public void approveSchedule(String id, LocalDate userPaymentDate) {
         RecurringCostSchedule schedule = scheduleRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy kỳ chi phí!"));
+                .orElseThrow(() -> new RuntimeException("Cost schedule not found!"));
 
         if (schedule.getPaymentStatus() != PaymentStatus.PENDING) {
-            throw new RuntimeException("Chỉ được duyệt kỳ chi phí đang ở trạng thái Chờ (PENDING)!");
+            throw new RuntimeException("Only PENDING cost schedules can be approved!");
         }
 
         schedule.setPaymentStatus(PaymentStatus.PAID); // Đổi thành YES/APPROVED
@@ -183,14 +183,14 @@ public class CostWizardService {
     // ==============================================================================
     public void cancelSchedule(String id, String reason) {
         if (reason == null || reason.trim().isEmpty()) {
-            throw new RuntimeException("Lý do hủy là bắt buộc!");
+            throw new RuntimeException("Cancellation reason is required!");
         }
 
         RecurringCostSchedule schedule = scheduleRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy kỳ chi phí!"));
+                .orElseThrow(() -> new RuntimeException("Cost schedule not found!"));
 
         if (schedule.getPaymentStatus() != PaymentStatus.PENDING) {
-            throw new RuntimeException("Chỉ được hủy kỳ chi phí đang ở trạng thái Chờ (PENDING)!");
+            throw new RuntimeException("Only PENDING cost schedules can be cancelled!");
         }
 
         schedule.setPaymentStatus(PaymentStatus.REJECTED);

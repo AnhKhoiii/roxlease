@@ -76,7 +76,7 @@ export default function PropertyConsole() {
           setChildData([]); 
         }
       } catch (err) {
-        console.warn("Không tải được dữ liệu con để đếm:", err);
+        console.warn("Cannot load child data to count:", err);
         setChildData([]);
       }
 
@@ -351,7 +351,7 @@ export default function PropertyConsole() {
                     
                     {activeTab === 'site' && (
                       <>
-                        <td className="px-6 py-3"><span className="bg-blue-100 text-blue-700 text-xs px-2.5 py-1 rounded font-bold">{getChildCount(item)} Tòa nhà</span></td>
+                        <td className="px-6 py-3"><span className="bg-blue-100 text-blue-700 text-xs px-2.5 py-1 rounded font-bold">{getChildCount(item)} Buildings</span></td>
                         <td className="px-6 py-3 font-bold text-gray-800">{item.siteId}</td>
                         <td className="px-6 py-3 text-gray-600">{item.siteName}</td>
                         <td className="px-6 py-3 text-gray-600">{item.cityId}</td>
@@ -360,7 +360,7 @@ export default function PropertyConsole() {
 
                     {activeTab === 'building' && (
                       <>
-                        <td className="px-6 py-3"><span className="bg-blue-100 text-blue-700 text-xs px-2.5 py-1 rounded font-bold">{getChildCount(item)} Mặt sàn</span></td>
+                        <td className="px-6 py-3"><span className="bg-blue-100 text-blue-700 text-xs px-2.5 py-1 rounded font-bold">{getChildCount(item)} Floors</span></td>
                         <td className="px-6 py-3 font-bold text-gray-800">{item.blId}</td>
                         <td className="px-6 py-3 text-gray-600">{item.blName}</td>
                         <td className="px-6 py-3 text-gray-600">{item.siteId}</td>
@@ -372,7 +372,7 @@ export default function PropertyConsole() {
 
                     {activeTab === 'floor' && (
                       <>
-                        <td className="px-6 py-3"><span className="bg-blue-100 text-blue-700 text-xs px-2.5 py-1 rounded font-bold">{getChildCount(item)} Phòng</span></td>
+                        <td className="px-6 py-3"><span className="bg-blue-100 text-blue-700 text-xs px-2.5 py-1 rounded font-bold">{getChildCount(item)} Rooms</span></td>
                         <td className="px-6 py-3 font-bold text-gray-800">{item.flId}</td>
                         <td className="px-6 py-3 text-gray-600">{item.flName}</td>
                         <td className="px-6 py-3 text-gray-600">{item.blId}</td>

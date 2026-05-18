@@ -43,7 +43,7 @@ axiosInstance.interceptors.response.use(
       
       // Lỗi 401 (Unauthorized): JWT hết hạn, sai hoặc không tồn tại
       if (status === 401) {
-        console.error('Phiên đăng nhập hết hạn hoặc không hợp lệ.');
+        console.error('Session expired or invalid.');
         // Xóa token cũ
         localStorage.removeItem('jwt_token');
         
@@ -55,7 +55,7 @@ axiosInstance.interceptors.response.use(
       
       // Lỗi 403 (Forbidden): Đã đăng nhập nhưng Role không đủ quyền
       if (status === 403) {
-        console.error('Bạn không có quyền truy cập chức năng này.');
+        console.error('You do not have permission to access this feature.');
         // TODO: Có thể hiển thị một thông báo Toast (ví dụ: react-toastify) cho khách hàng biết
       }
     }

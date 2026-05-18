@@ -1,0 +1,21 @@
+﻿Field Name,New Value
+recurringCostId,4567890
+description,
+costType,BASESERVICE
+vatCountry,Vietnam
+dateMatchLs,false
+overrideExchangeRate,false
+active,false
+startDate,2026-05-01
+endDate,2026-12-31
+period,MONTHLY
+interval,1
+amountInBase,1000
+amountOutBase,0
+amountInVat,100
+amountInTotal,1100
+amountOutVat,0
+amountOutTotal,0
+exchangeRate,1
+currVat,0
+overrideVat,false

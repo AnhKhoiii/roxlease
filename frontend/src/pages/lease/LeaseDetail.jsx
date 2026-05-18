@@ -65,12 +65,12 @@ export default function LeaseDetail() {
             data: payload
           };
           await axiosInstance.post("/lease/requests/submit-module", finalRequestPayload);
-          alert("Lưu và gửi yêu cầu xóa thành công!");
+          alert("Delete request saved and submitted successfully!");
           setIsModalOpen(false);
           fetchLeaseDetail();
         } else {
           await axiosInstance.delete(`/lease/leases/${actualLeaseData.lsId}`);
-          alert("Đã xóa nháp hợp đồng thành công!");
+          alert("Draft lease deleted successfully!");
           navigate('/lease/console');
         }
         return;
@@ -89,9 +89,9 @@ export default function LeaseDetail() {
           data: payload
         };
         await axiosInstance.post("/lease/requests/submit-module", finalRequestPayload);
-        alert("Lưu và gửi yêu cầu phê duyệt thành công!");
+        alert("Approval request saved and submitted successfully!");
       } else {
-        alert("Lưu thay đổi thành công!");
+        alert("Changes saved successfully!");
       }
 
       setIsModalOpen(false);
@@ -99,9 +99,9 @@ export default function LeaseDetail() {
     } catch (error) {
       console.error(error);
       if (error.response && error.response.status === 403) {
-          alert("LỖI 403: Phiên đăng nhập đã hết hạn hoặc bạn không có quyền. Vui lòng thử lại!");
+          alert("ERROR 403: Session expired or access denied. Please try again!");
       } else {
-          alert("Lỗi lưu dữ liệu! Vui lòng kiểm tra lại.");
+          alert("Error saving data! Please check again.");
       }
     }
   };

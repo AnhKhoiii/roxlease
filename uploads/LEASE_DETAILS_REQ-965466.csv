@@ -1,0 +1,13 @@
+﻿Field Name,New Value
+active,false
+siteId,APR
+buildingId,APR-A
+amenityId,null
+handoverDate,2026-05-01
+startDate,2026-05-01
+endDate,2026-12-31
+currency,USD
+baseExchangeRate,25000
+lsId,qân
+signedDate,null
+action,CREATE

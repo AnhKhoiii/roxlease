@@ -91,7 +91,7 @@ export default function OptionsTab({ lease }) {
     try {
       const res = await axiosInstance.post("/files/upload", uploadData, { headers: { "Content-Type": "multipart/form-data" }});
       setFormData(prev => ({ ...prev, docUrl: res.data.url }));
-    } catch (error) { alert("Lỗi tải file đính kèm!"); } 
+    } catch (error) { alert("Error uploading attachment!"); } 
     finally { setUploading(false); }
   };
 
@@ -124,7 +124,7 @@ export default function OptionsTab({ lease }) {
       }
       fetchData();
       setModalConfig({ isOpen: false, mode: "ADD", data: null });
-    } catch (error) { alert("Lỗi lưu dữ liệu. Vui lòng kiểm tra lại!"); } 
+    } catch (error) { alert("Error saving data. Please check again!"); } 
     finally { setLoading(false); }
   };
 
@@ -151,15 +151,15 @@ export default function OptionsTab({ lease }) {
       };
 
       await axiosInstance.post("/lease/requests/submit-module", requestPayload);
-      alert("Đã gửi Request duyệt! File Excel đã được tạo.");
+      alert("Approval request submitted! Excel file created.");
       fetchData(); setModalConfig({ isOpen: false, mode: "ADD" });
-    } catch (error) { alert("Lỗi gửi Request!"); } 
+    } catch (error) { alert("Error submitting request!"); } 
     finally { setLoading(false); }
   };
 
   // --- THÊM HÀM DELETE HÀNG LOẠT ---
   const handleDelete = async () => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa các mục đã chọn?\n\n- Bản nháp (Chưa Active) sẽ bị xóa vĩnh viễn khỏi hệ thống.\n- Mục đang hiệu lực (Đã Active) sẽ được gửi Yêu cầu Duyệt Xóa vào hàng đợi.")) return;
+    if (!window.confirm("Are you sure you want to delete the selected items?\n\n- Drafts (Inactive) will be permanently deleted.\n- Active items will be sent to the Deletion Request queue.")) return;
     
     setLoading(true);
     let deletedCount = 0;
@@ -183,15 +183,15 @@ export default function OptionsTab({ lease }) {
           deletedCount++;
         }
       }
-      alert(`Hoàn tất xử lý Xóa:\n- Xóa trực tiếp: ${deletedCount} bản nháp.\n- Đã gửi Yêu cầu Duyệt Xóa: ${requestCount} mục đang hoạt động.`);
+      alert(`Deletion process completed:\n- Permanently deleted: ${deletedCount} drafts.\n- Deletion Requests sent: ${requestCount} active items.`);
       setSelectedIds([]);
       fetchData();
-    } catch (error) { alert("Có lỗi xảy ra trong quá trình xử lý xóa!"); } 
+    } catch (error) { alert("An error occurred during the deletion process!"); } 
     finally { setLoading(false); }
   };
 
   const handleBulkSubmit = async () => {
-    if (!window.confirm(`Bạn có chắc muốn gửi yêu cầu duyệt CẬP NHẬT cho ${selectedIds.length} mục đã chọn?`)) return;
+    if (!window.confirm(`Are you sure you want to submit UPDATE requests for ${selectedIds.length} selected items?`)) return;
     setLoading(true);
     try {
       for (const id of selectedIds) {
@@ -205,10 +205,10 @@ export default function OptionsTab({ lease }) {
         };
         await axiosInstance.post("/lease/requests/submit-module", requestPayload);
       }
-      alert("Đã gửi yêu cầu duyệt hàng loạt thành công!");
+      alert("Bulk approval request submitted successfully!");
       setSelectedIds([]);
       fetchData();
-    } catch (error) { alert("Có lỗi xảy ra khi gửi yêu cầu duyệt hàng loạt!"); } 
+    } catch (error) { alert("An error occurred while submitting bulk requests!"); } 
     finally { setLoading(false); }
   };
 

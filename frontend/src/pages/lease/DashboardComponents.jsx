@@ -262,23 +262,13 @@ const LeaseAlerts = ({ alerts, charts, onChartClick }) => {
 // ==================================================
 // 3. CONTRACT REVENUE SECTION
 // ==================================================
-const ContractRevenueSection = ({ revenue, filters }) => {
+const ContractRevenueSection = ({ revenue }) => {
   const filteredData = React.useMemo(() => {
     let list = revenue?.contract || [];
-    if (!filters) return list;
-
-    // 1. Lọc theo filter
-    let filtered = list.filter(item => {
-      if (filters.siteId && item.siteId && !item.siteId.includes(filters.siteId)) return false;
-      if (filters.buildingId && item.buildingId && !item.buildingId.includes(filters.buildingId)) return false;
-      if (filters.fromDate && item.date && new Date(item.date) < new Date(filters.fromDate)) return false;
-      if (filters.toDate && item.date && new Date(item.date) > new Date(filters.toDate)) return false;
-      return true;
-    });
 
     // 2. Group by month và tính tổng
     const grouped = {};
-    filtered.forEach(item => {
+    list.forEach(item => {
       const month = item.month || 'Unknown';
       if (!grouped[month]) {
         grouped[month] = { 
@@ -307,7 +297,7 @@ const ContractRevenueSection = ({ revenue, filters }) => {
     });
 
     return Object.values(grouped);
-  }, [revenue?.contract, filters]);
+  }, [revenue?.contract]);
 
   return (
     <SectionContainer>
@@ -343,21 +333,12 @@ const ContractRevenueSection = ({ revenue, filters }) => {
 // ==================================================
 // 4. SERVICE FEE REVENUE SECTION
 // ==================================================
-const ServiceFeeSection = ({ revenue, filters }) => {
+const ServiceFeeSection = ({ revenue }) => {
   const filteredData = React.useMemo(() => {
     let list = revenue?.serviceFee || [];
-    if (!filters) return list;
-    
-    let filtered = list.filter(item => {
-      if (filters.siteId && item.siteId && !item.siteId.includes(filters.siteId)) return false;
-      if (filters.buildingId && item.buildingId && !item.buildingId.includes(filters.buildingId)) return false;
-      if (filters.fromDate && item.date && new Date(item.date) < new Date(filters.fromDate)) return false;
-      if (filters.toDate && item.date && new Date(item.date) > new Date(filters.toDate)) return false;
-      return true;
-    });
 
     const grouped = {};
-    filtered.forEach(item => {
+    list.forEach(item => {
       const month = item.month || 'Unknown';
       if (!grouped[month]) {
         grouped[month] = { month, planned: 0, forecast: 0, actual: 0 };
@@ -368,7 +349,7 @@ const ServiceFeeSection = ({ revenue, filters }) => {
     });
 
     return Object.values(grouped);
-  }, [revenue?.serviceFee, filters]);
+  }, [revenue?.serviceFee]);
 
   return (
     <SectionContainer>
@@ -396,21 +377,12 @@ const ServiceFeeSection = ({ revenue, filters }) => {
 // ==================================================
 // 5. AMENITY REVENUE SECTION
 // ==================================================
-const AmenityRevenueSection = ({ revenue, filters }) => {
+const AmenityRevenueSection = ({ revenue }) => {
   const filteredData = React.useMemo(() => {
     let list = revenue?.amenity || [];
-    if (!filters) return list;
-    
-    let filtered = list.filter(item => {
-      if (filters.siteId && item.siteId && !item.siteId.includes(filters.siteId)) return false;
-      if (filters.buildingId && item.buildingId && !item.buildingId.includes(filters.buildingId)) return false;
-      if (filters.fromDate && item.date && new Date(item.date) < new Date(filters.fromDate)) return false;
-      if (filters.toDate && item.date && new Date(item.date) > new Date(filters.toDate)) return false;
-      return true;
-    });
 
     const grouped = {};
-    filtered.forEach(item => {
+    list.forEach(item => {
       const category = item.category || 'Unknown';
       if (!grouped[category]) {
         grouped[category] = { category, planned: 0, forecast: 0, actual: 0 };
@@ -421,7 +393,7 @@ const AmenityRevenueSection = ({ revenue, filters }) => {
     });
 
     return Object.values(grouped);
-  }, [revenue?.amenity, filters]);
+  }, [revenue?.amenity]);
 
   return (
     <SectionContainer>
@@ -452,13 +424,23 @@ const AmenityRevenueSection = ({ revenue, filters }) => {
 export default function LeaseDashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  
+  // Thiết lập Date mặc định
+  const today = new Date();
+  const defaultToDate = today.toISOString().split("T")[0];
+  const defaultFromDate = `${today.getFullYear()}-01-01`;
+
   const [filters, setFilters] = useState({
-    fromDate: "",
-    toDate: new Date().toISOString().split("T")[0], // Mặc định là Sysdate
+    fromDate: defaultFromDate,
+    toDate: defaultToDate,
     division: "",
     siteId: "",
     buildingId: ""
   });
+
+  // Quản lý hiển thị danh sách Site ID Dropdown
+  const [sites, setSites] = useState([]);
+  const [showSiteDropdown, setShowSiteDropdown] = useState(false);
 
   const [chartDetailModal, setChartDetailModal] = useState({ isOpen: false, title: "", category: "", list: [] });
 
@@ -488,6 +470,15 @@ export default function LeaseDashboard() {
   }, [filters]);
 
   useEffect(() => {
+    const fetchSites = async () => {
+      try {
+        const res = await axiosInstance.get('/space/properties/sites');
+        setSites(Array.isArray(res.data) ? res.data : (res.data?.content || []));
+      } catch(e) {
+        console.error("Lỗi lấy danh sách Site:", e);
+      }
+    };
+    fetchSites();
     fetchData();
   }, [fetchData]);
 
@@ -519,11 +510,36 @@ export default function LeaseDashboard() {
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">To Date (Sysdate)</label>
-              <input type="date" name="toDate" value={filters.toDate} onChange={handleFilterChange} className="border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" />
+              <input type="date" name="toDate" value={filters.toDate} max={defaultToDate} onChange={handleFilterChange} className="border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 cursor-pointer" />
             </div>
-            <div className="flex flex-col gap-1.5">
+            <div className="relative flex flex-col gap-1.5 w-52">
               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Site ID</label>
-              <input type="text" name="siteId" placeholder="Filter by Site..." value={filters.siteId} onChange={handleFilterChange} className="border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" />
+              <input 
+                type="text" 
+                name="siteId" 
+                placeholder="Search & Select Site..." 
+                value={filters.siteId} 
+                onChange={(e) => { handleFilterChange(e); setShowSiteDropdown(true); }} 
+                onFocus={() => setShowSiteDropdown(true)}
+                onBlur={() => setTimeout(() => setShowSiteDropdown(false), 200)}
+                className="border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 w-full" 
+              />
+              {showSiteDropdown && (
+                <div className="absolute top-[100%] mt-1 left-0 w-full bg-white border border-gray-200 rounded shadow-xl max-h-[160px] overflow-y-auto z-50">
+                  {sites.length > 0 ? (
+                    sites
+                      .filter(s => !filters.siteId || (s.siteId||'').toLowerCase().includes(filters.siteId.toLowerCase()) || (s.siteName||'').toLowerCase().includes(filters.siteId.toLowerCase()))
+                      .map((s, idx) => (
+                        <div key={s.siteId || s.id || idx} onMouseDown={(e) => { e.preventDefault(); setFilters(prev => ({...prev, siteId: s.siteId || s.id})); setShowSiteDropdown(false); }} className="px-3 py-2.5 text-xs font-medium text-gray-700 hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-0">
+                          <span className="font-bold text-blue-600">{s.siteId || s.id}</span>
+                          {s.siteName ? ` - ${s.siteName}` : ''}
+                        </div>
+                      ))
+                  ) : (
+                    <div className="px-3 py-3 text-xs text-gray-400 text-center italic">No sites found</div>
+                  )}
+                </div>
+              )}
             </div>
             <button onClick={fetchData} className="bg-blue-900 hover:bg-blue-800 text-white px-6 py-2 rounded font-bold uppercase shadow-sm transition-colors text-sm">
               Apply Filter
@@ -538,9 +554,9 @@ export default function LeaseDashboard() {
         {/* CÁC SECTION DỮ LIỆU */}
         <OverviewSection overview={data?.overview} amenity={data?.amenity} />
         <LeaseAlerts alerts={data?.leaseAlerts} charts={data?.charts} onChartClick={handleChartClick} />
-        <ContractRevenueSection revenue={data?.revenue} filters={filters} />
-        <ServiceFeeSection revenue={data?.revenue} filters={filters} />
-        <AmenityRevenueSection revenue={data?.revenue} filters={filters} />
+        <ContractRevenueSection revenue={data?.revenue} />
+        <ServiceFeeSection revenue={data?.revenue} />
+        <AmenityRevenueSection revenue={data?.revenue} />
 
       </div>
 
@@ -598,15 +614,15 @@ export default function LeaseDashboard() {
                     <svg className="w-12 h-12 text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    <p className="text-gray-500 font-medium">Không có dữ liệu chi tiết cho mục này.</p>
-                    <p className="text-[11px] text-gray-400 mt-1">Backend cần trả về field <code className="bg-gray-100 px-1 rounded text-red-500">details</code> (dạng mảng) trong payload của Chart để hiển thị.</p>
+                    <p className="text-gray-500 font-medium">No detailed data available for this item.</p>
+                    <p className="text-[11px] text-gray-400 mt-1">Backend must return the <code className="bg-gray-100 px-1 rounded text-red-500">details</code> field (array format) in the Chart payload to display.</p>
                  </div>
               )}
             </div>
             
             <div className="bg-gray-50 px-5 py-3 border-t border-gray-200 flex justify-end shrink-0">
               <button onClick={() => setChartDetailModal({ isOpen: false, title: "", category: "", list: [] })} className="px-5 py-2 bg-white border border-gray-300 rounded text-xs font-bold text-gray-700 hover:bg-gray-100 transition-colors shadow-sm">
-                Đóng (Close)
+                Close
               </button>
             </div>
           </div>

@@ -460,6 +460,53 @@ public class LeaseDashboardService {
         List<Lease> allLeases = mongoTemplate.find(leaseQuery, Lease.class);
         Set<String> validLeaseIds = allLeases.stream().map(Lease::getLsId).collect(Collectors.toSet());
 
+        // 🚀 BỔ SUNG: Tìm các hợp đồng tiện ích (Amenity) thuộc Site ID / Building ID này
+        // Đề phòng trường hợp Lease của Amenity không lưu trực tiếp siteId trên bảng leases
+        if ((siteId != null && !siteId.isEmpty()) || (buildingId != null && !buildingId.isEmpty())) {
+            Query amenityQuery = new Query();
+            if (siteId != null && !siteId.isEmpty()) amenityQuery.addCriteria(Criteria.where("siteId").is(siteId));
+            if (buildingId != null && !buildingId.isEmpty()) {
+                amenityQuery.addCriteria(new Criteria().orOperator(
+                    Criteria.where("blId").is(buildingId),
+                    Criteria.where("buildingId").is(buildingId)
+                ));
+            }
+            List<Amenity> siteAmenities = mongoTemplate.find(amenityQuery, Amenity.class);
+            Set<String> siteAmenityIds = siteAmenities.stream().map(Amenity::getAmenityId).collect(Collectors.toSet());
+
+            if (!siteAmenityIds.isEmpty()) {
+                List<LeaseAmenity> siteLeaseAmenities = mongoTemplate.find(
+                    new Query(Criteria.where("amenityId").in(siteAmenityIds)), LeaseAmenity.class);
+                Set<String> amenityLeaseIdsFromRelation = siteLeaseAmenities.stream().map(LeaseAmenity::getLsId).collect(Collectors.toSet());
+
+                Criteria criteria;
+                if (!amenityLeaseIdsFromRelation.isEmpty()) {
+                    criteria = new Criteria().orOperator(
+                        Criteria.where("lsId").in(amenityLeaseIdsFromRelation),
+                        Criteria.where("amenityId").in(siteAmenityIds),
+                        Criteria.where("amenity_id").in(siteAmenityIds),
+                        Criteria.where("amenityIds").in(siteAmenityIds),
+                        Criteria.where("amenity_ids").in(siteAmenityIds)
+                    );
+                } else {
+                    criteria = new Criteria().orOperator(
+                        Criteria.where("amenityId").in(siteAmenityIds),
+                        Criteria.where("amenity_id").in(siteAmenityIds),
+                        Criteria.where("amenityIds").in(siteAmenityIds),
+                        Criteria.where("amenity_ids").in(siteAmenityIds)
+                    );
+                }
+
+                Query extraLeaseQuery = new Query(criteria);
+                List<Lease> extraLeases = mongoTemplate.find(extraLeaseQuery, Lease.class);
+                for (Lease l : extraLeases) {
+                    if (l.getLsId() != null && validLeaseIds.add(l.getLsId())) {
+                        allLeases.add(l);
+                    }
+                }
+            }
+        }
+
         List<LeaseAmenity> leaseAmenities = mongoTemplate.findAll(LeaseAmenity.class);
         List<RecurringCostSchedule> schedules = mongoTemplate.findAll(RecurringCostSchedule.class)
             .stream().filter(s -> s.getLeaseId() != null && validLeaseIds.contains(s.getLeaseId())).collect(Collectors.toList());
@@ -501,7 +548,17 @@ public class LeaseDashboardService {
 
         Set<String> amenityLeaseIds = leaseAmenities.stream().map(LeaseAmenity::getLsId).collect(Collectors.toSet());
 
-        List<org.bson.Document> leaseDocs = mongoTemplate.find(leaseQuery, org.bson.Document.class, "leases");
+        List<org.bson.Document> leaseDocs;
+        if (validLeaseIds.isEmpty()) {
+            leaseDocs = Collections.emptyList();
+        } else {
+            Query finalLeaseDocQuery = new Query(new Criteria().orOperator(
+                Criteria.where("_id").in(validLeaseIds),
+                Criteria.where("lsId").in(validLeaseIds),
+                Criteria.where("ls_id").in(validLeaseIds)
+            ));
+            leaseDocs = mongoTemplate.find(finalLeaseDocQuery, org.bson.Document.class, "leases");
+        }
         Map<String, org.bson.Document> leaseDocMap = new HashMap<>();
         for (org.bson.Document doc : leaseDocs) {
             String lsId = doc.getString("_id") != null ? doc.getString("_id") : doc.getString("ls_id");

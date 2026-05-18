@@ -182,7 +182,7 @@ public class PropertyController {
     public ResponseEntity<?> getAllFloors(@RequestParam(required = false) String buildingId) {
         if (buildingId != null && !buildingId.isEmpty()) {
             return ResponseEntity.ok(floorRepo.findAll().stream()
-                    .filter(f -> buildingId.equals(f.getBlId())) // Chú ý: Dùng getBlId() hoặc getBuildingId() tùy model của bạn
+                    .filter(f -> buildingId.equals(f.getBlId())) // Note: Use getBlId() or getBuildingId() depending on your model
                     .collect(java.util.stream.Collectors.toList()));
         }
         return ResponseEntity.ok(floorRepo.findAll());
@@ -219,7 +219,7 @@ public class PropertyController {
     public ResponseEntity<?> getAllSuites(@RequestParam(required = false) String floorId) {
         if (floorId != null && !floorId.isEmpty()) {
             return ResponseEntity.ok(suiteRepo.findAll().stream()
-                    .filter(s -> floorId.equals(s.getFlId())) // Chú ý: Dùng getFlId() tùy model của bạn
+                    .filter(s -> floorId.equals(s.getFlId())) // Note: Use getFlId() depending on your model
                     .collect(java.util.stream.Collectors.toList()));
         }
         return ResponseEntity.ok(suiteRepo.findAll());

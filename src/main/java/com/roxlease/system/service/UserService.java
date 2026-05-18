@@ -227,7 +227,7 @@ public class UserService {
                 user.setDepartment(getCellValue(currentRow.getCell(5)));
                 user.setPhone(getCellValue(currentRow.getCell(6)));
 
-                // Set password mặc định cho user import (Mã hoá bằng BCrypt)
+                // Set default password for imported user (Encrypted with BCrypt)
                 user.setUserPwd(passwordEncoder.encode("12345678aA@"));
                 userRepository.save(user);
             }
@@ -236,7 +236,7 @@ public class UserService {
         }
     }
 
-    // Hàm hỗ trợ đọc từng ô Excel
+    // Helper function to read each Excel cell
     private String getCellValue(Cell cell) {
         if (cell == null) return "";
         switch (cell.getCellType()) {
