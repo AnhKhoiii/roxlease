@@ -77,6 +77,32 @@ export default function LeaseReports() {
     fetchReportData(activeTab);
   }, [activeTab, fetchReportData]);
 
+  const handleExportExcel = async () => {
+    try {
+      const queryParams = new URLSearchParams({ type: activeTab });
+      if (filters.siteId) queryParams.append('siteId', filters.siteId);
+      if (filters.fromDate) queryParams.append('fromDate', filters.fromDate);
+      if (filters.toDate) queryParams.append('toDate', filters.toDate);
+
+      // responseType 'blob' là bắt buộc để xử lý file tải về
+      const response = await axiosInstance.get(`/lease/analytics/export?${queryParams.toString()}`, {
+        responseType: 'blob' 
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Report_${activeTab}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      
+    } catch (error) {
+      console.error("Lỗi xuất file Excel:", error);
+      alert("Không thể xuất file lúc này.");
+    }
+  };
+
   // Render Header bảng dựa theo Tab được chọn
   const getHeaders = () => {
     switch(activeTab) {
@@ -116,6 +142,9 @@ export default function LeaseReports() {
              </div>
              <button onClick={() => fetchReportData(activeTab)} className="bg-blue-900 text-white px-5 py-2 rounded-lg text-xs font-bold uppercase shadow-sm hover:bg-blue-800 transition-all h-[38px] mb-0.5">
                Refresh Data
+             </button>
+             <button onClick={handleExportExcel} className="bg-green-600 text-white px-5 py-2 rounded-lg text-xs font-bold uppercase shadow-sm hover:bg-green-700 transition-all h-[38px] mb-0.5">
+               Export Excel
              </button>
           </div>
         </div>

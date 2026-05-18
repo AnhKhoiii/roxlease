@@ -15,6 +15,13 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -435,5 +442,52 @@ public class LeaseAnalyticsService {
             }
         }
         return amount;
+    }
+
+    // ============================================================================
+    // EXPORT TO EXCEL
+    // ============================================================================
+    public ByteArrayInputStream exportReportToExcel(String type, String siteId, LocalDate fromDate, LocalDate toDate) {
+        List<Map<String, Object>> data = getReportDataByType(type, siteId, fromDate, toDate);
+
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("Report Data");
+
+            if (data != null && !data.isEmpty()) {
+                // Lấy danh sách các cột từ phần tử đầu tiên
+                List<String> columns = new ArrayList<>(data.get(0).keySet());
+
+                // Tạo header
+                Row headerRow = sheet.createRow(0);
+                for (int i = 0; i < columns.size(); i++) {
+                    Cell cell = headerRow.createCell(i);
+                    cell.setCellValue(columns.get(i));
+                }
+
+                // Đổ dữ liệu
+                int rowIdx = 1;
+                for (Map<String, Object> map : data) {
+                    Row row = sheet.createRow(rowIdx++);
+                    for (int i = 0; i < columns.size(); i++) {
+                        Cell cell = row.createCell(i);
+                        Object value = map.get(columns.get(i));
+                        if (value != null) {
+                            if (value instanceof Number) {
+                                cell.setCellValue(((Number) value).doubleValue());
+                            } else {
+                                cell.setCellValue(value.toString());
+                            }
+                        } else {
+                            cell.setCellValue("");
+                        }
+                    }
+                }
+            }
+
+            workbook.write(out);
+            return new ByteArrayInputStream(out.toByteArray());
+        } catch (Exception e) {
+            throw new RuntimeException("Error exporting report to Excel: " + e.getMessage());
+        }
     }
 }

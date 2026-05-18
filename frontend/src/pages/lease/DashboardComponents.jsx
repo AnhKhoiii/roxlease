@@ -454,6 +454,46 @@ export default function LeaseDashboard() {
     });
   };
 
+  // Hàm xuất Excel dành riêng cho Modal chi tiết của Chart
+  const handleExportModalData = () => {
+    if (!chartDetailModal.list || chartDetailModal.list.length === 0) return;
+    
+    let csvContent = "\uFEFF"; 
+    const list = chartDetailModal.list;
+    const hasRecurringCostId = list.some(i => i.recurringCostId !== undefined);
+    const hasDueDate = list.some(i => i.dueDate !== undefined);
+
+    // 1. Tạo Header tương ứng với các cột có trong bảng
+    let headers = ["ID", "Details / Name"];
+    if (hasRecurringCostId) headers.push("Recurring Cost ID");
+    if (hasDueDate) headers.push("Due Date");
+    headers.push("Status / Value");
+
+    csvContent += headers.join(",") + "\n";
+
+    // 2. Điền dữ liệu
+    list.forEach((item, idx) => {
+      const id = item.id || item.lsId || item.code || `Item-${idx+1}`;
+      const name = item.name || item.description || item.partyName || item.title || "-";
+      
+      let row = [`"${id}"`, `"${name}"`];
+      if (hasRecurringCostId) row.push(`"${item.recurringCostId && item.recurringCostId !== "N/A" ? item.recurringCostId : "-"}"`);
+      if (hasDueDate) row.push(`"${item.dueDate && item.dueDate !== "N/A" ? item.dueDate : "-"}"`);
+      row.push(`"${item.status || item.value || item.amount || "-"}"`);
+      csvContent += row.join(",") + "\n";
+    });
+
+    // 3. Tải file tự động
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `${chartDetailModal.title.replace(/\s+/g, '_')}_${chartDetailModal.category.replace(/\s+/g, '_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
@@ -463,7 +503,7 @@ export default function LeaseDashboard() {
       const res = await axiosInstance.get("/lease/dashboard", { params });
       setData(res.data);
     } catch (e) {
-      console.error("Lỗi khi tải dữ liệu Dashboard:", e);
+      console.error("Error fetching Dashboard data:", e);
     } finally {
       setLoading(false);
     }
@@ -475,7 +515,7 @@ export default function LeaseDashboard() {
         const res = await axiosInstance.get('/space/properties/sites');
         setSites(Array.isArray(res.data) ? res.data : (res.data?.content || []));
       } catch(e) {
-        console.error("Lỗi lấy danh sách Site:", e);
+        console.error("Error fetching Sites:", e);
       }
     };
     fetchSites();
@@ -620,10 +660,16 @@ export default function LeaseDashboard() {
               )}
             </div>
             
-            <div className="bg-gray-50 px-5 py-3 border-t border-gray-200 flex justify-end shrink-0">
+            <div className="bg-gray-50 px-5 py-3 border-t border-gray-200 flex justify-end gap-3 shrink-0">
               <button onClick={() => setChartDetailModal({ isOpen: false, title: "", category: "", list: [] })} className="px-5 py-2 bg-white border border-gray-300 rounded text-xs font-bold text-gray-700 hover:bg-gray-100 transition-colors shadow-sm">
                 Close
               </button>
+              {chartDetailModal.list && chartDetailModal.list.length > 0 && (
+                <button onClick={handleExportModalData} className="px-5 py-2 bg-green-600 border border-transparent rounded text-xs font-bold text-white hover:bg-green-700 transition-colors shadow-sm flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                  Export Excel
+                </button>
+              )}
             </div>
           </div>
         </div>
