@@ -112,6 +112,8 @@ const KpiGrid = ({ kpi, showOcc = true }) => {
 // 1. OVERVIEW SECTION
 // ==================================================
 const OverviewSection = ({ overview, amenity }) => {
+  const [tooltip, setTooltip] = useState({ show: false, text: '', x: 0, y: 0 });
+
   const gfa = overview?.gfa || 1; 
   const pctAvail = Math.min((overview?.availableNfa / gfa) * 100, 100) || 0;
   const pctLeased = Math.min((overview?.leasedNfa / gfa) * 100, 100) || 0;
@@ -143,9 +145,24 @@ const OverviewSection = ({ overview, amenity }) => {
           </div>
 
           <div className="w-full h-[20px] rounded-full overflow-hidden flex mb-3 shadow-inner bg-gray-100">
-            <div className="h-full bg-red-500 transition-all duration-700" style={{ width: `${pctAvail}%` }}></div>
-            <div className="h-full bg-green-500 transition-all duration-700" style={{ width: `${pctLeased}%` }}></div>
-            <div className="h-full bg-yellow-400 transition-all duration-700" style={{ width: `${pctOther}%` }}></div>
+            <div 
+              className="h-full bg-red-500 transition-all duration-700 hover:brightness-110 cursor-help" 
+              style={{ width: `${pctAvail}%` }} 
+              onMouseMove={(e) => setTooltip({ show: true, text: `Available NFA: ${formatNum(overview?.availableNfa)} m² (${pctAvail.toFixed(1)}%)`, x: e.clientX, y: e.clientY })}
+              onMouseLeave={() => setTooltip({ ...tooltip, show: false })}
+            ></div>
+            <div 
+              className="h-full bg-green-500 transition-all duration-700 hover:brightness-110 cursor-help" 
+              style={{ width: `${pctLeased}%` }} 
+              onMouseMove={(e) => setTooltip({ show: true, text: `Leased NFA: ${formatNum(overview?.leasedNfa)} m² (${pctLeased.toFixed(1)}%)`, x: e.clientX, y: e.clientY })}
+              onMouseLeave={() => setTooltip({ ...tooltip, show: false })}
+            ></div>
+            <div 
+              className="h-full bg-yellow-400 transition-all duration-700 hover:brightness-110 cursor-help" 
+              style={{ width: `${pctOther}%` }} 
+              onMouseMove={(e) => setTooltip({ show: true, text: `Other Area: ${formatNum(overview?.otherArea)} m² (${pctOther.toFixed(1)}%)`, x: e.clientX, y: e.clientY })}
+              onMouseLeave={() => setTooltip({ ...tooltip, show: false })}
+            ></div>
           </div>
           
           <div className="flex justify-center gap-6 text-[11px] font-bold text-gray-600 uppercase tracking-tighter">
@@ -166,8 +183,18 @@ const OverviewSection = ({ overview, amenity }) => {
           </div>
 
           <div className="w-full h-[20px] rounded-full overflow-hidden flex mb-3 shadow-inner bg-gray-100">
-            <div className="h-full bg-red-500 transition-all duration-700" style={{ width: `${pctAmenityAvail}%` }}></div>
-            <div className="h-full bg-green-500 transition-all duration-700" style={{ width: `${pctAmenityOccupied}%` }}></div>
+            <div 
+              className="h-full bg-red-500 transition-all duration-700 hover:brightness-110 cursor-help" 
+              style={{ width: `${pctAmenityAvail}%` }} 
+              onMouseMove={(e) => setTooltip({ show: true, text: `Available Amenities: ${formatNum(amenity?.availableAmenities)} (${pctAmenityAvail.toFixed(1)}%)`, x: e.clientX, y: e.clientY })}
+              onMouseLeave={() => setTooltip({ ...tooltip, show: false })}
+            ></div>
+            <div 
+              className="h-full bg-green-500 transition-all duration-700 hover:brightness-110 cursor-help" 
+              style={{ width: `${pctAmenityOccupied}%` }} 
+              onMouseMove={(e) => setTooltip({ show: true, text: `Leased Amenities: ${formatNum(amenity?.leasedAmenities)} (${pctAmenityOccupied.toFixed(1)}%)`, x: e.clientX, y: e.clientY })}
+              onMouseLeave={() => setTooltip({ ...tooltip, show: false })}
+            ></div>
           </div>
           
           <div className="flex justify-center gap-6 text-[11px] font-bold text-gray-600 uppercase tracking-tighter">
@@ -176,6 +203,17 @@ const OverviewSection = ({ overview, amenity }) => {
           </div>
         </div>
       </div>
+
+      {/* HIỂN THỊ TOOLTIP NỔI (FLOATING) */}
+      {tooltip.show && (
+        <div 
+          className="fixed z-[9999] bg-white text-black border border-gray-200 font-semibold text-xs px-3 py-2 rounded shadow-xl pointer-events-none transform -translate-x-1/2 -translate-y-full whitespace-nowrap"
+          style={{ left: tooltip.x, top: tooltip.y - 15 }}
+        >
+          {tooltip.text}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-white"></div>
+        </div>
+      )}
     </SectionContainer>
   );
 };
