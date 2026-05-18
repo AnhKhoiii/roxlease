@@ -5,6 +5,7 @@ import com.roxlease.lease.model.Enum.RQStatus;
 import com.roxlease.lease.model.Enum.RQType;
 import com.roxlease.lease.model.Clause;
 import com.roxlease.lease.model.LeaseOption;
+import com.roxlease.lease.model.Lease;
 import com.roxlease.lease.model.LeaseSuite;
 import com.roxlease.cost.model.RecurringCost;
 import com.roxlease.cost.model.RecurringCostSchedule;
@@ -280,6 +281,7 @@ public class RequestService {
             case SUITE_ASSIGNMENT: entityClass = LeaseSuite.class; break;
             case CONTRACT_AMENDMENTS: entityClass = Amendment.class; break;
             case RECURRING_COSTS: entityClass = RecurringCost.class; break;
+            case LEASE_DETAILS: entityClass = Lease.class; break;
             default: return;
         }
 

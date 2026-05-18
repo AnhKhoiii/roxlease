@@ -69,18 +69,6 @@ public class RequestController {
     public ResponseEntity<Request> approveRequest(@PathVariable String id, @RequestParam(defaultValue = "Admin") String user) {
         Request approvedReq = service.approveRequest(id, user);
 
-        if (approvedReq != null && approvedReq.getRequestType() == RQType.LEASE_DETAILS) {
-            
-            String leaseId = approvedReq.getTargetId();
-            
-            if (leaseId != null) {
-                leaseRepository.findById(leaseId).ifPresent(lease -> {
-                    lease.setActive(true);
-                    leaseRepository.save(lease);
-                });
-            }
-        }
-
         return ResponseEntity.ok(approvedReq);
     }
 
