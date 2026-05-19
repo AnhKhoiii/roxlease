@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import axiosInstance from "../../api/axiosInstance";
 
 const Header = ({ title, onClose, onSave, onDelete, canEdit, mode }) => {
   return (
@@ -55,6 +56,7 @@ const Upload = ({ label, disabled, accept, onChange, hint }) => (
 export default function PropertyModal({ isOpen, onClose, onSave, onDelete, mode, initialData, activeTab, canEdit = true, sites = [], buildings = [], cities = [] }) {
   const [formData, setFormData] = useState({});
   const [errors, setErrors] = useState({});
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (isOpen) { setFormData(initialData || {}); setErrors({}); }
@@ -65,6 +67,23 @@ export default function PropertyModal({ isOpen, onClose, onSave, onDelete, mode,
   const handleChange = (field, value) => {
     setFormData({ ...formData, [field]: value });
     if (errors[field]) setErrors({ ...errors, [field]: null });
+  };
+
+  // Hàm xử lý upload ảnh riêng biệt để tránh lỗi 400
+  const handleImageUpload = async (field, file) => {
+    if (!file) return;
+    const uploadData = new FormData();
+    uploadData.append("file", file);
+    setUploading(true);
+    try {
+      const res = await axiosInstance.post("/files/upload", uploadData, { headers: { "Content-Type": "multipart/form-data" }});
+      handleChange(field, res.data.url);
+    } catch (error) {
+      console.error("Upload error", error);
+      alert("Failed to upload image!");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSaveAction = (isSaveAndAdd = false) => {
@@ -128,8 +147,14 @@ export default function PropertyModal({ isOpen, onClose, onSave, onDelete, mode,
                   <Input label="Longitude" type="number" value={formData.longitude} onChange={v => handleChange('longitude', v)} disabled={!canEdit} />
                   <Input label="Latitude" type="number" value={formData.lat} onChange={v => handleChange('lat', v)} disabled={!canEdit} />
                 </div>
-                <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
-                  <Upload label="Upload Site Image" accept="image/*" onChange={file => handleChange('image', file)} disabled={!canEdit} />
+                <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg shadow-sm flex flex-col gap-3">
+                  {formData.image && typeof formData.image === 'string' && (
+                    <div className="flex justify-center bg-white border border-gray-200 p-2 rounded">
+                      <img src={formData.image.startsWith('http') ? formData.image : `http://localhost:8080${formData.image}`} alt="Site" className="h-32 object-contain" />
+                    </div>
+                  )}
+                  <Upload label="Upload Site Image" accept="image/*" onChange={file => handleImageUpload('image', file)} disabled={!canEdit || uploading} />
+                  {uploading && <span className="text-xs text-orange-500 font-semibold animate-pulse">Uploading...</span>}
                 </div>
               </div>
             </div>
@@ -158,8 +183,14 @@ export default function PropertyModal({ isOpen, onClose, onSave, onDelete, mode,
                   <Input label="Longitude" type="number" value={formData.longitude} onChange={v => handleChange('longitude', v)} disabled={!canEdit} />
                   <Input label="Latitude" type="number" value={formData.lat} onChange={v => handleChange('lat', v)} disabled={!canEdit} />
                 </div>
-                <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
-                  <Upload label="Upload Building Image" accept="image/*" onChange={file => handleChange('blImage', file)} disabled={!canEdit} />
+                <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg shadow-sm flex flex-col gap-3">
+                  {formData.blImage && typeof formData.blImage === 'string' && (
+                    <div className="flex justify-center bg-white border border-gray-200 p-2 rounded">
+                      <img src={formData.blImage.startsWith('http') ? formData.blImage : `http://localhost:8080${formData.blImage}`} alt="Building" className="h-32 object-contain" />
+                    </div>
+                  )}
+                  <Upload label="Upload Building Image" accept="image/*" onChange={file => handleImageUpload('blImage', file)} disabled={!canEdit || uploading} />
+                  {uploading && <span className="text-xs text-orange-500 font-semibold animate-pulse">Uploading...</span>}
                 </div>
               </div>
             </div>

@@ -297,20 +297,57 @@ public class RequestService {
                     String key = entry.getKey();
                     Object value = entry.getValue();
 
-                    // Lọc bỏ các trường khóa chính (_id, id) và các custom ID có nguy cơ được đánh dấu @Id để tránh lỗi MongoDB "Modifying immutable field '_id'"
+                    // Lọc bỏ các trường khóa chính (_id, id) và các metadata
                     if (!key.equals("_id") && !key.equals("id") && !key.equals("_class") && !key.equals("class") 
-                        && !key.equals("recurringCostId") && !key.equals("amendmentId") && !key.equals("opId") && !key.equals("clauseId") && !key.equals("lsSuId") && !key.equals("suId")) {
+                        && !key.equals("recurringCostId") && !key.equals("amendmentId") && !key.equals("opId") 
+                        && !key.equals("clauseId") && !key.equals("lsSuId") && !key.equals("suId")
+                        && !key.equals("lsId") && !key.equals("leaseId") && !key.equals("createdAt") 
+                        && !key.equals("updatedAt") && !key.equals("createdDate") && !key.equals("updatedDate")) {
                         
-                        // 🚀 FIX LỖI ÉP KIỂU (MappingException) DÀNH RIÊNG CHO RECURRING COST
-                        if (entityClass == RecurringCost.class && value != null) {
-                            if (value instanceof String && (key.contains("Date") || key.contains("date"))) {
-                                try {
-                                    value = java.time.LocalDate.parse((String) value);
-                                } catch (Exception ignored) {}
-                            } else if (value instanceof Number && (key.startsWith("amount") || key.equals("exchangeRate") || key.equals("currVat"))) {
-                                try {
-                                    value = new java.math.BigDecimal(value.toString());
-                                } catch (Exception ignored) {}
+                        // 🚀 SỬ DỤNG REFLECTION ĐỂ CHỌN ĐÚNG KIỂU DỮ LIỆU TỪ ENTITY CLASS (Tránh lỗi MappingException)
+                        if (value != null) {
+                            try {
+                                java.lang.reflect.Field field = null;
+                                Class<?> currentClass = entityClass;
+                                while (currentClass != null && currentClass != Object.class) {
+                                    try {
+                                        field = currentClass.getDeclaredField(key);
+                                        break;
+                                    } catch (NoSuchFieldException e) {
+                                        currentClass = currentClass.getSuperclass();
+                                    }
+                                }
+
+                                if (field != null) {
+                                    Class<?> type = field.getType();
+                                    String strVal = value.toString().trim();
+                                    
+                                    if (strVal.isEmpty() || strVal.equalsIgnoreCase("null")) {
+                                        value = null;
+                                    } else if (type == java.time.LocalDate.class) {
+                                        if (strVal.contains("T")) value = java.time.LocalDate.parse(strVal.split("T")[0]);
+                                        else value = java.time.LocalDate.parse(strVal);
+                                    } else if (type == java.time.LocalDateTime.class) {
+                                        value = java.time.LocalDateTime.parse(strVal);
+                                    } else if (type == java.math.BigDecimal.class) {
+                                        value = new java.math.BigDecimal(strVal);
+                                    } else if (type == Double.class || type == double.class) {
+                                        value = Double.valueOf(strVal);
+                                    } else if (type == Integer.class || type == int.class) {
+                                        value = Integer.valueOf(strVal);
+                                    } else if (type == Boolean.class || type == boolean.class) {
+                                        value = Boolean.valueOf(strVal);
+                                    } else if (type.isEnum()) {
+                                        for (Object enumConstant : type.getEnumConstants()) {
+                                            if (enumConstant.toString().equalsIgnoreCase(strVal)) {
+                                                value = enumConstant;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            } catch (Exception ignored) {
+                                System.err.println("Request parsing error for key " + key + ": " + ignored.getMessage());
                             }
                         }
                         
