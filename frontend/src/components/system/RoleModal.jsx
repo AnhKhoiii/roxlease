@@ -4,7 +4,6 @@ export default function RoleModal({ isOpen, onClose, onSave, mode, initialData, 
   const [formData, setFormData] = useState({
     roleName: "",
     roleTitle: "", 
-    vpaRestriction: "",
     isSystem: false
   });
 
@@ -17,11 +16,10 @@ export default function RoleModal({ isOpen, onClose, onSave, mode, initialData, 
         setFormData({
           roleName: initialData.roleName || "",
           roleTitle: initialData.description || initialData.roleTitle || "",
-          vpaRestriction: initialData.vpaRestriction ? JSON.stringify(initialData.vpaRestriction, null, 2) : "",
           isSystem: initialData.isSystem || false 
         });
       } else {
-        setFormData({ roleName: "", roleTitle: "", vpaRestriction: "", isSystem: false });
+        setFormData({ roleName: "", roleTitle: "", isSystem: false });
       }
     }
   }, [isOpen, mode, initialData]);
@@ -46,7 +44,6 @@ export default function RoleModal({ isOpen, onClose, onSave, mode, initialData, 
     const dataToSave = {
       roleName: formData.roleName.toUpperCase(),
       description: formData.roleTitle,
-      vpaRestriction: formData.vpaRestriction ? formData.vpaRestriction : null,
       isSystem: formData.isSystem
     };
 
@@ -100,16 +97,6 @@ export default function RoleModal({ isOpen, onClose, onSave, mode, initialData, 
               className={`w-[350px] border rounded px-3 py-2 outline-none transition-all ${
                 errors.roleTitle ? 'border-red-500 bg-red-50' : 'border-gray-300 disabled:bg-gray-100 disabled:text-gray-500 cursor-not-allowed'
               }`}
-            />
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label className="font-bold text-gray-700 text-[16px]">VPA Restriction</label>
-            <textarea
-              value={formData.vpaRestriction}
-              onChange={(e) => handleChange('vpaRestriction', e.target.value)}
-              disabled={!canEdit}
-              className="w-full border border-gray-300 rounded p-4 outline-none focus:border-yellow-500 h-[200px] resize-none font-mono text-sm disabled:bg-gray-100 disabled:text-gray-500 cursor-not-allowed"
             />
           </div>
 

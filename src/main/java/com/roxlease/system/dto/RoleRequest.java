@@ -10,5 +10,4 @@ public class RoleRequest {
     
     private String description;
     private Boolean isSystem;
-    private String vpaRestriction;
 }

@@ -31,7 +31,6 @@ public class RoleService {
         role.setRoleName(request.getRoleName().toUpperCase());
         role.setDescription(request.getDescription());
         role.setIsSystem(request.getIsSystem() != null ? request.getIsSystem() : false);
-        role.setVpaRestriction(request.getVpaRestriction());
         roleRepository.save(role);
     }
 
@@ -41,7 +40,6 @@ public class RoleService {
         
         existingRole.setDescription(request.getDescription());
         existingRole.setIsSystem(request.getIsSystem() != null ? request.getIsSystem() : false);
-        existingRole.setVpaRestriction(request.getVpaRestriction());
         roleRepository.save(existingRole);
     }
 

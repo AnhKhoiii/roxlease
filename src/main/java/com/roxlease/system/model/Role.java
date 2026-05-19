@@ -23,9 +23,6 @@ public class Role {
     @Field("is_system")
     private Boolean isSystem;
 
-    @Field("VPA_restriction")
-    private String vpaRestriction;
-
     @Field("permissions_ids")
     private List<String> permissionsIds;
 
