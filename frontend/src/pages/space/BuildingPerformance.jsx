@@ -19,7 +19,6 @@ const TableHeaderWithTooltip = ({ title, tooltipText, required }) => (
 
 export default function BuildingPerformance() {
   const [loading, setLoading] = useState(false);
-  // Đổi buildingId thành blId trong filter state
   const [filters, setFilters] = useState({ siteId: "ALL", blId: "ALL" });
   
   const [data, setData] = useState({
@@ -65,26 +64,53 @@ export default function BuildingPerformance() {
         let beIntArea = kpis.areaGrossInt ?? kpis.area_gross_int;
         let beExtArea = kpis.areaGrossExt ?? kpis.area_gross_ext;
         
+        const relevantBuildings = filters.siteId === "ALL" ? buildings : buildings.filter(b => b.siteId === filters.siteId);
+
         // Nếu API performance không trả về hoặc trả về 0, ta lấy dữ liệu từ mảng buildings dự phòng
         if (!beIntArea || beIntArea === 0 || !beExtArea || beExtArea === 0) {
-          const relevantBuildings = filters.siteId === "ALL" ? buildings : buildings.filter(b => b.siteId === filters.siteId);
           if (filters.blId === "ALL") {
             beIntArea = relevantBuildings.reduce((sum, b) => sum + (b.areaGrossInt || 0), 0);
             beExtArea = relevantBuildings.reduce((sum, b) => sum + (b.areaGrossExt || 0), 0);
           } else {
-            const selectedBuilding = buildings.find(b => b.blId === filters.blId || b.id === filters.blId);
+            const selectedBuilding = relevantBuildings.find(b => b.blId === filters.blId || b.id === filters.blId);
             beIntArea = selectedBuilding?.areaGrossInt || 0;
             beExtArea = selectedBuilding?.areaGrossExt || 0;
           }
         }
         
-        // Cập nhật giá trị nếu đang hiển thị là 0, null, hoặc undefined
-        if (!kpis.totalInteriorArea || kpis.totalInteriorArea === 0) {
-          kpis.totalInteriorArea = beIntArea || 0;
+        // Cập nhật giá trị KPI để hiển thị
+        if (!kpis.totalInteriorArea || kpis.totalInteriorArea === 0) kpis.totalInteriorArea = beIntArea || 0;
+        if (!kpis.totalExteriorArea || kpis.totalExteriorArea === 0) kpis.totalExteriorArea = beExtArea || 0;
+        if (!kpis.rentableArea || kpis.rentableArea === 0) kpis.rentableArea = beIntArea || 0; // Fallback NFA
+        if (!kpis.usableArea || kpis.usableArea === 0) kpis.usableArea = beExtArea || 0; // Fallback NFA
+
+        // ĐẢM BẢO BIỂU ĐỒ (CHART) VẪN HIỂN THỊ KỂ CẢ KHI BACKEND TRẢ VỀ RỖNG (Do chưa có dữ liệu thuê)
+        let updatedChartData = responseData.chartData ? [...responseData.chartData] : [];
+        if (filters.blId !== "ALL") {
+           if (!updatedChartData.find(c => c.blId === filters.blId)) {
+               const b = relevantBuildings.find(b => b.blId === filters.blId || b.id === filters.blId);
+               if (b) {
+                   updatedChartData.push({
+                       blId: b.blId,
+                       rentableArea: kpis.rentableArea,
+                       usableArea: kpis.usableArea,
+                       leasedArea: 0
+                   });
+               }
+           }
+        } else {
+           relevantBuildings.forEach(b => {
+               if (!updatedChartData.find(c => c.blId === b.blId)) {
+                   updatedChartData.push({
+                       blId: b.blId,
+                       rentableArea: b.areaGrossInt || 0,
+                       usableArea: b.areaGrossExt || 0,
+                       leasedArea: 0
+                   });
+               }
+           });
         }
-        if (!kpis.totalExteriorArea || kpis.totalExteriorArea === 0) {
-          kpis.totalExteriorArea = beExtArea || 0;
-        }
+        responseData.chartData = updatedChartData;
       }
       
       setData(responseData);

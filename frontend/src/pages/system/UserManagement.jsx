@@ -174,9 +174,9 @@ export default function UserManagement() {
   };
 
   return (
-    <div className="flex w-full h-full bg-white font-sans relative">
+    <div className="flex w-full h-full bg-white font-sans relative overflow-hidden">
 
-      <div className="flex-1 p-10 flex flex-col">
+      <div className="flex-1 p-10 flex flex-col overflow-hidden">
 
         {/* Top buttons */}
         <div className="flex justify-between items-center mb-6">
@@ -184,14 +184,14 @@ export default function UserManagement() {
             <button 
               onClick={openAddModal} 
               disabled={!canEdit}
-              className={`px-5 py-2 rounded font-bold transition ${!canEdit ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-red-500 hover:bg-red-600 text-white'}`}
+              className={`px-5 py-2 rounded font-bold transition shadow-sm ${!canEdit ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-red-500 hover:bg-red-600 text-white'}`}
             >
               Add new User
             </button>
             <button 
               onClick={() => { if(selectedUsers.length===0) alert("Choose users first!"); else setShowConfirmModal(true); }}
               disabled={!canEdit}
-              className={`px-5 py-2 rounded font-bold transition ${!canEdit ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-red-500 hover:bg-red-600 text-white'}`}
+              className={`px-5 py-2 rounded font-bold transition shadow-sm ${!canEdit ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-red-500 hover:bg-red-600 text-white'}`}
             >
               Lock/Unlock
             </button>
@@ -230,7 +230,7 @@ export default function UserManagement() {
           {Object.keys(filters).map((key) => (
             <input
               key={key}
-              className="border border-yellow-500 rounded px-3 py-2 min-w-[140px] flex-1 outline-none focus:ring-1 focus:ring-yellow-500"
+              className="border border-yellow-500 rounded px-4 py-2 min-w-[140px] flex-1 outline-none focus:ring-1 focus:ring-yellow-500"
               placeholder={key.charAt(0).toUpperCase() + key.slice(1)}
               value={filters[key]}
               onChange={(e) => setFilters({...filters, [key]: e.target.value})}
@@ -239,20 +239,20 @@ export default function UserManagement() {
         </div>
 
         {/* Table */}
-        <div className="bg-white shadow rounded overflow-auto flex-1">
+        <div className="bg-white shadow rounded overflow-auto flex-1 border border-gray-200">
           <table className="w-full min-w-[1000px]">
-            <thead className="bg-yellow-500 text-white sticky top-0">
+            <thead className="bg-yellow-500 text-white sticky top-0 shadow-sm">
               <tr className="text-left whitespace-nowrap">
-                <th className="p-3 w-[60px] text-center">
+                <th className="p-4 w-[60px] text-center">
                   <input type="checkbox" disabled={!canEdit} className="w-4 h-4 cursor-pointer" checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0} onChange={handleSelectAll} />
                 </th>
-                <th className="p-3">Username</th>
-                <th className="p-3">Fullname</th>
-                <th className="p-3">Company</th>
-                <th className="p-3">Department</th>
-                <th className="p-3">Role</th>
-                <th className="p-3">Email</th>
-                <th className="p-3">Status</th>
+                <th className="p-4 font-bold text-lg">Username</th>
+                <th className="p-4 font-bold text-lg">Fullname</th>
+                <th className="p-4 font-bold text-lg">Company</th>
+                <th className="p-4 font-bold text-lg">Department</th>
+                <th className="p-4 font-bold text-lg">Role</th>
+                <th className="p-4 font-bold text-lg">Email</th>
+                <th className="p-4 font-bold text-lg">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -264,16 +264,16 @@ export default function UserManagement() {
                   className="border-b hover:bg-gray-50 transition-colors whitespace-nowrap cursor-pointer"
                   onDoubleClick={() => openEditModal(user)} 
                 >
-                  <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                  <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
                     <input type="checkbox" disabled={!canEdit} className={`w-4 h-4 ${!canEdit ? 'cursor-not-allowed' : 'cursor-pointer accent-red-500'}`} checked={selectedUsers.includes(user.username)} onChange={() => handleSelectRow(user.username)} />
                   </td>
-                  <td className="p-3 font-semibold text-gray-800">{user.username}</td>
-                  <td className="p-3">{user.fullname || user.fullName}</td>
-                  <td className="p-3">{user.company}</td>
-                  <td className="p-3">{user.department}</td>
-                  <td className="p-3 text-red-500 font-medium">{user.roleName}</td>
-                  <td className="p-3">{user.email}</td>
-                  <td className="p-3">
+                  <td className="p-4 font-bold text-gray-800">{user.username}</td>
+                  <td className="p-4">{user.fullname || user.fullName}</td>
+                  <td className="p-4">{user.company}</td>
+                  <td className="p-4">{user.department}</td>
+                  <td className="p-4 text-red-500 font-bold">{user.roleName}</td>
+                  <td className="p-4">{user.email}</td>
+                  <td className="p-4">
                     <span className={`px-3 py-1 rounded text-white text-sm font-semibold ${user.status === "Active" || user.status === "ACTIVE" ? "bg-green-500" : "bg-gray-400"}`}>
                       {user.status || 'Active'}
                     </span>

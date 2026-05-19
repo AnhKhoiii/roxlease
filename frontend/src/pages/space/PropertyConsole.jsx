@@ -154,6 +154,9 @@ export default function PropertyConsole() {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
 
+        // Đợi 1 chút để Backend xử lý xong và lưu vào MongoDB trước khi lấy lại
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
         // --- TỰ ĐỘNG TÍNH TOÁN GFA VÀ NFA TỪ BẢN VẼ SAU KHI UPLOAD ---
         try {
           // Lấy lại dữ liệu Floor để nhận drawingJson mới nhất
