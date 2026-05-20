@@ -135,6 +135,14 @@ public class RequestController {
     }
 
     // ====================================================
+    // API LẤY DANH SÁCH SUITE ĐANG ĐƯỢC THUÊ (CHO FRONTEND)
+    // ====================================================
+    @GetMapping("/active-suites")
+    public ResponseEntity<java.util.List<String>> getActiveSuites() {
+        return ResponseEntity.ok(service.getActiveSuiteIds());
+    }
+
+    // ====================================================
     // API KIỂM TRA XUNG ĐỘT SUITE (WARNING FRONTEND)
     // ====================================================
     @GetMapping("/check-suite/{suId}")

@@ -33,6 +33,7 @@ export default function LeaseSuitesTab({ lease }) {
   const [leaseSuites, setLeaseSuites] = useState([]);
   const [masterSuites, setMasterSuites] = useState([]); 
   const [floors, setFloors] = useState([]); 
+  const [activeSuiteIds, setActiveSuiteIds] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -60,6 +61,9 @@ export default function LeaseSuitesTab({ lease }) {
         const flData = resFloors.data?.content || resFloors.data;
         setFloors(Array.isArray(flData) ? flData : []);
       }
+
+      const resActiveSuites = await axiosInstance.get(`/lease/requests/active-suites`);
+      setActiveSuiteIds(resActiveSuites.data || []);
     } catch (error) { console.error("Failed to fetch suite data", error); } 
     finally { setLoading(false); setSelectedIds([]); }
   }, [leaseId, lease?.buildingId]);
@@ -76,7 +80,7 @@ export default function LeaseSuitesTab({ lease }) {
     return masterSuites.filter(su => {
       const isSameFloor = (su.flId || su.floorId) === formData.floorId; 
       const isCurrentSuite = originalData && (su.suiteId === originalData.suId || su.id === originalData.suId || su.suId === originalData.suId);
-      const isActiveElsewhere = su.status === "OCCUPIED" && !isCurrentSuite; 
+        const isActiveElsewhere = activeSuiteIds.includes(su.suiteId || su.id || su.suId) && !isCurrentSuite; 
       return isSameFloor && !isActiveElsewhere;
     });
   };
@@ -130,16 +134,18 @@ export default function LeaseSuitesTab({ lease }) {
       setLoading(true);
       const cleanDataObj = sanitizePayload(dataObj);
       const suiteCode = cleanDataObj.suId || formData.suId;
+      let targetId = cleanDataObj.id || cleanDataObj.lsSuId; 
       
       if (suiteCode) {
-        const checkRes = await axiosInstance.get(`/lease/requests/check-suite/${suiteCode}`);
+        const checkRes = await axiosInstance.get(`/lease/requests/check-suite/${suiteCode}`, {
+          params: { excludeTargetId: targetId }
+        });
         if (checkRes.data.hasPending) {
           const confirm = window.confirm(`⚠️ WARNING: Suite [${suiteCode}] already has a pending request.\n\nAre you sure you want to submit a competing request?`);
           if (!confirm) { setLoading(false); return; }
         }
       }
 
-      let targetId = cleanDataObj.id || cleanDataObj.lsSuId; 
       let changedData = { ...cleanDataObj };
       delete changedData.floorId;
 
@@ -211,7 +217,9 @@ export default function LeaseSuitesTab({ lease }) {
         const cleanDataObj = sanitizePayload(item);
         delete cleanDataObj.floorId;
 
-        const checkRes = await axiosInstance.get(`/lease/requests/check-suite/${cleanDataObj.suId}`);
+        const checkRes = await axiosInstance.get(`/lease/requests/check-suite/${cleanDataObj.suId}`, {
+          params: { excludeTargetId: mongoId }
+        });
         if (checkRes.data.hasPending) {
           const confirm = window.confirm(`⚠️ WARNING: Suite [${cleanDataObj.suId}] already has a pending request.\n\nAre you sure you want to submit a competing request?`);
           if (!confirm) continue; 

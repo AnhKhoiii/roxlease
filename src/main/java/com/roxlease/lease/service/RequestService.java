@@ -75,10 +75,6 @@ public class RequestService {
 
             if (approvedSuId != null) {
                 if (!"DELETE".equalsIgnoreCase(request.getAction()) && !"REMOVE".equalsIgnoreCase(request.getAction())) {
-                    // Đổi trạng thái mặt bằng ở bảng Master (Space) thành OCCUPIED để không ai add được nữa
-                    Query updateSuiteStatus = new Query(Criteria.where("suiteId").is(approvedSuId));
-                    mongoTemplate.updateFirst(updateSuiteStatus, new Update().set("status", "OCCUPIED"), "suites");
-
                     // Tìm tất cả các Request PENDING khác có cùng mã Suite này
                     Query pendingQuery = new Query(Criteria.where("status").is(RQStatus.PENDING)
                                                 .and("requestType").is(RQType.SUITE_ASSIGNMENT));
@@ -97,10 +93,6 @@ public class RequestService {
                             repository.save(pReq);
                         }
                     }
-                } else {
-                    // Nếu là hành động DELETE mặt bằng, nhả lại trạng thái AVAILABLE
-                    Query updateSuiteStatus = new Query(Criteria.where("suiteId").is(approvedSuId));
-                    mongoTemplate.updateFirst(updateSuiteStatus, new Update().set("status", "AVAILABLE"), "suites");
                 }
             }
             
@@ -171,6 +163,13 @@ public class RequestService {
             if (suId.equals(extractSuiteIdFromRequest(req))) return true;
         }
         return false;
+    }
+
+    // --- HÀM LẤY DANH SÁCH CÁC SUITE ĐANG ĐƯỢC THUÊ (CHO FRONTEND LỌC MÀ KHÔNG CẦN TRƯỜNG STATUS) ---
+    public List<String> getActiveSuiteIds() {
+        Query query = new Query(Criteria.where("active").is(true));
+        List<LeaseSuite> activeSuites = mongoTemplate.find(query, LeaseSuite.class);
+        return activeSuites.stream().map(LeaseSuite::getSuId).filter(java.util.Objects::nonNull).collect(java.util.stream.Collectors.toList());
     }
 
     private String extractLeaseIdFromRequest(Request req) {
