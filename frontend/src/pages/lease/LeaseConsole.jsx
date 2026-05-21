@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import axiosInstance from "../../api/axiosInstance";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import LeaseModal from "../../components/lease/LeaseModal"; 
 
 export default function LeaseConsole() {
@@ -12,6 +12,7 @@ export default function LeaseConsole() {
   const [totalElements, setTotalElements] = useState(0);
   const [expanded, setExpanded] = useState(false);
   const navigate = useNavigate();
+  const { currentUser } = useOutletContext();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState("ADD");
@@ -35,7 +36,7 @@ export default function LeaseConsole() {
   const [columnFilters, setColumnFilters] = useState(initialColumnFilters);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
 
-  const permissions = JSON.parse(localStorage.getItem('permissions') || '[]');
+  const permissions = currentUser?.permissions || [];
   const canEdit = permissions.includes('LEASE_CONSOLE_EDIT');
 
   const columns = [

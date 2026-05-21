@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useOutletContext } from "react-router-dom";
 import axiosInstance from "../../api/axiosInstance";
 import BackgroundDataModal from "../../components/lease/BackgroundDataModal";
 
@@ -19,7 +20,8 @@ export default function BackgroundDataConsole() {
   
   const [notification, setNotification] = useState({ show: false, type: '', message: '' });
 
-  const permissions = JSON.parse(localStorage.getItem('permissions') || '[]');
+  const { currentUser } = useOutletContext();
+  const permissions = currentUser?.permissions || [];
   const canEdit = permissions.includes('LEASE_PARTY_EDIT');
 
   const showToast = (type, message) => {

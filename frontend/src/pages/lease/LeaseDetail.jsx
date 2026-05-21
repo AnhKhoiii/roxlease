@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useOutletContext } from "react-router-dom";
 import axiosInstance from "../../api/axiosInstance";
 import LeaseModal from "../../components/lease/LeaseModal";
 import ContactsTab from "./tabs/ContactsTab";
@@ -12,6 +12,7 @@ import RecurringCostsTab from "./tabs/RecurringCostTab";
 export default function LeaseDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { currentUser } = useOutletContext();
   
   const [lease, setLease] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -24,7 +25,7 @@ export default function LeaseDetail() {
   const isAmenityLease = lease?.assocAmenity === true || !!lease?.amenityId || !!lease?.amenityID || (lease?.amenityIds && lease.amenityIds.length > 0);
 
   // Phân quyền (RBAC) - Tự động disable chức năng Edit nếu canEdit = false
-  const permissions = JSON.parse(localStorage.getItem('permissions') || '[]');
+  const permissions = currentUser?.permissions || [];
   const canEdit = permissions.includes('LEASE_CONSOLE_EDIT');
 
   const tabs = ["Contacts", "Recurring Costs", "Clauses", "Options", "Amendments"];

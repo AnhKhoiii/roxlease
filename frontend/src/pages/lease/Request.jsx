@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useOutletContext } from "react-router-dom";
 import axiosInstance from "../../api/axiosInstance";
 
 const BASE_URL = axiosInstance.defaults.baseURL ? axiosInstance.defaults.baseURL.replace(/\/api\/?$/, '') : 'http://localhost:8080';
@@ -40,7 +41,8 @@ export default function Request() {
     document: "", comment: "", requestData: {} 
   });
 
-  const permissions = JSON.parse(localStorage.getItem('permissions') || '[]');
+  const { currentUser } = useOutletContext();
+  const permissions = currentUser?.permissions || [];
   const canEdit = permissions.includes('LEASE_REQUEST_EDIT');
 
   // ==========================================
