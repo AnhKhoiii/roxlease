@@ -106,7 +106,7 @@ const AutocompleteInput = ({ label, value, onChange, options = [], disabled, pla
 // ==========================================
 // MODAL CHÍNH
 // ==========================================
-export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData, isLeaseActive }) {
+export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData, isLeaseActive, canEdit = true }) {
   const [formData, setFormData] = useState({});
   const [sites, setSites] = useState([]);
   const [buildings, setBuildings] = useState([]);
@@ -260,7 +260,7 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData,
           <h2 className="text-base font-bold uppercase tracking-tight text-white drop-shadow-sm">{mode === "ADD" ? "Add New Lease" : "Edit Lease"}</h2>
           
           <div className="flex gap-2 items-center">
-            {mode === "ADD" ? (
+            {mode === "ADD" && canEdit ? (
               <>
                 <button 
                   onClick={() => handleSaveAction(false)} 
@@ -275,7 +275,7 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData,
                   Save & Send Request
                 </button>
               </>
-            ) : (
+            ) : canEdit ? (
               <>
             <button 
               onClick={handleDeleteAction} 
@@ -297,7 +297,7 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData,
                   Update & Send Request
                 </button>
               </>
-            )}
+            ) : null}
             <button onClick={onClose} className="text-white hover:text-red-100 ml-2 transition-colors"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
           </div>
         </div>
@@ -308,38 +308,38 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData,
             {/* CỘT 1 */}
             <div className="flex flex-col gap-3">
               <div className="pb-0.5 border-b border-gray-100"><span className="font-bold text-blue-800 text-[9px] uppercase tracking-wider">General & Timeline</span></div>
-              <Input label="Lease Code" value={formData.lsId} onChange={v => handleChange('lsId', v)} disabled={mode === "EDIT"} />
-              <Input label="Description" value={formData.description} onChange={v => handleChange('description', v)} />
-              <Input label="Signing Date" type="date" value={formData.signedDate} onChange={v => handleChange('signedDate', v)} />
-              <Input label="Handover Date" type="date" value={formData.handoverDate} onChange={v => handleChange('handoverDate', v)} />
-              <Input label="Start Date" type="date" value={formData.startDate} onChange={v => handleChange('startDate', v)} />
-              <Input label="End Date" type="date" value={formData.endDate} onChange={v => handleChange('endDate', v)} />
-              <Select label="Lease Type" value={formData.lsType} onChange={v => handleChange('lsType', v)} options={['EXTERNAL', 'INTERNAL', 'MSB']} />
-              <Select label="Space Use" value={formData.spaceUse} onChange={v => handleChange('spaceUse', v)} options={['OFFICE', 'RETAIL', 'STORAGE', 'MANUFACTURING', 'MIXED_USE', 'N_A']} />
+              <Input label="Lease Code" value={formData.lsId} onChange={v => handleChange('lsId', v)} disabled={!canEdit || mode === "EDIT"} />
+              <Input label="Description" value={formData.description} onChange={v => handleChange('description', v)} disabled={!canEdit} />
+              <Input label="Signing Date" type="date" value={formData.signedDate} onChange={v => handleChange('signedDate', v)} disabled={!canEdit} />
+              <Input label="Handover Date" type="date" value={formData.handoverDate} onChange={v => handleChange('handoverDate', v)} disabled={!canEdit} />
+              <Input label="Start Date" type="date" value={formData.startDate} onChange={v => handleChange('startDate', v)} disabled={!canEdit} />
+              <Input label="End Date" type="date" value={formData.endDate} onChange={v => handleChange('endDate', v)} disabled={!canEdit} />
+              <Select label="Lease Type" value={formData.lsType} onChange={v => handleChange('lsType', v)} options={['EXTERNAL', 'INTERNAL', 'MSB']} disabled={!canEdit} />
+              <Select label="Space Use" value={formData.spaceUse} onChange={v => handleChange('spaceUse', v)} options={['OFFICE', 'RETAIL', 'STORAGE', 'MANUFACTURING', 'MIXED_USE', 'N_A']} disabled={!canEdit} />
             </div>
 
             {/* CỘT 2 */}
             <div className="flex flex-col gap-3">
               <div className="pb-0.5 border-b border-gray-100"><span className="font-bold text-blue-800 text-[9px] uppercase tracking-wider">Location & Structure</span></div>
-              <AutocompleteInput label="Site ID" value={formData.siteId} onChange={v => handleChange('siteId', v)} options={sites} placeholder="Search Site ID..." />
-              <AutocompleteInput label="Building ID" value={formData.buildingId} onChange={v => handleChange('buildingId', v)} options={buildings} disabled={!formData.siteId} placeholder={!formData.siteId ? "Select Site first..." : "Search Building ID..."} />
-              <AutocompleteInput label="Amenity ID" value={formData.amenityId} onChange={v => handleChange('amenityId', v)} options={amenities} disabled={!formData.buildingId} placeholder={!formData.buildingId ? "Select Building first..." : "Search Amenity ID..."} />
-              <Select label="Lease / Sublease" value={formData.leaseSublease} onChange={v => handleChange('leaseSublease', v)} options={['LEASE', 'SUBLEASE']} />
+              <AutocompleteInput label="Site ID" value={formData.siteId} onChange={v => handleChange('siteId', v)} options={sites} placeholder="Search Site ID..." disabled={!canEdit} />
+              <AutocompleteInput label="Building ID" value={formData.buildingId} onChange={v => handleChange('buildingId', v)} options={buildings} disabled={!canEdit || !formData.siteId} placeholder={!formData.siteId ? "Select Site first..." : "Search Building ID..."} />
+              <AutocompleteInput label="Amenity ID" value={formData.amenityId} onChange={v => handleChange('amenityId', v)} options={amenities} disabled={!canEdit || !formData.buildingId} placeholder={!formData.buildingId ? "Select Building first..." : "Search Amenity ID..."} />
+              <Select label="Lease / Sublease" value={formData.leaseSublease} onChange={v => handleChange('leaseSublease', v)} options={['LEASE', 'SUBLEASE']} disabled={!canEdit} />
             </div>
 
             {/* CỘT 3 */}
             <div className="flex flex-col gap-3">
               <div className="pb-0.5 border-b border-gray-100"><span className="font-bold text-blue-800 text-[9px] uppercase tracking-wider">Financial & Status</span></div>
-              <Input label="Deposit" type="number" value={formData.amountDeposit} onChange={v => handleChange('amountDeposit', v)} disabled={formData.active} />
-              <Input label="Rent Unit Cost" type="number" value={formData.rentUnitCost} onChange={v => handleChange('rentUnitCost', v)} disabled={formData.active} />
-              <Input label="Service Unit Cost" type="number" value={formData.serviceUnitCost} onChange={v => handleChange('serviceUnitCost', v)} disabled={formData.active} />
-              <Select label="Currency" value={formData.currency} onChange={v => handleChange('currency', v)} options={['VND', 'USD', 'GBP', 'EUR', 'JPY', 'CNY', 'KRW', 'SGD', 'THB', 'AUD']} />
-              <Input label="Base Exchange Rate" type="number" value={formData.baseExchangeRate} onChange={v => handleChange('baseExchangeRate', v)} />
-              <Select label="Rent Type" value={formData.rentType} onChange={v => handleChange('rentType', v)} options={['GROSS_RENT', 'NET_RENT', 'REVENUE_SHARING', 'TRIPLE_NET']} />
+              <Input label="Deposit" type="number" value={formData.amountDeposit} onChange={v => handleChange('amountDeposit', v)} disabled={!canEdit || formData.active} />
+              <Input label="Rent Unit Cost" type="number" value={formData.rentUnitCost} onChange={v => handleChange('rentUnitCost', v)} disabled={!canEdit || formData.active} />
+              <Input label="Service Unit Cost" type="number" value={formData.serviceUnitCost} onChange={v => handleChange('serviceUnitCost', v)} disabled={!canEdit || formData.active} />
+              <Select label="Currency" value={formData.currency} onChange={v => handleChange('currency', v)} options={['VND', 'USD', 'GBP', 'EUR', 'JPY', 'CNY', 'KRW', 'SGD', 'THB', 'AUD']} disabled={!canEdit} />
+              <Input label="Base Exchange Rate" type="number" value={formData.baseExchangeRate} onChange={v => handleChange('baseExchangeRate', v)} disabled={!canEdit} />
+              <Select label="Rent Type" value={formData.rentType} onChange={v => handleChange('rentType', v)} options={['GROSS_RENT', 'NET_RENT', 'REVENUE_SHARING', 'TRIPLE_NET']} disabled={!canEdit} />
               <div className="flex flex-col gap-2 mt-1 bg-gray-50 p-2.5 rounded border border-gray-200/60">
-                <Checkbox label="VAT Excluded?" checked={formData.vatExcluded} onChange={v => handleChange('vatExcluded', v)} />
-                <Checkbox label="Lease Signed?" checked={formData.isSign} onChange={v => handleChange('isSign', v)} />
-                <Checkbox label="Assume renewal for KPI" checked={formData.assumeRenewal} onChange={v => handleChange('assumeRenewal', v)} />
+                <Checkbox label="VAT Excluded?" checked={formData.vatExcluded} onChange={v => handleChange('vatExcluded', v)} disabled={!canEdit} />
+                <Checkbox label="Lease Signed?" checked={formData.isSign} onChange={v => handleChange('isSign', v)} disabled={!canEdit} />
+                <Checkbox label="Assume renewal for KPI" checked={formData.assumeRenewal} onChange={v => handleChange('assumeRenewal', v)} disabled={!canEdit} />
                 <Checkbox label="Active" checked={formData.active} onChange={() => {}} disabled={true} />
               </div>
             </div>
@@ -348,15 +348,15 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData,
             <div className="flex flex-col gap-3">
               <div className="pb-0.5 border-b border-gray-100"><span className="font-bold text-blue-800 text-[9px] uppercase tracking-wider">Parties & Area</span></div>
               <Input label="Negotiated Area" type="number" value={formData.areaNegotiated} disabled={true} placeholder="Auto-calculated from Suites" onChange={() => {}} />
-              <Input label="Corridor Area" type="number" value={formData.areaCorridor} onChange={v => handleChange('areaCorridor', v)} />
-              <Input label="Parent Lease" value={formData.parentLsId} onChange={v => handleChange('parentLsId', v)} />
+              <Input label="Corridor Area" type="number" value={formData.areaCorridor} onChange={v => handleChange('areaCorridor', v)} disabled={!canEdit} />
+              <Input label="Parent Lease" value={formData.parentLsId} onChange={v => handleChange('parentLsId', v)} disabled={!canEdit} />
               <div className="flex items-end gap-2 mt-0.5">
                 <div className="flex-1">
-                  <AutocompleteInput label="Party ID / Name" value={formData.partyId} onChange={v => handleChange('partyId', v)} options={parties} placeholder="Search Party..." />
+                  <AutocompleteInput label="Party ID / Name" value={formData.partyId} onChange={v => handleChange('partyId', v)} options={parties} placeholder="Search Party..." disabled={!canEdit} />
                 </div>
-                <div className="pb-1.5"><Checkbox label="Is Landlord?" checked={formData.isLandlord} onChange={v => handleChange('isLandlord', v)} /></div>
+                <div className="pb-1.5"><Checkbox label="Is Landlord?" checked={formData.isLandlord} onChange={v => handleChange('isLandlord', v)} disabled={!canEdit} /></div>
               </div>
-              <Input label="Person In charge (PIC)" value={formData.pic} onChange={v => handleChange('pic', v)} />
+              <Input label="Person In charge (PIC)" value={formData.pic} onChange={v => handleChange('pic', v)} disabled={!canEdit} />
             </div>
 
           </div>

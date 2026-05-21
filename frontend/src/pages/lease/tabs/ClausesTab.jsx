@@ -9,10 +9,10 @@ const Input = ({ label, value, onChange, type = "text", required, disabled, plac
   </div>
 );
 
-const Textarea = ({ label, value, onChange, required }) => (
+const Textarea = ({ label, value, onChange, required, disabled }) => (
   <div className="flex flex-col gap-1 w-full h-full">
     <label className="font-bold text-[10px] text-gray-700 uppercase tracking-wide">{label} {required && <span className="text-red-500">*</span>}</label>
-    <textarea value={value || ''} onChange={e => onChange(e.target.value)} className="border border-gray-300 rounded px-3 py-1.5 text-[12px] outline-none focus:border-blue-500 bg-white resize-none min-h-[100px] shadow-sm w-full flex-1" />
+    <textarea value={value || ''} onChange={e => onChange(e.target.value)} disabled={disabled} className="border border-gray-300 rounded px-3 py-1.5 text-[12px] outline-none focus:border-blue-500 bg-white resize-none min-h-[100px] shadow-sm w-full flex-1 disabled:bg-gray-100 disabled:text-gray-500" />
   </div>
 );
 
@@ -36,7 +36,7 @@ const Checkbox = ({ label, checked, onChange, disabled }) => (
 // --- MAIN COMPONENT ---
 const BASE_URL = axiosInstance.defaults.baseURL ? axiosInstance.defaults.baseURL.replace(/\/api\/?$/, '') : 'http://localhost:8080';
 
-export default function ClausesTab({ lease }) {
+export default function ClausesTab({ lease, canEdit = true }) {
   const leaseId = lease?.lsId; 
   const isActive = lease?.active;
 
@@ -206,14 +206,14 @@ export default function ClausesTab({ lease }) {
 
       <div className="flex justify-between items-center gap-2 mb-3">
         <div className="flex gap-2">
-          <button onClick={() => { setFormData(initialForm); setOriginalData(null); setModalConfig({ isOpen: true, mode: "ADD" }); }} className="bg-[#DE3B40] hover:bg-[#C11C22] text-white px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors">Add Clause</button>
-          <button onClick={handleDelete} disabled={selectedIds.length === 0} className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${selectedIds.length > 0 ? "bg-red-50 text-[#DE3B40] border border-[#DE3B40]" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}>Delete Selected</button>
+          <button onClick={() => { setFormData(initialForm); setOriginalData(null); setModalConfig({ isOpen: true, mode: "ADD" }); }} disabled={!canEdit} className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${canEdit ? "bg-[#DE3B40] hover:bg-[#C11C22] text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}>Add Clause</button>
+          <button onClick={handleDelete} disabled={selectedIds.length === 0 || !canEdit} className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${(selectedIds.length > 0 && canEdit) ? "bg-red-50 text-[#DE3B40] border border-[#DE3B40]" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}>Delete Selected</button>
         </div>
         
         <button 
           onClick={handleBulkSubmit} 
-          disabled={selectedIds.length === 0 || !isActive} 
-          className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${(selectedIds.length > 0 && isActive) ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
+          disabled={selectedIds.length === 0 || !isActive || !canEdit} 
+          className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${(selectedIds.length > 0 && isActive && canEdit) ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
         >
           Submit Request for Selected
         </button>
@@ -274,10 +274,10 @@ export default function ClausesTab({ lease }) {
                 {/* CỘT 1 */}
                 <div className="flex flex-col gap-4">
                   <div className="pb-1 border-b border-gray-200"><span className="font-bold text-[10px] uppercase text-gray-500 tracking-wider">General</span></div>
-                  <Input label="Clause ID" required value={formData.clauseId} onChange={v => setFormData({...formData, clauseId: v})} disabled={modalConfig.mode === "EDIT"} placeholder="Enter Clause ID" />
+                  <Input label="Clause ID" required value={formData.clauseId} onChange={v => setFormData({...formData, clauseId: v})} disabled={!canEdit || modalConfig.mode === "EDIT"} placeholder="Enter Clause ID" />
                   
                   {/* 🚀 THÊM SELECT BOX CHỌN ENUM TYPE */}
-                  <Select label="Clause Type" required value={formData.clauseType} onChange={v => setFormData({...formData, clauseType: v})} 
+                  <Select label="Clause Type" required value={formData.clauseType} disabled={!canEdit} onChange={v => setFormData({...formData, clauseType: v})} 
                     options={[
                       {value: 'SPECIAL', label: 'Special'},
                       {value: 'DEPOSIT', label: 'Deposit'},
@@ -287,7 +287,7 @@ export default function ClausesTab({ lease }) {
                     ]} 
                   />
 
-                  <Textarea label="Description" required value={formData.description} onChange={v => setFormData({...formData, description: v})} />
+                  <Textarea label="Description" required value={formData.description} disabled={!canEdit} onChange={v => setFormData({...formData, description: v})} />
                 </div>
 
                 {/* CỘT 2 */}
@@ -296,11 +296,12 @@ export default function ClausesTab({ lease }) {
                   <div className="bg-blue-50 p-3 rounded border border-blue-100 flex flex-col gap-3">
                     <Checkbox 
                       label="Date match lease?" 
+                      disabled={!canEdit}
                       checked={formData.dateMatchLs} 
                       onChange={v => setFormData({ ...formData, dateMatchLs: v, startDate: v ? lease?.startDate : formData.startDate, endDate: v ? lease?.endDate : formData.endDate })} 
                     />
-                    <Input type="date" label="Start Date" value={formData.startDate} onChange={v => setFormData({...formData, startDate: v})} disabled={formData.dateMatchLs} />
-                    <Input type="date" label="End Date" value={formData.endDate} onChange={v => setFormData({...formData, endDate: v})} disabled={formData.dateMatchLs} />
+                    <Input type="date" label="Start Date" value={formData.startDate} onChange={v => setFormData({...formData, startDate: v})} disabled={!canEdit || formData.dateMatchLs} />
+                    <Input type="date" label="End Date" value={formData.endDate} onChange={v => setFormData({...formData, endDate: v})} disabled={!canEdit || formData.dateMatchLs} />
                   </div>
                   <div className="bg-white p-3 rounded border border-gray-200 mt-auto"><Checkbox label="Active" checked={formData.active} disabled={true} /></div>
                 </div>
@@ -308,13 +309,13 @@ export default function ClausesTab({ lease }) {
                 {/* CỘT 3 */}
                 <div className="flex flex-col gap-4">
                   <div className="pb-1 border-b border-gray-200"><span className="font-bold text-[10px] uppercase text-gray-500 tracking-wider">Responsibility & Document</span></div>
-                  <Select label="Responsible Party" value={formData.responsibleParty} onChange={v => setFormData({...formData, responsibleParty: v})} options={[{value: 'LANDLORD', label: 'Landlord'}, {value: 'TENANT', label: 'Tenant'}, {value: 'MUTUAL', label: 'Mutual'}, {value: 'OTHER', label: 'Other'}]} />
-                  <Select label="Exercised by" value={formData.exercisedBy} onChange={v => setFormData({...formData, exercisedBy: v})} options={[{value: 'LANDLORD', label: 'Landlord'}, {value: 'TENANT', label: 'Tenant'}, {value: 'MUTUAL', label: 'Mutual'}]} />
+                  <Select label="Responsible Party" disabled={!canEdit} value={formData.responsibleParty} onChange={v => setFormData({...formData, responsibleParty: v})} options={[{value: 'LANDLORD', label: 'Landlord'}, {value: 'TENANT', label: 'Tenant'}, {value: 'MUTUAL', label: 'Mutual'}, {value: 'OTHER', label: 'Other'}]} />
+                  <Select label="Exercised by" disabled={!canEdit} value={formData.exercisedBy} onChange={v => setFormData({...formData, exercisedBy: v})} options={[{value: 'LANDLORD', label: 'Landlord'}, {value: 'TENANT', label: 'Tenant'}, {value: 'MUTUAL', label: 'Mutual'}]} />
                   
                   <div className="flex flex-col gap-1 w-full bg-white p-3 rounded border border-gray-200 mt-auto">
                     <label className="font-bold text-[10px] text-gray-700 uppercase tracking-wide">Document</label>
                     <div className="flex items-center gap-3 mt-1">
-                      <input type="file" onChange={handleFileUpload} disabled={uploading} className="block w-full text-[11px] text-gray-500 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-[11px] file:font-semibold file:bg-blue-50 file:text-blue-700 cursor-pointer hover:file:bg-blue-100 transition-colors" />
+                      <input type="file" onChange={handleFileUpload} disabled={uploading || !canEdit} className="block w-full text-[11px] text-gray-500 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-[11px] file:font-semibold file:bg-blue-50 file:text-blue-700 cursor-pointer hover:file:bg-blue-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed" />
                       {uploading && <span className="text-xs text-orange-500 font-semibold animate-pulse">Uploading...</span>}
                     </div>
                     {(formData.docUrl || formData.documentUrl) && <p className="text-[10px] mt-2 text-gray-500">File: <a href={`${BASE_URL}${formData.docUrl || formData.documentUrl}`} target="_blank" rel="noreferrer" className="text-blue-600 underline">Download/View</a></p>}
@@ -324,22 +325,24 @@ export default function ClausesTab({ lease }) {
               </div>
 
               <div className="flex justify-between items-center mt-3 pt-4 border-t border-gray-200">
-                {modalConfig.mode === "EDIT" ? (
+                {modalConfig.mode === "EDIT" && canEdit ? (
                   <button onClick={() => handleSubmitRequest("DELETE", formData)} disabled={!isActive} className={`px-4 py-2 text-xs font-bold rounded transition-colors ${isActive ? "text-red-500 hover:bg-red-50 border border-red-100" : "text-gray-400 bg-gray-200 cursor-not-allowed"}`}>Request Delete</button>
                 ) : <div></div>}
                 <div className="flex gap-2">
                   <button onClick={() => setModalConfig({ ...modalConfig, isOpen: false })} className="px-4 py-2 text-xs font-bold text-gray-600 bg-white border border-gray-300 rounded hover:bg-gray-100 shadow-sm transition-colors">Cancel</button>
-                  {!formData.active && (
+                  {canEdit && !formData.active && (
                     <button onClick={handleSaveDraft} disabled={!isFormValid} className="px-5 py-2 text-xs font-bold text-gray-800 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50 shadow-sm transition-colors">Save as Draft</button>
                   )}
 
-                  <button 
-                    onClick={() => handleSubmitRequest(modalConfig.mode === "ADD" ? "CREATE" : "UPDATE", formData)} 
-                    disabled={!isFormValid || !isActive} 
-                    className={`px-5 py-2 text-xs font-bold text-white shadow-sm rounded transition-colors ${(!isFormValid || !isActive) ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
-                  >
-                    {modalConfig.mode === "ADD" ? "Save & Submit Request" : "Update & Submit Request"}
-                  </button>
+                  {canEdit && (
+                    <button 
+                      onClick={() => handleSubmitRequest(modalConfig.mode === "ADD" ? "CREATE" : "UPDATE", formData)} 
+                      disabled={!isFormValid || !isActive} 
+                      className={`px-5 py-2 text-xs font-bold text-white shadow-sm rounded transition-colors ${(!isFormValid || !isActive) ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
+                    >
+                      {modalConfig.mode === "ADD" ? "Save & Submit Request" : "Update & Submit Request"}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

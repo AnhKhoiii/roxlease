@@ -35,6 +35,9 @@ export default function LeaseConsole() {
   const [columnFilters, setColumnFilters] = useState(initialColumnFilters);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
 
+  const permissions = JSON.parse(localStorage.getItem('permissions') || '[]');
+  const canEdit = permissions.includes('LEASE_CONSOLE_EDIT');
+
   const columns = [
     { key: "lsId", label: "Lease ID", sortable: true },
     { key: "siteId", label: "Site ID", sortable: true },
@@ -228,7 +231,7 @@ export default function LeaseConsole() {
           <button className="text-gray-600 font-semibold hover:bg-gray-200 px-6 py-2 text-sm rounded-t-md transition-colors">Details</button>
         </div>
         <div className="flex gap-3">
-          <button onClick={handleOpenAdd} className="bg-[#DE3B40] hover:bg-[#C11C22] text-white px-5 py-1.5 rounded text-sm font-semibold shadow-sm transition-colors">+ Add new</button>
+          <button onClick={handleOpenAdd} disabled={!canEdit} className={`px-5 py-1.5 rounded text-sm font-semibold shadow-sm transition-colors ${canEdit ? "bg-[#DE3B40] hover:bg-[#C11C22] text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}>+ Add new</button>
           <button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-5 py-1.5 rounded text-sm font-semibold shadow-sm transition-colors">Export</button>
         </div>
       </div>
@@ -369,7 +372,14 @@ export default function LeaseConsole() {
         </div>
       </div>
       
-      <LeaseModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveModal} mode={modalMode} initialData={selectedData} />
+      <LeaseModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onSave={handleSaveModal} 
+        mode={modalMode} 
+        initialData={selectedData} 
+        canEdit={canEdit} 
+      />
     </div>
   );
 }

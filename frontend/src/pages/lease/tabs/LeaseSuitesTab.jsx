@@ -29,7 +29,7 @@ const Checkbox = ({ label, checked, onChange, disabled }) => (
 // --- MAIN COMPONENT ---
 const BASE_URL = axiosInstance.defaults.baseURL ? axiosInstance.defaults.baseURL.replace(/\/api\/?$/, '') : 'http://localhost:8080';
 
-export default function LeaseSuitesTab({ lease }) {
+export default function LeaseSuitesTab({ lease, canEdit = true }) {
   const leaseId = lease?.lsId; 
   const isActive = lease?.active === true;
   const [leaseSuites, setLeaseSuites] = useState([]);
@@ -259,14 +259,14 @@ export default function LeaseSuitesTab({ lease }) {
     <div className="flex flex-col h-full animate-[fadeIn_0.2s_ease-out]">
       <div className="flex justify-between items-center gap-2 mb-3">
         <div className="flex gap-2">
-          <button onClick={() => { setFormData(initialForm); setOriginalData(null); setModalConfig({ isOpen: true, mode: "ADD" }); }} className="bg-[#DE3B40] hover:bg-[#C11C22] text-white px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors">Add Suite</button>
+          <button onClick={() => { setFormData(initialForm); setOriginalData(null); setModalConfig({ isOpen: true, mode: "ADD" }); }} disabled={!canEdit} className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${canEdit ? "bg-[#DE3B40] hover:bg-[#C11C22] text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}>Add Suite</button>
           {/* GẮN SỰ KIỆN handleDelete CHO NÚT DELETE SELECTED */}
-          <button onClick={handleDelete} disabled={selectedIds.length === 0} className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${selectedIds.length > 0 ? "bg-red-50 text-[#DE3B40] border border-[#DE3B40]" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}>Delete Selected</button>
+          <button onClick={handleDelete} disabled={selectedIds.length === 0 || !canEdit} className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${(selectedIds.length > 0 && canEdit) ? "bg-red-50 text-[#DE3B40] border border-[#DE3B40]" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}>Delete Selected</button>
         </div>
         <button 
           onClick={handleBulkSubmit} 
-          disabled={selectedIds.length === 0 || !isActive} 
-          className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${(selectedIds.length > 0 && isActive) ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
+          disabled={selectedIds.length === 0 || !isActive || !canEdit} 
+          className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${(selectedIds.length > 0 && isActive && canEdit) ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
         >
           Submit Request for Selected
         </button>
@@ -320,44 +320,46 @@ export default function LeaseSuitesTab({ lease }) {
               <div className="grid grid-cols-3 gap-4">
                 <Input label="Site ID" value={lease?.siteId} disabled />
                 <Input label="Building ID" value={lease?.buildingId} disabled />
-                <Input label="Lease Suite ID" required value={formData.lsSuId} onChange={v => setFormData({...formData, lsSuId: v})} disabled={modalConfig.mode === "EDIT"} placeholder="Enter Lease Suite ID" />
+                <Input label="Lease Suite ID" required value={formData.lsSuId} onChange={v => setFormData({...formData, lsSuId: v})} disabled={!canEdit || modalConfig.mode === "EDIT"} placeholder="Enter Lease Suite ID" />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <Select label="Floor ID" required value={formData.floorId} onChange={v => { setFormData({...formData, floorId: v, suId: ""}); }} options={Array.isArray(floors) ? floors.map(f => ({ value: f.flId || f.id, label: f.flId || f.id })) : []} />
-                <Select label="Suite Code" required value={formData.suId} onChange={v => setFormData({...formData, suId: v})} options={getAvailableSuites().map(su => ({ value: su.suiteId || su.suId || su.id, label: su.suiteId || su.suId || su.id }))} disabled={!formData.floorId} />
+                <Select label="Floor ID" required value={formData.floorId} disabled={!canEdit} onChange={v => { setFormData({...formData, floorId: v, suId: ""}); }} options={Array.isArray(floors) ? floors.map(f => ({ value: f.flId || f.id, label: f.flId || f.id })) : []} />
+                <Select label="Suite Code" required value={formData.suId} disabled={!canEdit || !formData.floorId} onChange={v => setFormData({...formData, suId: v})} options={getAvailableSuites().map(su => ({ value: su.suiteId || su.suId || su.id, label: su.suiteId || su.suId || su.id }))} />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <Input type="date" label="Start Date" disabled={formData.dateMatchLs} value={formData.dateMatchLs ? (lease?.startDate || "") : formData.dateStart} onChange={v => setFormData({...formData, dateStart: v})} />
-                <Input type="date" label="End Date" disabled={formData.dateMatchLs} value={formData.dateMatchLs ? (lease?.endDate || "") : formData.dateEnd} onChange={v => setFormData({...formData, dateEnd: v})} />
+                <Input type="date" label="Start Date" disabled={!canEdit || formData.dateMatchLs} value={formData.dateMatchLs ? (lease?.startDate || "") : formData.dateStart} onChange={v => setFormData({...formData, dateStart: v})} />
+                <Input type="date" label="End Date" disabled={!canEdit || formData.dateMatchLs} value={formData.dateMatchLs ? (lease?.endDate || "") : formData.dateEnd} onChange={v => setFormData({...formData, dateEnd: v})} />
               </div>
               <div className="flex flex-col gap-1 w-full bg-white p-3 rounded border border-gray-200">
                 <label className="font-bold text-[10px] text-gray-700 uppercase tracking-wide">Attachment Document</label>
                 <div className="flex items-center gap-3 mt-1">
-                  <input type="file" onChange={handleFileUpload} disabled={uploading} className="block w-full text-[11px] text-gray-500 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-[11px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 border border-gray-300 rounded cursor-pointer" />
+                  <input type="file" onChange={handleFileUpload} disabled={uploading || !canEdit} className="block w-full text-[11px] text-gray-500 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-[11px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 border border-gray-300 rounded cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed" />
                   {uploading && <span className="text-xs text-orange-500 font-semibold animate-pulse">Uploading...</span>}
                 </div>
                 {(formData.docUrl || formData.documentUrl) && <p className="text-[10px] mt-1.5 text-gray-500">Current file: <a href={`${BASE_URL}${formData.docUrl || formData.documentUrl}`} target="_blank" rel="noreferrer" className="text-blue-600 underline">Download/View</a></p>}
               </div>
               <div className="flex flex-col gap-2 bg-white p-3 rounded border border-gray-200">
-                <Checkbox label="Date match lease?" checked={formData.dateMatchLs} onChange={v => setFormData({...formData, dateMatchLs: v, dateStart: v ? (lease?.startDate || "") : formData.dateStart, dateEnd: v ? (lease?.endDate || "") : formData.dateEnd})} />
+                <Checkbox label="Date match lease?" disabled={!canEdit} checked={formData.dateMatchLs} onChange={v => setFormData({...formData, dateMatchLs: v, dateStart: v ? (lease?.startDate || "") : formData.dateStart, dateEnd: v ? (lease?.endDate || "") : formData.dateEnd})} />
                 <Checkbox label="Active" checked={formData.active} onChange={() => {}} disabled={true} />
               </div>
               <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-200">
-                {modalConfig.mode === "EDIT" ? (
+                {modalConfig.mode === "EDIT" && canEdit ? (
                   <button onClick={() => handleSubmitRequest("DELETE", formData)} disabled={!isActive} className={`px-4 py-2 text-xs font-bold rounded transition-colors ${isActive ? "text-red-500 hover:bg-red-50 border border-red-100" : "text-gray-400 bg-gray-200 cursor-not-allowed"}`}>Request Delete</button>
                 ) : <div></div>}
                 <div className="flex gap-2">
                   <button onClick={() => setModalConfig({ ...modalConfig, isOpen: false })} className="px-4 py-2 text-xs font-bold text-gray-600 bg-gray-100 rounded hover:bg-gray-200">Cancel</button>
-                  {!formData.active && (
+                  {canEdit && !formData.active && (
                     <button onClick={handleSaveDraft} disabled={!isFormValid} className="px-4 py-2 text-xs font-bold text-blue-600 bg-blue-50 rounded hover:bg-blue-100 disabled:opacity-50">Save as Draft</button>
                   )}
-                  <button 
-                    onClick={() => handleSubmitRequest(modalConfig.mode === "ADD" ? "CREATE" : "UPDATE", formData)} 
-                    disabled={!isFormValid || !isActive} 
-                    className={`px-5 py-2 text-xs font-bold text-white shadow-sm rounded transition-colors ${(!isFormValid || !isActive) ? "bg-gray-400 cursor-not-allowed" : "bg-[#D68910] hover:bg-[#B9770E]"}`}
-                  >
-                    {modalConfig.mode === "ADD" ? "Save & Submit Request" : "Update & Submit Request"}
-                  </button>
+                  {canEdit && (
+                    <button 
+                      onClick={() => handleSubmitRequest(modalConfig.mode === "ADD" ? "CREATE" : "UPDATE", formData)} 
+                      disabled={!isFormValid || !isActive} 
+                      className={`px-5 py-2 text-xs font-bold text-white shadow-sm rounded transition-colors ${(!isFormValid || !isActive) ? "bg-gray-400 cursor-not-allowed" : "bg-[#D68910] hover:bg-[#B9770E]"}`}
+                    >
+                      {modalConfig.mode === "ADD" ? "Save & Submit Request" : "Update & Submit Request"}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

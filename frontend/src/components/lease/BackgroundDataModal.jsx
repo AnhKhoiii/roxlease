@@ -3,14 +3,14 @@ import React, { useState, useEffect } from "react";
 // ==========================================
 // THÀNH PHẦN HEADER & NÚT BẤM
 // ==========================================
-const Header = ({ title, onClose, onSave, mode }) => {
+const Header = ({ title, onClose, onSave, mode, canEdit }) => {
   return (
     <div className="flex items-center justify-between bg-[#EFB034] px-8 py-5 rounded-t-xl shrink-0">
       <h2 className="text-[22px] font-bold uppercase tracking-tight text-black">{title}</h2>
       <div className="flex items-center gap-3">
         
         {/* Nút Save and Add Another (Chỉ hiện khi đang ở chế độ Thêm mới) */}
-        {mode === "ADD" && (
+        {mode === "ADD" && canEdit && (
           <button 
             onClick={() => onSave(true)} 
             className="bg-white text-[#DE3B40] border border-[#DE3B40] hover:bg-red-50 px-5 py-2 rounded font-bold transition-colors shadow-sm text-sm"
@@ -20,12 +20,14 @@ const Header = ({ title, onClose, onSave, mode }) => {
         )}
 
         {/* Nút Save bình thường */}
-        <button 
-          onClick={() => onSave(false)} 
-          className="bg-[#DE3B40] hover:bg-[#C11C22] text-white px-8 py-2 rounded font-bold transition-colors shadow-sm text-sm"
-        >
-          Save
-        </button>
+        {canEdit && (
+          <button 
+            onClick={() => onSave(false)} 
+            className="bg-[#DE3B40] hover:bg-[#C11C22] text-white px-8 py-2 rounded font-bold transition-colors shadow-sm text-sm"
+          >
+            Save
+          </button>
+        )}
 
         {/* Nút Đóng (X) */}
         <button onClick={onClose} className="text-gray-800 hover:text-black transition-colors ml-3">
@@ -54,14 +56,15 @@ const Input = ({ label, value, onChange, disabled, error, type="text" }) => (
   </div>
 );
 
-const Checkbox = ({ label, checked, onChange }) => (
-  <label className="flex items-center gap-3 cursor-pointer select-none w-max mt-2">
+const Checkbox = ({ label, checked, onChange, disabled }) => (
+  <label className={`flex items-center gap-3 select-none w-max mt-2 ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
     <div className="relative flex items-center justify-center">
         <input 
           type="checkbox" 
           checked={checked || false} 
-          onChange={e => onChange(e.target.checked)} 
-          className="peer appearance-none w-5 h-5 border-2 border-gray-400 rounded-sm checked:bg-[#EFB034] checked:border-[#EFB034] transition-colors cursor-pointer"
+          onChange={e => !disabled && onChange(e.target.checked)} 
+          disabled={disabled}
+          className="peer appearance-none w-5 h-5 border-2 border-gray-400 rounded-sm checked:bg-[#EFB034] checked:border-[#EFB034] transition-colors cursor-pointer disabled:bg-gray-100 disabled:border-gray-300"
         />
         {/* Dấu tick SVG */}
         <svg className="absolute w-3.5 h-3.5 text-white pointer-events-none opacity-0 peer-checked:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3.5">
@@ -75,7 +78,7 @@ const Checkbox = ({ label, checked, onChange }) => (
 // ==========================================
 // MODAL CHÍNH
 // ==========================================
-export default function BackgroundDataModal({ isOpen, onClose, onSave, mode, initialData }) {
+export default function BackgroundDataModal({ isOpen, onClose, onSave, mode, initialData, canEdit = true }) {
   const [formData, setFormData] = useState({});
   const [errors, setErrors] = useState({});
 
@@ -117,7 +120,7 @@ export default function BackgroundDataModal({ isOpen, onClose, onSave, mode, ini
     <div className="fixed inset-0 z-[100] bg-black/50 flex justify-center items-center backdrop-blur-sm font-sans p-4">
       {/* Kích thước modal thu gọn lại 650px cho vừa vặn với 4 ô */}
       <div className="bg-white w-[800px] rounded-xl shadow-2xl flex flex-col animate-[fadeIn_0.2s_ease-out]">
-        <Header title={getModalTitle()} onClose={onClose} onSave={handleSaveAction} mode={mode} />
+        <Header title={getModalTitle()} onClose={onClose} onSave={handleSaveAction} mode={mode} canEdit={canEdit} />
         
         <div className="p-8 pb-10 flex-1">
             <div className="flex flex-col gap-6">
@@ -128,12 +131,13 @@ export default function BackgroundDataModal({ isOpen, onClose, onSave, mode, ini
                         label="Party ID *" 
                         value={formData.partyId} 
                         onChange={v => handleChange('partyId', v)} 
-                        disabled={mode === "EDIT"} 
+                        disabled={!canEdit || mode === "EDIT"} 
                         error={errors.partyId} 
                     />
                     <Input 
                         label="Party Name *" 
                         value={formData.partyName} 
+                        disabled={!canEdit}
                         onChange={v => handleChange('partyName', v)} 
                         error={errors.partyName} 
                     />
@@ -145,15 +149,18 @@ export default function BackgroundDataModal({ isOpen, onClose, onSave, mode, ini
                         label="Email" 
                         type="email"
                         value={formData.email} 
+                        disabled={!canEdit}
                         onChange={v => handleChange('email', v)} 
                     />
                     <Input 
                         label="Phone" 
                         value={formData.phone} 
+                        disabled={!canEdit}
                         onChange={v => handleChange('phone', v)} 
                     />
                     <Checkbox 
                         label="Is Landlord?" 
+                        disabled={!canEdit}
                         checked={formData.isLandlord} 
                         onChange={v => handleChange('isLandlord', v)} 
                     />

@@ -53,7 +53,7 @@ const getDisplayId = (c) => c?.recurringCostId || c?.id || c?._id;
 // ==========================================
 // MAIN COMPONENT
 // ==========================================
-export default function RecurringCostTab({ lease }) {
+export default function RecurringCostTab({ lease, canEdit = true }) {
   const leaseId = lease?.lsId; 
   const isActive = lease?.active === true;
   const [costs, setCosts] = useState([]);
@@ -302,13 +302,13 @@ export default function RecurringCostTab({ lease }) {
     <div className="flex flex-col h-full animate-[fadeIn_0.2s_ease-out]">
       <div className="flex justify-between items-center gap-2 mb-3">
         <div className="flex gap-2">
-          <button onClick={() => { setFormData(initialForm); setModal({ isOpen: true, mode: "ADD" }); }} className="bg-[#DE3B40] hover:bg-[#C11C22] text-white px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors">Add Cost</button>
-          <button disabled={selectedIds.length === 0} onClick={handleDelete} className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${selectedIds.length > 0 ? "bg-red-50 text-[#DE3B40] border border-[#DE3B40]" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}>Delete Selected</button>
+          <button onClick={() => { setFormData(initialForm); setModal({ isOpen: true, mode: "ADD" }); }} disabled={!canEdit} className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${canEdit ? "bg-[#DE3B40] hover:bg-[#C11C22] text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}>Add Cost</button>
+          <button disabled={selectedIds.length === 0 || !canEdit} onClick={handleDelete} className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${(selectedIds.length > 0 && canEdit) ? "bg-red-50 text-[#DE3B40] border border-[#DE3B40]" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}>Delete Selected</button>
         </div>
         <button 
           onClick={handleBulkSubmit} 
-          disabled={selectedIds.length === 0 || !isActive} 
-          className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${(selectedIds.length > 0 && isActive) ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
+          disabled={selectedIds.length === 0 || !isActive || !canEdit} 
+          className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${(selectedIds.length > 0 && isActive && canEdit) ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
         >
           Submit Request for Selected
         </button>
@@ -386,11 +386,11 @@ export default function RecurringCostTab({ lease }) {
                 
                 {/* ---------------- CỘT 1 ---------------- */}
                 <div className="flex flex-col gap-4 bg-white p-4 rounded shadow-sm border border-gray-200">
-                  <Input label="Recurring Cost ID" required value={formData.recurringCostId} onChange={v => setFormData({...formData, recurringCostId: v})} disabled={modal.mode === "EDIT"} placeholder="Enter Cost ID" />
+                  <Input label="Recurring Cost ID" required value={formData.recurringCostId} onChange={v => setFormData({...formData, recurringCostId: v})} disabled={!canEdit || modal.mode === "EDIT"} placeholder="Enter Cost ID" />
                   
-                  <Input label="Description" value={formData.description} onChange={v => setFormData({...formData, description: v})} />
+                  <Input label="Description" value={formData.description} onChange={v => setFormData({...formData, description: v})} disabled={!canEdit} />
                   
-                  <Select label="Cost Type" required value={formData.costType} onChange={v => setFormData({...formData, costType: v})} 
+                  <Select label="Cost Type" required value={formData.costType} disabled={!canEdit} onChange={v => setFormData({...formData, costType: v})} 
                     options={[
                       {value: 'BASERENT', label: 'Base Rent'}, 
                       {value: 'BASESERVICE', label: 'Base Service'}, 
@@ -403,26 +403,27 @@ export default function RecurringCostTab({ lease }) {
                     value={lease?.vatExcluded ? "" : formData.vatCountry} 
                     onChange={v => setFormData({...formData, vatCountry: v})} 
                     options={vatCountries.map(c => ({value: c.countryName, label: c.countryName}))} 
-                    disabled={lease?.vatExcluded} 
+                    disabled={!canEdit || lease?.vatExcluded} 
                   />
                   
                   <Input label="VAT (%)" value={computed.systemVat} disabled={true} placeholder="System Auto-filled" onChange={() => {}} />
                   
-                  <Input type="number" label="Exchange Rate Override" value={formData.exchangeRateOverrideVal} onChange={v => setFormData({...formData, exchangeRateOverrideVal: v})} disabled={!formData.overrideExchangeRate} />
-                  <Input type="number" label="VAT Percent Override (%)" value={formData.vatPercentOverrideVal} onChange={v => setFormData({...formData, vatPercentOverrideVal: v})} disabled={!formData.overrideVatPercent} />
-                  <Input type="number" label="VAT Amount Override" value={formData.vatAmountOverrideVal} onChange={v => setFormData({...formData, vatAmountOverrideVal: v})} disabled={!formData.overrideVatAmount} />
+                  <Input type="number" label="Exchange Rate Override" value={formData.exchangeRateOverrideVal} onChange={v => setFormData({...formData, exchangeRateOverrideVal: v})} disabled={!canEdit || !formData.overrideExchangeRate} />
+                  <Input type="number" label="VAT Percent Override (%)" value={formData.vatPercentOverrideVal} onChange={v => setFormData({...formData, vatPercentOverrideVal: v})} disabled={!canEdit || !formData.overrideVatPercent} />
+                  <Input type="number" label="VAT Amount Override" value={formData.vatAmountOverrideVal} onChange={v => setFormData({...formData, vatAmountOverrideVal: v})} disabled={!canEdit || !formData.overrideVatAmount} />
                 </div>
 
                 {/* ---------------- CỘT 2 ---------------- */}
                 <div className="flex flex-col gap-4 bg-white p-4 rounded shadow-sm border border-gray-200">
                   {/* 🚀 FIX LỖI 2: ĐÃ ĐỔI THÀNH formData.startDate VÀ formData.endDate CHUẨN */}
-                  <Input type="date" label="Start Date" disabled={formData.dateMatchLs} value={formData.dateMatchLs ? (lease?.startDate || "") : formData.startDate} onChange={v => setFormData({...formData, startDate: v})} />
-                  <Input type="date" label="End Date" disabled={formData.dateMatchLs} value={formData.dateMatchLs ? (lease?.endDate || "") : formData.endDate} onChange={v => setFormData({...formData, endDate: v})} />
+                  <Input type="date" label="Start Date" disabled={!canEdit || formData.dateMatchLs} value={formData.dateMatchLs ? (lease?.startDate || "") : formData.startDate} onChange={v => setFormData({...formData, startDate: v})} />
+                  <Input type="date" label="End Date" disabled={!canEdit || formData.dateMatchLs} value={formData.dateMatchLs ? (lease?.endDate || "") : formData.endDate} onChange={v => setFormData({...formData, endDate: v})} />
                   
                   <div className="bg-gray-50 border border-gray-200 p-2 rounded -mt-2">
                     {/* 🚀 FIX LỖI 3: KHI TÍCH VÀO CHECKBOX SẼ CẬP NHẬT THẲNG VÀO STATE MÀ KHÔNG BỊ RỖNG NGẦM */}
                     <Checkbox 
                       label="Date match lease?" 
+                      disabled={!canEdit}
                       checked={formData.dateMatchLs} 
                       onChange={v => setFormData({
                         ...formData, 
@@ -435,22 +436,22 @@ export default function RecurringCostTab({ lease }) {
 
                   <div className="border-t border-gray-200 pt-3 mt-1">
                     <h3 className="text-[11px] font-bold text-green-600 mb-2 uppercase">Income Flow</h3>
-                    <Input type="number" label="Amount Income - Base" value={formData.amountInBase} onChange={v => setFormData({...formData, amountInBase: v})} />
+                    <Input type="number" label="Amount Income - Base" disabled={!canEdit} value={formData.amountInBase} onChange={v => setFormData({...formData, amountInBase: v})} />
                     <Input type="number" label="Amount Income - VAT" disabled={true} value={computed.amountInVat} onChange={() => {}} />
                     <Input type="number" label="Amount Income - Total" disabled={true} value={computed.amountInTotal} onChange={() => {}} />
                   </div>
 
                   <div className="border-t border-gray-200 pt-3 mt-1 flex flex-col gap-2">
-                    <Checkbox label="Override Exchange Rate?" checked={formData.overrideExchangeRate} onChange={v => setFormData({...formData, overrideExchangeRate: v})} />
-                    <Checkbox label="Override VAT Percent?" checked={formData.overrideVatPercent} onChange={v => setFormData({...formData, overrideVatPercent: v})} />
-                    <Checkbox label="Override VAT Amount?" checked={formData.overrideVatAmount} onChange={v => setFormData({...formData, overrideVatAmount: v})} />
+                    <Checkbox label="Override Exchange Rate?" disabled={!canEdit} checked={formData.overrideExchangeRate} onChange={v => setFormData({...formData, overrideExchangeRate: v})} />
+                    <Checkbox label="Override VAT Percent?" disabled={!canEdit} checked={formData.overrideVatPercent} onChange={v => setFormData({...formData, overrideVatPercent: v})} />
+                    <Checkbox label="Override VAT Amount?" disabled={!canEdit} checked={formData.overrideVatAmount} onChange={v => setFormData({...formData, overrideVatAmount: v})} />
                   </div>
                 </div>
 
                 {/* ---------------- CỘT 3 ---------------- */}
                 <div className="flex flex-col gap-4 bg-white p-4 rounded shadow-sm border border-gray-200">
                   <Select label="Period" value={formData.period} onChange={v => setFormData({...formData, period: v})} 
-                    disabled={formData.active}
+                    disabled={!canEdit || formData.active}
                     options={[
                       {value: 'DAILY', label: 'Daily'},      
                       {value: 'WEEKLY', label: 'Weekly'}, 
@@ -460,7 +461,7 @@ export default function RecurringCostTab({ lease }) {
                     ]} 
                   />
                   
-                  <Input type="number" label="Interval" value={formData.interval} onChange={v => setFormData({...formData, interval: v})} disabled={formData.active} />
+                  <Input type="number" label="Interval" value={formData.interval} onChange={v => setFormData({...formData, interval: v})} disabled={!canEdit || formData.active} />
                   
                   <div className="bg-gray-50 border border-gray-200 p-2 rounded -mt-2 mb-2">
                     <Checkbox label="Active Status (Auto via Approval)" checked={formData.active} disabled={true} onChange={() => {}} />
@@ -468,7 +469,7 @@ export default function RecurringCostTab({ lease }) {
 
                   <div className="border-t border-gray-200 pt-3 flex flex-col gap-4 h-full">
                     <h3 className="text-[11px] font-bold text-red-600 uppercase">Expense Flow</h3>
-                    <Input type="number" label="Amount Expense - Base" value={formData.amountOutBase} onChange={v => setFormData({...formData, amountOutBase: v})} />
+                    <Input type="number" label="Amount Expense - Base" disabled={!canEdit} value={formData.amountOutBase} onChange={v => setFormData({...formData, amountOutBase: v})} />
                     <Input type="number" label="Amount Expense - VAT" disabled={true} value={computed.amountOutVat} onChange={() => {}} />
                     <Input type="number" label="Amount Expense - Total" disabled={true} value={computed.amountOutTotal} onChange={() => {}} />
                   </div>
@@ -480,16 +481,18 @@ export default function RecurringCostTab({ lease }) {
               <div className="flex justify-end items-center mt-6 pt-4 border-t border-gray-200">
                 <div className="flex gap-2">
                   <button onClick={() => setModal({ ...modal, isOpen: false })} className="px-5 py-2 text-xs font-bold text-gray-600 bg-gray-200 hover:bg-gray-300 rounded transition-colors">Cancel</button>
-                  {!formData.active && (
+                  {canEdit && !formData.active && (
                     <button onClick={handleSaveDraft} disabled={!isFormValid} className="px-4 py-2 text-xs font-bold text-blue-600 bg-blue-50 rounded hover:bg-blue-100 disabled:opacity-50 transition-colors">Save as Draft</button>
                   )}
-                  <button 
-                    onClick={() => handleSubmitRequest(modal.mode === "ADD" ? "CREATE" : "UPDATE", formData)} 
-                    disabled={!isFormValid || !isActive} 
-                    className={`px-6 py-2 text-xs font-bold text-white shadow-sm transition-colors rounded ${(!isFormValid || !isActive) ? "bg-gray-400 cursor-not-allowed" : "bg-[#D68910] hover:bg-[#B9770E]"}`}
-                  >
-                    {modal.mode === "ADD" ? "Save & Submit Request" : "Update & Submit Request"}
-                  </button>
+                  {canEdit && (
+                    <button 
+                      onClick={() => handleSubmitRequest(modal.mode === "ADD" ? "CREATE" : "UPDATE", formData)} 
+                      disabled={!isFormValid || !isActive} 
+                      className={`px-6 py-2 text-xs font-bold text-white shadow-sm transition-colors rounded ${(!isFormValid || !isActive) ? "bg-gray-400 cursor-not-allowed" : "bg-[#D68910] hover:bg-[#B9770E]"}`}
+                    >
+                      {modal.mode === "ADD" ? "Save & Submit Request" : "Update & Submit Request"}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

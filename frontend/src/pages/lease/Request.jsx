@@ -40,6 +40,9 @@ export default function Request() {
     document: "", comment: "", requestData: {} 
   });
 
+  const permissions = JSON.parse(localStorage.getItem('permissions') || '[]');
+  const canEdit = permissions.includes('LEASE_REQUEST_EDIT');
+
   // ==========================================
   // HÀM GỌI API (FETCH DATA)
   // ==========================================
@@ -222,7 +225,7 @@ export default function Request() {
           <button onClick={() => { setActiveTab("HISTORY"); setPageHistory(0); }} className={`px-6 py-2.5 text-[13px] font-bold rounded-t-md transition-colors ${activeTab === "HISTORY" ? "bg-white text-[#D68910] border-t-2 border-[#D68910] shadow-[0_-2px_4px_rgba(0,0,0,0.02)]" : "text-gray-600 hover:bg-gray-200"}`}>Request History</button>
         </div>
         
-        <button onClick={() => setIsAddOpen(true)} className="bg-[#DE3B40] hover:bg-[#C11C22] text-white px-5 py-1.5 rounded text-xs font-bold shadow-sm transition-colors mb-1">
+        <button onClick={() => setIsAddOpen(true)} disabled={!canEdit} className={`px-5 py-1.5 rounded text-xs font-bold shadow-sm transition-colors mb-1 ${canEdit ? "bg-[#DE3B40] hover:bg-[#C11C22] text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}>
           + Add New Request
         </button>
       </div>
@@ -340,8 +343,8 @@ export default function Request() {
 
                     {activeTab === "PENDING" ? (
                       <>
-                        <td className="px-2 py-2 border-r border-gray-50 text-center"><button onClick={() => handleApprove(item.id)} disabled={loading} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-full text-[10px] font-bold transition-colors w-full">Approve</button></td>
-                        <td className="px-2 py-2 border-r border-gray-50 text-center"><button onClick={() => handleOpenReject(item.id)} disabled={loading} className="bg-[#F9E79F] hover:bg-[#F4D03F] text-[#9C640C] px-4 py-1.5 rounded-full text-[10px] font-bold transition-colors w-full">Reject</button></td>
+                        <td className="px-2 py-2 border-r border-gray-50 text-center"><button onClick={() => handleApprove(item.id)} disabled={loading || !canEdit} className={`px-4 py-1.5 rounded-full text-[10px] font-bold transition-colors w-full ${canEdit ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}>Approve</button></td>
+                        <td className="px-2 py-2 border-r border-gray-50 text-center"><button onClick={() => handleOpenReject(item.id)} disabled={loading || !canEdit} className={`px-4 py-1.5 rounded-full text-[10px] font-bold transition-colors w-full ${canEdit ? "bg-[#F9E79F] hover:bg-[#F4D03F] text-[#9C640C]" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}>Reject</button></td>
                       </>
                     ) : (
                       <>

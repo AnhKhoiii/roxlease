@@ -23,6 +23,10 @@ export default function LeaseDetail() {
   // Kiểm tra xem Lease có gắn Amenity hay không
   const isAmenityLease = lease?.assocAmenity === true || !!lease?.amenityId || !!lease?.amenityID || (lease?.amenityIds && lease.amenityIds.length > 0);
 
+  // Phân quyền (RBAC) - Tự động disable chức năng Edit nếu canEdit = false
+  const permissions = JSON.parse(localStorage.getItem('permissions') || '[]');
+  const canEdit = permissions.includes('LEASE_CONSOLE_EDIT');
+
   const tabs = ["Contacts", "Recurring Costs", "Clauses", "Options", "Amendments"];
   if (lease && !isAmenityLease) {
     tabs.push("Suites");
@@ -150,7 +154,8 @@ export default function LeaseDetail() {
           <div className="flex gap-2">
             <button 
               onClick={() => setIsModalOpen(true)} // Mở Modal Edit
-              className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-1 rounded text-xs font-semibold shadow-sm transition-colors"
+              disabled={!canEdit}
+              className={`border px-4 py-1 rounded text-xs font-semibold shadow-sm transition-colors ${canEdit ? "bg-white border-gray-300 text-gray-700 hover:bg-gray-50" : "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"}`}
             >
               Edit
             </button>
@@ -209,12 +214,12 @@ export default function LeaseDetail() {
 
         <div className="p-3 flex-1 overflow-auto bg-white">
           {/* 4. CONTACTS TABLE */}
-          {activeTab === "Contacts" && <ContactsTab lease={lease} />}
-          {activeTab === "Clauses" && <ClausesTab lease={lease} />}
-          {activeTab === "Options" && <OptionsTab lease={lease} />}
-          {activeTab === "Amendments" && <AmendmentsTab lease={lease} />}
-          {activeTab === "Suites" && !isAmenityLease && <LeaseSuitesTab lease={lease} />}
-          {activeTab === "Recurring Costs" && <RecurringCostsTab lease={lease} />}
+          {activeTab === "Contacts" && <ContactsTab lease={lease} canEdit={canEdit} />}
+          {activeTab === "Clauses" && <ClausesTab lease={lease} canEdit={canEdit} />}
+          {activeTab === "Options" && <OptionsTab lease={lease} canEdit={canEdit} />}
+          {activeTab === "Amendments" && <AmendmentsTab lease={lease} canEdit={canEdit} />}
+          {activeTab === "Suites" && !isAmenityLease && <LeaseSuitesTab lease={lease} canEdit={canEdit} />}
+          {activeTab === "Recurring Costs" && <RecurringCostsTab lease={lease} canEdit={canEdit} />}
         </div>    
       </div>
 
@@ -226,6 +231,7 @@ export default function LeaseDetail() {
         mode="EDIT" 
         initialData={lease} 
         isLeaseActive={lease.active}
+        canEdit={canEdit}
       />
 
     </div>

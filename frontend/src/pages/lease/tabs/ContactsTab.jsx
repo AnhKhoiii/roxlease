@@ -23,7 +23,7 @@ const Input = ({ label, value, onChange, disabled, required, placeholder }) => (
 // ==========================================
 // MODAL COMPONENT
 // ==========================================
-const ContactModal = ({ isOpen, onClose, onSave, onDelete, mode, initialData, leaseId }) => {
+const ContactModal = ({ isOpen, onClose, onSave, onDelete, mode, initialData, leaseId, canEdit }) => {
   const [formData, setFormData] = useState({});
 
   useEffect(() => {
@@ -58,7 +58,7 @@ const ContactModal = ({ isOpen, onClose, onSave, onDelete, mode, initialData, le
             {mode === "ADD" ? "Add New Contact" : `Contact: ${formData.contactId || 'Edit'}`}
           </h2>
           <div className="flex gap-2 items-center">
-            {mode === "ADD" ? (
+            {mode === "ADD" && canEdit ? (
               <>
                 <button
                   onClick={() => handleSave(false)}
@@ -75,7 +75,7 @@ const ContactModal = ({ isOpen, onClose, onSave, onDelete, mode, initialData, le
                   Save and add another
                 </button>
               </>
-            ) : (
+            ) : canEdit ? (
               <>
                 <button
                   onClick={() => handleSave(false)}
@@ -91,7 +91,7 @@ const ContactModal = ({ isOpen, onClose, onSave, onDelete, mode, initialData, le
                   Delete
                 </button>
               </>
-            )}
+            ) : null}
             <button onClick={onClose} className="text-white hover:text-red-100 ml-2 transition-colors focus:outline-none">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -112,6 +112,7 @@ const ContactModal = ({ isOpen, onClose, onSave, onDelete, mode, initialData, le
             <Input 
               label="Contact Name" 
               value={formData.contactName} 
+              disabled={!canEdit}
               onChange={v => handleChange('contactName', v)} 
               required={true}
               placeholder="Enter contact name"
@@ -119,24 +120,28 @@ const ContactModal = ({ isOpen, onClose, onSave, onDelete, mode, initialData, le
             <Input 
               label="Company" 
               value={formData.company} 
+              disabled={!canEdit}
               onChange={v => handleChange('company', v)} 
               placeholder="Enter company"
             />
             <Input 
               label="Role" 
               value={formData.contactRole}
+              disabled={!canEdit}
               onChange={v => handleChange('contactRole', v)}
               placeholder="Enter role (e.g., Manager)"
             />
             <Input 
               label="Email" 
               value={formData.email} 
+              disabled={!canEdit}
               onChange={v => handleChange('email', v)} 
               placeholder="example@domain.com"
             />
             <Input 
               label="Phone" 
               value={formData.phone} 
+              disabled={!canEdit}
               onChange={v => handleChange('phone', v)} 
               placeholder="+1 234 567 890"
             />
@@ -150,7 +155,7 @@ const ContactModal = ({ isOpen, onClose, onSave, onDelete, mode, initialData, le
 // ==========================================
 // MAIN TAB COMPONENT
 // ==========================================
-export default function ContactsTab({ lease }) {
+export default function ContactsTab({ lease, canEdit = true }) {
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -273,15 +278,16 @@ export default function ContactsTab({ lease }) {
       <div className="flex justify-start gap-2 mb-3">
         <button 
           onClick={handleOpenAdd}
-          className="bg-[#DE3B40] hover:bg-[#C11C22] text-white px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors"
+          disabled={!canEdit}
+          className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${canEdit ? "bg-[#DE3B40] hover:bg-[#C11C22] text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
         >
           Add new
         </button>
         <button 
           onClick={handleDeleteSelected}
-          disabled={selectedIds.length === 0}
+          disabled={selectedIds.length === 0 || !canEdit}
           className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${
-            selectedIds.length > 0 
+            (selectedIds.length > 0 && canEdit) 
               ? "bg-[#DE3B40] hover:bg-[#C11C22] text-white" 
               : "bg-gray-200 text-gray-400 cursor-not-allowed"
           }`}
@@ -371,6 +377,7 @@ export default function ContactsTab({ lease }) {
         onClose={handleCloseModal}
         onSave={handleSaveContact}
         onDelete={handleDeleteSingle}
+        canEdit={canEdit}
       />
     </div>
   );

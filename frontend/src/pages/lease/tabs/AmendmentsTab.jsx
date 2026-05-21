@@ -65,7 +65,7 @@ const Checkbox = ({ label, checked, onChange, disabled }) => (
 // --- MAIN COMPONENT ---
 const BASE_URL = axiosInstance.defaults.baseURL ? axiosInstance.defaults.baseURL.replace(/\/api\/?$/, '') : 'http://localhost:8080';
 
-export default function AmendmentsTab({ lease }) {
+export default function AmendmentsTab({ lease, canEdit = true }) {
   const leaseId = lease?.lsId; 
   const isActive = lease?.active;
 
@@ -279,14 +279,15 @@ export default function AmendmentsTab({ lease }) {
         <div className="flex gap-2">
           <button 
             onClick={() => { setFormData(initialForm); setOriginalData(null); setModalConfig({ isOpen: true, mode: "ADD" }); }} 
-            className="bg-[#DE3B40] hover:bg-[#C11C22] text-white px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors"
+            disabled={!canEdit}
+            className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${canEdit ? "bg-[#DE3B40] hover:bg-[#C11C22] text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
           >
             Add Amendment
           </button>
           <button 
             onClick={handleDelete} 
-            disabled={selectedIds.length === 0} 
-            className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${selectedIds.length > 0 ? "bg-red-50 text-[#DE3B40] border border-[#DE3B40]" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}
+            disabled={selectedIds.length === 0 || !canEdit} 
+            className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${(selectedIds.length > 0 && canEdit) ? "bg-red-50 text-[#DE3B40] border border-[#DE3B40]" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}
           >
             Delete Selected
           </button>
@@ -294,8 +295,8 @@ export default function AmendmentsTab({ lease }) {
         
         <button 
           onClick={handleBulkSubmit} 
-          disabled={selectedIds.length === 0 || !isActive} 
-          className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${(selectedIds.length > 0 && isActive) ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
+          disabled={selectedIds.length === 0 || !isActive || !canEdit} 
+          className={`px-4 py-1.5 rounded text-xs font-bold shadow-sm transition-colors ${(selectedIds.length > 0 && isActive && canEdit) ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
         >
           Submit Request for Selected
         </button>
@@ -372,13 +373,14 @@ export default function AmendmentsTab({ lease }) {
                     required
                     value={formData.amendmentId} 
                     onChange={v => setFormData({...formData, amendmentId: v})} 
-                    disabled={modalConfig.mode === "EDIT"} 
+                    disabled={!canEdit || modalConfig.mode === "EDIT"} 
                     placeholder="Enter Amendment ID" 
                   />
                   <Textarea 
                     label="Description" 
                     required 
                     value={formData.description} 
+                    disabled={!canEdit}
                     onChange={v => setFormData({...formData, description: v})} 
                     placeholder="Describe the changes in this amendment..."
                   />
@@ -390,11 +392,11 @@ export default function AmendmentsTab({ lease }) {
                     <span className="font-bold text-[10px] uppercase text-gray-500 tracking-wider">Timeline & Status</span>
                   </div>
                   <div className="bg-white p-3 rounded border border-gray-200 flex flex-col gap-3 shadow-sm">
-                    <Input type="date" label="Requested Date" disabled={formData.dateMatchLs} value={formData.dateMatchLs ? (lease?.startDate || "") : formData.requestedDate} onChange={v => setFormData({...formData, requestedDate: v})} />
-                    <Input type="date" label="Effective Date" disabled={formData.dateMatchLs} value={formData.dateMatchLs ? (lease?.startDate || "") : formData.effectiveDate} onChange={v => setFormData({...formData, effectiveDate: v})} />
+                    <Input type="date" label="Requested Date" disabled={!canEdit || formData.dateMatchLs} value={formData.dateMatchLs ? (lease?.startDate || "") : formData.requestedDate} onChange={v => setFormData({...formData, requestedDate: v})} />
+                    <Input type="date" label="Effective Date" disabled={!canEdit || formData.dateMatchLs} value={formData.dateMatchLs ? (lease?.startDate || "") : formData.effectiveDate} onChange={v => setFormData({...formData, effectiveDate: v})} />
                   </div>
                   <div className="bg-white p-3 rounded border border-gray-200 mt-auto shadow-sm flex flex-col gap-2">
-                    <Checkbox label="Date match lease?" checked={formData.dateMatchLs} onChange={v => setFormData({...formData, dateMatchLs: v, requestedDate: v ? (lease?.startDate || "") : formData.requestedDate, effectiveDate: v ? (lease?.startDate || "") : formData.effectiveDate})} />
+                    <Checkbox label="Date match lease?" disabled={!canEdit} checked={formData.dateMatchLs} onChange={v => setFormData({...formData, dateMatchLs: v, requestedDate: v ? (lease?.startDate || "") : formData.requestedDate, effectiveDate: v ? (lease?.startDate || "") : formData.effectiveDate})} />
                     <Checkbox label="Active (Approved Status)" checked={formData.active} disabled={true} />
                   </div>
                 </div>
@@ -406,6 +408,7 @@ export default function AmendmentsTab({ lease }) {
                   </div>
                   <Select 
                     label="Exercised by" 
+                    disabled={!canEdit}
                     value={formData.exercisedBy} 
                     onChange={v => setFormData({...formData, exercisedBy: v})} 
                     options={[{value: 'LANDLORD', label: 'Landlord'}, {value: 'TENANT', label: 'Tenant'}, {value: 'MUTUAL', label: 'Mutual'}]} 
@@ -417,7 +420,7 @@ export default function AmendmentsTab({ lease }) {
                       <input 
                         type="file" 
                         onChange={handleFileUpload} 
-                        disabled={uploading} 
+                        disabled={uploading || !canEdit} 
                         className="block w-full text-[11px] text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-[11px] file:font-semibold file:bg-blue-50 file:text-blue-700 cursor-pointer hover:file:bg-blue-100 transition-colors" 
                       />
                       {uploading && <span className="text-xs text-orange-500 font-semibold animate-pulse">Uploading...</span>}
@@ -436,24 +439,26 @@ export default function AmendmentsTab({ lease }) {
               </div>
 
               <div className="flex justify-between items-center mt-3 pt-4 border-t border-gray-200">
-                {modalConfig.mode === "EDIT" ? (
+                {modalConfig.mode === "EDIT" && canEdit ? (
                   <button onClick={() => handleSubmitRequest("DELETE", formData)} disabled={!isActive} className={`px-4 py-2 text-xs font-bold rounded transition-colors ${isActive ? "text-red-500 hover:bg-red-50 border border-red-100" : "text-gray-400 bg-gray-200 cursor-not-allowed"}`}>Request Delete</button>
                 ) : <div></div>}
                 
                 <div className="flex gap-2">
                   <button onClick={() => setModalConfig({ ...modalConfig, isOpen: false })} className="px-5 py-2 text-xs font-bold text-gray-600 bg-white border border-gray-300 rounded hover:bg-gray-100 shadow-sm transition-colors">Cancel</button>
-                  {!formData.active && (
+                  {canEdit && !formData.active && (
                     <button onClick={handleSaveDraft} disabled={!isFormValid || loading} className="px-5 py-2 text-xs font-bold text-gray-800 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50 shadow-sm transition-colors">Save as Draft</button>
                   )}
 
                   {/* 🚀 KHÓA NÚT NÀY NẾU CHƯA ACTIVE HOẶC INVALID */}
-                  <button 
-                    onClick={() => handleSubmitRequest(modalConfig.mode === "ADD" ? "CREATE" : "UPDATE", formData)} 
-                    disabled={!isFormValid || !isActive || loading} 
-                    className={`px-5 py-2 text-xs font-bold text-white shadow-sm rounded transition-colors ${(!isFormValid || !isActive) ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
-                  >
-                    {modalConfig.mode === "ADD" ? "Save & Submit Request" : "Update & Submit Request"}
-                  </button>
+                  {canEdit && (
+                    <button 
+                      onClick={() => handleSubmitRequest(modalConfig.mode === "ADD" ? "CREATE" : "UPDATE", formData)} 
+                      disabled={!isFormValid || !isActive || loading} 
+                      className={`px-5 py-2 text-xs font-bold text-white shadow-sm rounded transition-colors ${(!isFormValid || !isActive) ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
+                    >
+                      {modalConfig.mode === "ADD" ? "Save & Submit Request" : "Update & Submit Request"}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

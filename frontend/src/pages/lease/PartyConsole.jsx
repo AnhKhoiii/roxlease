@@ -19,6 +19,9 @@ export default function BackgroundDataConsole() {
   
   const [notification, setNotification] = useState({ show: false, type: '', message: '' });
 
+  const permissions = JSON.parse(localStorage.getItem('permissions') || '[]');
+  const canEdit = permissions.includes('LEASE_PARTY_EDIT');
+
   const showToast = (type, message) => {
     setNotification({ show: true, type, message });
     setTimeout(() => setNotification({ show: false, type: '', message: '' }), 4000);
@@ -145,7 +148,7 @@ export default function BackgroundDataConsole() {
             <button onClick={fetchData} className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-5 py-2 rounded font-bold shadow-sm transition-colors text-[14px]">
               Refresh
             </button>
-            <button onClick={handleOpenAdd} className="bg-[#DE3B40] text-white hover:bg-[#C11C22] px-5 py-2 rounded font-bold shadow-sm transition-colors text-[14px]">
+            <button onClick={handleOpenAdd} disabled={!canEdit} className={`px-5 py-2 rounded font-bold shadow-sm transition-colors text-[14px] ${canEdit ? "bg-[#DE3B40] text-white hover:bg-[#C11C22]" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}>
               + Add new
             </button>
           </div>
@@ -204,6 +207,7 @@ export default function BackgroundDataConsole() {
         onSave={handleSaveModal} 
         mode={modalMode} 
         initialData={selectedData} 
+        canEdit={canEdit}
       />
 
       {notification.show && (
