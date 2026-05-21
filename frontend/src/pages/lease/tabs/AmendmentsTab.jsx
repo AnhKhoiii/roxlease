@@ -63,6 +63,8 @@ const Checkbox = ({ label, checked, onChange, disabled }) => (
 );
 
 // --- MAIN COMPONENT ---
+const BASE_URL = axiosInstance.defaults.baseURL ? axiosInstance.defaults.baseURL.replace(/\/api\/?$/, '') : 'http://localhost:8080';
+
 export default function AmendmentsTab({ lease }) {
   const leaseId = lease?.lsId; 
   const isActive = lease?.active;
@@ -81,7 +83,8 @@ export default function AmendmentsTab({ lease }) {
     requestedDate: "", 
     effectiveDate: "", 
     exercisedBy: "", 
-    documentUrl: "", 
+    docUrl: "", 
+    documentUrl: "",
     active: false,
     dateMatchLs: false
   };
@@ -119,7 +122,7 @@ export default function AmendmentsTab({ lease }) {
     setUploading(true);
     try {
       const res = await axiosInstance.post("/files/upload", uploadData, { headers: { "Content-Type": "multipart/form-data" }});
-      setFormData(prev => ({ ...prev, documentUrl: res.data.url }));
+      setFormData(prev => ({ ...prev, docUrl: res.data.url, documentUrl: res.data.url }));
     } catch (error) { 
       alert("Lỗi tải file đính kèm!"); 
     } finally { 
@@ -136,6 +139,13 @@ export default function AmendmentsTab({ lease }) {
     if (payload.requestedDate === "") payload.requestedDate = null;
     if (payload.effectiveDate === "") payload.effectiveDate = null;
     if (payload.exercisedBy === "") payload.exercisedBy = null;
+    
+    if (payload.docUrl || payload.documentUrl) {
+      const fileUrl = payload.docUrl || payload.documentUrl;
+      payload.docUrl = fileUrl;
+      payload.documentUrl = fileUrl;
+    }
+
     return payload;
   };
 
@@ -316,7 +326,7 @@ export default function AmendmentsTab({ lease }) {
                 return (
                   <tr 
                     key={rowId || idx} 
-                    onDoubleClick={() => { setFormData({...a}); setOriginalData({...a}); setModalConfig({ isOpen: true, mode: "EDIT" }); }} 
+                    onDoubleClick={() => { setFormData({...a, docUrl: a.docUrl || a.documentUrl, documentUrl: a.docUrl || a.documentUrl}); setOriginalData({...a, docUrl: a.docUrl || a.documentUrl, documentUrl: a.docUrl || a.documentUrl}); setModalConfig({ isOpen: true, mode: "EDIT" }); }} 
                     className={`cursor-pointer transition-colors ${isSelected ? "bg-blue-50/60" : "hover:bg-orange-50/50"}`}
                   >
                     <td className="px-3 py-2 text-center border-r border-gray-50">

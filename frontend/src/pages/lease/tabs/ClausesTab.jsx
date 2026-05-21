@@ -34,6 +34,8 @@ const Checkbox = ({ label, checked, onChange, disabled }) => (
 );
 
 // --- MAIN COMPONENT ---
+const BASE_URL = axiosInstance.defaults.baseURL ? axiosInstance.defaults.baseURL.replace(/\/api\/?$/, '') : 'http://localhost:8080';
+
 export default function ClausesTab({ lease }) {
   const leaseId = lease?.lsId; 
   const isActive = lease?.active;
@@ -49,7 +51,7 @@ export default function ClausesTab({ lease }) {
     clauseId: "", clauseType: "", description: "", 
     startDate: "", endDate: "", dateMatchLs: false, 
     responsibleParty: "", exercisedBy: "", 
-    documentUrl: "", active: false 
+    docUrl: "", documentUrl: "", active: false 
   };
   const [formData, setFormData] = useState(initialForm);
   const [originalData, setOriginalData] = useState(null); 
@@ -80,7 +82,7 @@ export default function ClausesTab({ lease }) {
     setUploading(true);
     try {
       const res = await axiosInstance.post("/files/upload", uploadData, { headers: { "Content-Type": "multipart/form-data" }});
-      setFormData(prev => ({ ...prev, documentUrl: res.data.url }));
+      setFormData(prev => ({ ...prev, docUrl: res.data.url, documentUrl: res.data.url }));
     } catch (error) { alert("Error uploading attachment!"); } 
     finally { setUploading(false); }
   };
@@ -89,6 +91,12 @@ export default function ClausesTab({ lease }) {
     const payload = { ...data };
     if (payload.startDate === "") payload.startDate = null;
     if (payload.endDate === "") payload.endDate = null;
+
+    if (payload.docUrl || payload.documentUrl) {
+      const fileUrl = payload.docUrl || payload.documentUrl;
+      payload.docUrl = fileUrl;
+      payload.documentUrl = fileUrl;
+    }
     return payload;
   };
 
@@ -232,7 +240,7 @@ export default function ClausesTab({ lease }) {
                 const rowId = c.clauseId || c.id;
                 const isSelected = selectedIds.includes(rowId);
                 return (
-                  <tr key={rowId || idx} onDoubleClick={() => { setFormData({...c}); setOriginalData({...c}); setModalConfig({ isOpen: true, mode: "EDIT" }); }} className={`cursor-pointer transition-colors ${isSelected ? "bg-blue-50/60" : "hover:bg-orange-50/50"}`}>
+                <tr key={rowId || idx} onDoubleClick={() => { setFormData({...c, docUrl: c.docUrl || c.documentUrl, documentUrl: c.docUrl || c.documentUrl}); setOriginalData({...c, docUrl: c.docUrl || c.documentUrl, documentUrl: c.docUrl || c.documentUrl}); setModalConfig({ isOpen: true, mode: "EDIT" }); }} className={`cursor-pointer transition-colors ${isSelected ? "bg-blue-50/60" : "hover:bg-orange-50/50"}`}>
                     <td className="px-3 py-2 text-center border-r border-gray-50"><input type="checkbox" checked={isSelected} onChange={(e) => handleSelectRow(e, rowId)} onClick={e => e.stopPropagation()} className="w-3.5 h-3.5 rounded accent-blue-600 cursor-pointer" /></td>
                     <td className="px-4 py-2 font-bold text-gray-800 border-r border-gray-50">{rowId}</td>
                     
@@ -243,7 +251,7 @@ export default function ClausesTab({ lease }) {
                     <td className="px-4 py-2 text-gray-700 border-r border-gray-50">{c.endDate || "-"}</td>
                     <td className="px-4 py-2 font-semibold text-gray-600 border-r border-gray-50">{c.responsibleParty || "-"}</td>
                     <td className="px-4 py-2 text-gray-700 border-r border-gray-50 truncate max-w-[200px]">{c.description}</td>
-                    <td className="px-4 py-2 text-center border-r border-gray-50">{c.documentUrl ? <a href={`http://localhost:8080${c.documentUrl}`} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="text-blue-500 underline font-semibold">View</a> : "-"}</td>
+                    <td className="px-4 py-2 text-center border-r border-gray-50">{(c.docUrl || c.documentUrl) ? <a href={`${BASE_URL}${c.docUrl || c.documentUrl}`} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="text-blue-500 underline font-semibold">View</a> : "-"}</td>
                     <td className="px-4 py-2 text-center"><input type="checkbox" checked={c.active} readOnly className="w-3.5 h-3.5 rounded accent-blue-600" /></td>
                   </tr>
                 );
@@ -309,7 +317,7 @@ export default function ClausesTab({ lease }) {
                       <input type="file" onChange={handleFileUpload} disabled={uploading} className="block w-full text-[11px] text-gray-500 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-[11px] file:font-semibold file:bg-blue-50 file:text-blue-700 cursor-pointer hover:file:bg-blue-100 transition-colors" />
                       {uploading && <span className="text-xs text-orange-500 font-semibold animate-pulse">Uploading...</span>}
                     </div>
-                    {formData.documentUrl && <p className="text-[10px] mt-2 text-gray-500">File: <a href={`http://localhost:8080${formData.documentUrl}`} target="_blank" rel="noreferrer" className="text-blue-600 underline">Download/View</a></p>}
+                    {(formData.docUrl || formData.documentUrl) && <p className="text-[10px] mt-2 text-gray-500">File: <a href={`${BASE_URL}${formData.docUrl || formData.documentUrl}`} target="_blank" rel="noreferrer" className="text-blue-600 underline">Download/View</a></p>}
                   </div>
                 </div>
 

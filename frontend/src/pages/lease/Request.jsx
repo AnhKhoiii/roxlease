@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import axiosInstance from "../../api/axiosInstance";
 
+const BASE_URL = axiosInstance.defaults.baseURL ? axiosInstance.defaults.baseURL.replace(/\/api\/?$/, '') : 'http://localhost:8080';
+
 export default function Request() {
   // ==========================================
   // STATE QUẢN LÝ DỮ LIỆU & PHÂN TRANG
@@ -332,7 +334,7 @@ export default function Request() {
                     
                     <td className="px-4 py-2 border-r border-gray-50 text-center">
                       {item.document ? (
-                        <a href={`http://localhost:8080${item.document}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:text-blue-800 font-bold underline bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded transition-colors inline-block">Tải File</a>
+                        <a href={`${BASE_URL}${item.document}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:text-blue-800 font-bold underline bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded transition-colors inline-block">Tải File</a>
                       ) : "-"}
                     </td>
 

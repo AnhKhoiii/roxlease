@@ -34,6 +34,8 @@ const Checkbox = ({ label, checked, onChange, disabled }) => (
 );
 
 // --- MAIN COMPONENT ---
+const BASE_URL = axiosInstance.defaults.baseURL ? axiosInstance.defaults.baseURL.replace(/\/api\/?$/, '') : 'http://localhost:8080';
+
 export default function OptionsTab({ lease }) {
   const leaseId = lease?.lsId; 
   const isActive = lease?.active === true;
@@ -48,7 +50,7 @@ export default function OptionsTab({ lease }) {
   const initialForm = {
     opId: "", opDescription: "", opType: "", suiteId: "", issueDate: "",
     dateMatchLs: false, startDate: "", endDate: "", exercisedBy: "",
-    areaInvolved: "", docUrl: "", active: false
+    areaInvolved: "", docUrl: "", documentUrl: "", active: false
   };
   const [formData, setFormData] = useState(initialForm);
   const [originalData, setOriginalData] = useState(null); 
@@ -90,7 +92,7 @@ export default function OptionsTab({ lease }) {
     setUploading(true);
     try {
       const res = await axiosInstance.post("/files/upload", uploadData, { headers: { "Content-Type": "multipart/form-data" }});
-      setFormData(prev => ({ ...prev, docUrl: res.data.url }));
+      setFormData(prev => ({ ...prev, docUrl: res.data.url, documentUrl: res.data.url }));
     } catch (error) { alert("Error uploading attachment!"); } 
     finally { setUploading(false); }
   };
@@ -109,6 +111,12 @@ export default function OptionsTab({ lease }) {
     if (payload.suiteId === "") payload.suiteId = null;
     if (payload.areaInvolved === "") payload.areaInvolved = null;
     else payload.areaInvolved = Number(payload.areaInvolved);
+
+    if (payload.docUrl || payload.documentUrl) {
+      const fileUrl = payload.docUrl || payload.documentUrl;
+      payload.docUrl = fileUrl;
+      payload.documentUrl = fileUrl;
+    }
     return payload;
   };
 
@@ -254,14 +262,14 @@ export default function OptionsTab({ lease }) {
                   const rowId = opt.opId || opt.id;
                   const isSelected = selectedIds.includes(rowId);
                   return (
-                    <tr key={rowId || idx} onDoubleClick={() => { setFormData({...opt}); setOriginalData({...opt}); setModalConfig({ isOpen: true, mode: "EDIT" }); }} className={`cursor-pointer transition-colors group ${isSelected ? "bg-blue-50" : "hover:bg-orange-50/50"}`}>
+                    <tr key={rowId || idx} onDoubleClick={() => { setFormData({...opt, docUrl: opt.docUrl || opt.documentUrl, documentUrl: opt.docUrl || opt.documentUrl}); setOriginalData({...opt, docUrl: opt.docUrl || opt.documentUrl, documentUrl: opt.docUrl || opt.documentUrl}); setModalConfig({ isOpen: true, mode: "EDIT" }); }} className={`cursor-pointer transition-colors group ${isSelected ? "bg-blue-50" : "hover:bg-orange-50/50"}`}>
                       <td className="px-3 py-2 text-center border-r border-gray-50"><input type="checkbox" checked={isSelected} onChange={(e) => handleSelectRow(e, rowId)} onClick={(e) => e.stopPropagation()} className="w-3.5 h-3.5 rounded" /></td>
                       <td className="px-4 py-2 text-gray-700 border-r border-gray-50">{rowId || "-"}</td>
                       <td className="px-4 py-2 font-semibold text-blue-600 border-r border-gray-50">{opt.opType}</td>
                       <td className="px-4 py-2 text-gray-700 border-r border-gray-50 truncate max-w-[150px]">{opt.opDescription}</td>
                       <td className="px-4 py-2 text-gray-700 border-r border-gray-50">{opt.startDate || "-"}</td>
                       <td className="px-4 py-2 text-gray-700 border-r border-gray-50">{opt.endDate || "-"}</td>
-                      <td className="px-4 py-2 text-center border-r border-gray-50">{opt.docUrl ? <a href={`http://localhost:8080${opt.docUrl}`} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="text-blue-500 underline font-semibold">Download</a> : "-"}</td>
+                      <td className="px-4 py-2 text-center border-r border-gray-50">{(opt.docUrl || opt.documentUrl) ? <a href={`${BASE_URL}${opt.docUrl || opt.documentUrl}`} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="text-blue-500 underline font-semibold">Download</a> : "-"}</td>
                       <td className="px-4 py-2 text-center"><input type="checkbox" checked={opt.active} readOnly className="w-3.5 h-3.5 rounded accent-blue-600 cursor-default" onClick={e => e.stopPropagation()} /></td>
                     </tr>
                   );
@@ -309,7 +317,7 @@ export default function OptionsTab({ lease }) {
                       <input type="file" onChange={handleFileUpload} disabled={uploading} className="block w-full text-[11px] text-gray-500 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-[11px] file:font-semibold file:bg-blue-50 file:text-blue-700 cursor-pointer" />
                       {uploading && <span className="text-xs text-orange-500 font-semibold">Uploading...</span>}
                     </div>
-                    {formData.docUrl && <p className="text-[10px] mt-1.5 text-gray-500">Current: <a href={`http://localhost:8080${formData.docUrl}`} target="_blank" rel="noreferrer" className="text-blue-600 underline">Download</a></p>}
+                    {(formData.docUrl || formData.documentUrl) && <p className="text-[10px] mt-1.5 text-gray-500">Current: <a href={`${BASE_URL}${formData.docUrl || formData.documentUrl}`} target="_blank" rel="noreferrer" className="text-blue-600 underline">Download</a></p>}
                   </div>
                 </div>
               </div>

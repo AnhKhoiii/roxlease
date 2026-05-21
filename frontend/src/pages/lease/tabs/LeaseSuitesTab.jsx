@@ -27,6 +27,8 @@ const Checkbox = ({ label, checked, onChange, disabled }) => (
 );
 
 // --- MAIN COMPONENT ---
+const BASE_URL = axiosInstance.defaults.baseURL ? axiosInstance.defaults.baseURL.replace(/\/api\/?$/, '') : 'http://localhost:8080';
+
 export default function LeaseSuitesTab({ lease }) {
   const leaseId = lease?.lsId; 
   const isActive = lease?.active === true;
@@ -40,7 +42,7 @@ export default function LeaseSuitesTab({ lease }) {
   
   const [modalConfig, setModalConfig] = useState({ isOpen: false, mode: "ADD" });
 
-  const initialForm = { lsSuId: "", suId: "", floorId: "", dateStart: "", dateEnd: "", docUrl: "", active: false, dateMatchLs: false };
+  const initialForm = { lsSuId: "", suId: "", floorId: "", dateStart: "", dateEnd: "", docUrl: "", documentUrl: "", active: false, dateMatchLs: false };
   const [formData, setFormData] = useState(initialForm);
   const [originalData, setOriginalData] = useState(null);
 
@@ -93,7 +95,7 @@ export default function LeaseSuitesTab({ lease }) {
     setUploading(true);
     try {
       const res = await axiosInstance.post("/files/upload", uploadData, { headers: { "Content-Type": "multipart/form-data" }});
-      setFormData(prev => ({ ...prev, docUrl: res.data.url }));
+      setFormData(prev => ({ ...prev, docUrl: res.data.url, documentUrl: res.data.url }));
     } catch (error) { alert("Lỗi upload file!"); } 
     finally { setUploading(false); }
   };
@@ -108,6 +110,12 @@ export default function LeaseSuitesTab({ lease }) {
     if (payload.floorId === "") payload.floorId = null;
     if (payload.dateStart === "") payload.dateStart = null;
     if (payload.dateEnd === "") payload.dateEnd = null;
+
+    if (payload.docUrl || payload.documentUrl) {
+      const fileUrl = payload.docUrl || payload.documentUrl;
+      payload.docUrl = fileUrl;
+      payload.documentUrl = fileUrl;
+    }
     return payload;
   };
 
@@ -283,13 +291,13 @@ export default function LeaseSuitesTab({ lease }) {
               const detail = getSuiteDetails(ls.suId);
             const isSelected = selectedIds.includes(rowId);
               return (
-              <tr key={rowId || idx} onDoubleClick={() => { const data = {...ls, floorId: detail.floorId || detail.flId || ""}; setFormData(data); setOriginalData(data); setModalConfig({ isOpen: true, mode: "EDIT" }); }} className={`cursor-pointer transition-colors ${isSelected ? "bg-blue-50" : "hover:bg-orange-50/50"}`}>
+              <tr key={rowId || idx} onDoubleClick={() => { const data = {...ls, floorId: detail.floorId || detail.flId || "", docUrl: ls.docUrl || ls.documentUrl, documentUrl: ls.docUrl || ls.documentUrl}; setFormData(data); setOriginalData(data); setModalConfig({ isOpen: true, mode: "EDIT" }); }} className={`cursor-pointer transition-colors ${isSelected ? "bg-blue-50" : "hover:bg-orange-50/50"}`}>
                 <td className="px-3 py-2 text-center border-r border-gray-50"><input type="checkbox" checked={isSelected} onChange={(e) => handleSelectRow(e, rowId)} onClick={(e) => e.stopPropagation()} disabled={!rowId} className="w-3.5 h-3.5 rounded disabled:opacity-50" /></td>
                   <td className="px-4 py-2 font-semibold text-blue-600 border-r border-gray-50">{ls.suId}</td>
                   <td className="px-4 py-2 text-gray-700 border-r border-gray-50">{detail.floorId || detail.flId || "-"}</td>
                   <td className="px-4 py-2 text-gray-700 border-r border-gray-50">{ls.dateStart || "-"}</td>
                   <td className="px-4 py-2 text-gray-700 border-r border-gray-50">{ls.dateEnd || "-"}</td>
-                  <td className="px-4 py-2 text-center border-r border-gray-50">{ls.docUrl ? <a href={`http://localhost:8080${ls.docUrl}`} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="text-blue-500 hover:text-blue-700 font-semibold underline">Download</a> : "-"}</td>
+                  <td className="px-4 py-2 text-center border-r border-gray-50">{(ls.docUrl || ls.documentUrl) ? <a href={`${BASE_URL}${ls.docUrl || ls.documentUrl}`} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="text-blue-500 hover:text-blue-700 font-semibold underline">Download</a> : "-"}</td>
                   <td className="px-4 py-2 text-center"><input type="checkbox" checked={ls.active} readOnly className="w-3.5 h-3.5 rounded accent-blue-600" /></td>
                 </tr>
               );
@@ -328,7 +336,7 @@ export default function LeaseSuitesTab({ lease }) {
                   <input type="file" onChange={handleFileUpload} disabled={uploading} className="block w-full text-[11px] text-gray-500 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-[11px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 border border-gray-300 rounded cursor-pointer" />
                   {uploading && <span className="text-xs text-orange-500 font-semibold animate-pulse">Uploading...</span>}
                 </div>
-                {formData.docUrl && <p className="text-[10px] mt-1.5 text-gray-500">Current file: <a href={`http://localhost:8080${formData.docUrl}`} target="_blank" rel="noreferrer" className="text-blue-600 underline">Download/View</a></p>}
+                {(formData.docUrl || formData.documentUrl) && <p className="text-[10px] mt-1.5 text-gray-500">Current file: <a href={`${BASE_URL}${formData.docUrl || formData.documentUrl}`} target="_blank" rel="noreferrer" className="text-blue-600 underline">Download/View</a></p>}
               </div>
               <div className="flex flex-col gap-2 bg-white p-3 rounded border border-gray-200">
                 <Checkbox label="Date match lease?" checked={formData.dateMatchLs} onChange={v => setFormData({...formData, dateMatchLs: v, dateStart: v ? (lease?.startDate || "") : formData.dateStart, dateEnd: v ? (lease?.endDate || "") : formData.dateEnd})} />
