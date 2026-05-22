@@ -23,6 +23,15 @@
 * **Quản lý Role:** Tạo các vai trò (VD: System Admin, Space Manager) và gắn cờ System Role. Ngăn chặn xóa Role nếu đang có người dùng sử dụng.
 * **Quản lý Permission:** Tạo các mã quyền tự động generate theo chuẩn (VD: `SYSTEM_USER_EDIT`).
 
+### Quản lý Không gian (Space Management)
+* **Cấu trúc Bất động sản:** Quản lý hệ thống tài sản theo mô hình phân cấp: Site ➔ Building ➔ Floor ➔ Room/Suite.
+* **Tự động đồng bộ Diện tích:** Tính toán diện tích theo thời gian thực từ Room/Suite lên Floor (GFA, NFA). Trích xuất và phân tích tự động thông số diện tích (Area Gross Internal/External) trực tiếp từ dữ liệu hệ tọa độ đa giác bản vẽ (Drawing JSON).
+* **Tính năng theo dõi:** Cung cấp Giao diện điều khiển (Space Console), theo dõi hiệu suất tòa nhà (Building Performance), và hệ thống dữ liệu nền (Background Data).
+
+### Quản lý Cho thuê (Lease Management)
+* **Vòng đời Thuê & Hợp đồng:** Xử lý toàn bộ quy trình thuê với Lease Console, Khởi tạo Yêu cầu thuê (Lease Request), Tiện ích ước tính chi phí (Cost Wizard), và Hệ thống Báo cáo (Reports).
+* **Quản lý Danh bạ Hợp đồng:** Lưu trữ và truy vấn danh sách thông tin liên hệ (Contact) gắn kết trực tiếp với từng mã Hợp đồng (Lease ID).
+
 ---
 
 ## Công nghệ sử dụng (Tech Stack)
@@ -74,10 +83,15 @@
    spring.mail.password=your-app-password
    spring.mail.properties.mail.smtp.auth=true
    spring.mail.properties.mail.smtp.starttls.enable=true
+
+   # Giới hạn dung lượng File Upload
+   spring.servlet.multipart.max-file-size=50MB
+   spring.servlet.multipart.max-request-size=50MB
+   ```
+
 * Chạy lệnh cài đặt thư viện và khởi động Server:
 
-```
-Bash
+```bash
 mvn clean install
 mvn spring-boot:run
 ```
@@ -86,20 +100,17 @@ mvn spring-boot:run
 
 3. Cài đặt Frontend (ReactJS)
 * Mở một terminal mới, di chuyển vào thư mục frontend:
-```
-Bash
+```bash
 cd frontend
 ```
 * Cài đặt các package phụ thuộc:
-``
-Bash
+```bash
 npm install
 ```
 * Khởi động môi trường dev:
-```
-Bash
+```bash
 npm run dev
-``
+```
 Giao diện Web sẽ chạy tại: http://localhost:5173
 
 * Khởi tạo Dữ liệu (Seeding Data)
@@ -136,7 +147,11 @@ frontend/src/
 │       └── PermissionModal.jsx
 ├── layouts/
 │   ├── DashboardLayout.jsx
-│   └── SystemLayout.jsx
+│   ├── SystemLayout.jsx
+│   ├── lease/
+│   │   └── LeaseLayout.jsx
+│   └── space/
+│       └── SpaceLayout.jsx
 ├── pages/
 │   ├── auth/
 │   │   ├── Login.jsx
@@ -146,11 +161,16 @@ frontend/src/
 │   │   ├── UserManagement.jsx
 │   │   ├── RoleManagement.jsx
 │   │   └── ...
-│   └── space/ (Để trống)
+│   ├── space/
+│   │   ├── SpaceConsole.jsx
+│   │   ├── BuildingPerformance.jsx
+│   │   └── ...
+│   └── lease/
+│       ├── LeaseConsole.jsx
+│       ├── LeaseRequest.jsx
+│       ├── CostWizard.jsx
+│       └── ...
 ├── App.jsx
 └── main.jsx
-<<<<<<< HEAD
-```
-=======
 ```
 >>>>>>> 533f49a8cd5d483fcc58f07b17163cb47b8c1f24
