@@ -139,6 +139,27 @@ export default function PropertyConsole() {
       const dxfFile = formData.dxfFile;
       delete formData.dxfFile; 
 
+      if (activeTab === 'floor' && dxfFile && isEdit) {
+        try {
+          const suiteRes = await axiosInstance.get(`/space/properties/suites?floorId=${formData.flId}`);
+          const floorSuites = suiteRes.data || [];
+          
+          if (floorSuites.length > 0) {
+            const activeSuiteRes = await axiosInstance.get('/lease/requests/active-suites');
+            const activeSuiteIds = activeSuiteRes.data || [];
+            
+            const hasActiveSuite = floorSuites.some(s => activeSuiteIds.includes(s.suiteId));
+            
+            if (hasActiveSuite) {
+              showToast('error', 'Cannot update DXF file because this floor has at least one active lease suite.');
+              return;
+            }
+          }
+        } catch (err) {
+          console.warn("Failed to check active suites for floor:", err);
+        }
+      }
+
       if (isEdit) {
         await axiosInstance.put(`${endpoint}/${formData[idField]}`, formData);
       } else {

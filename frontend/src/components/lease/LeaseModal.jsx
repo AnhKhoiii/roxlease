@@ -193,7 +193,6 @@ export default function LeaseModal({ isOpen, onClose, onSave, mode, initialData,
     if (!formData.lsId) { alert("Lease Code (lsId) is required!"); return; }
 
     const payload = { ...formData };
-    payload.signedDate = payload.signedDate ? new Date(payload.signedDate).toISOString() : null;
     Object.keys(payload).forEach(key => {
       const value = payload[key];
       if (value === "") payload[key] = null;

@@ -1180,7 +1180,7 @@ public class LeaseDashboardService {
         if (catStr == null) return false;
         
         String cUpper = catStr.toUpperCase().replace(" ", "").replace("_", "");
-        boolean isRent = cUpper.contains(KEY_RENT) || cUpper.contains("BASERENT") || cUpper.contains("RENTAL") || cUpper.equals("OCC") || cUpper.contains("OCCUPANCY");
+        boolean isRent = cUpper.contains(KEY_RENT) || cUpper.contains("BASERENT") || cUpper.contains("RENTAL");
         boolean isService = cUpper.equals("BASESERVICE") || cUpper.contains("INCOMEBASESERVICE") || cUpper.equals("SERVICE");
         
         if (category == RevenueCategory.CONTRACT) {
