@@ -31,3 +31,14 @@ build/
 
 ### VS Code ###
 .vscode/
+
+uploads/*
+docs/*
+.agents/*
+
+!docs/flows/
+docs/flows/*
+!docs/flows/ocr.md
+!docs/ocr/
+docs/ocr/*
+!docs/ocr/office-lease-all-fields.template.json

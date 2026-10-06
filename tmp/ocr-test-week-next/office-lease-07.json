@@ -1,0 +1,1234 @@
+{
+  "synthetic": true,
+  "sampleId": "OCR-07",
+  "contractNumber": "HDVP-2026-007",
+  "ourRole": "TENANT",
+  "matchedContractSide": "B",
+  "expectedOCRResult": {
+    "ourRole": "TENANT",
+    "matchedContractSide": "B",
+    "counterparty": "partyA"
+  },
+  "partyA": {
+    "name": "Công ty TNHH Cao Ốc Phương Nam",
+    "taxCode": "0319999107",
+    "registeredAddress": "18 đường Mẫu Số, phường Bến Thành, TP. Hồ Chí Minh",
+    "mailingAddress": "18 đường Mẫu Số, phường Bến Thành, TP. Hồ Chí Minh",
+    "representative": "Bùi Đức Huy",
+    "representativeTitle": "Giám đốc",
+    "identityDocument": "079099000107",
+    "phone": "0900000206",
+    "email": "huy@phuongnam.example",
+    "bankAccount": "000000020007",
+    "bankName": "Ngân hàng Mẫu Việt Nam"
+  },
+  "partyB": {
+    "name": "Công ty TNHH RoxLease Dữ Liệu Mẫu",
+    "taxCode": "0319999001",
+    "registeredAddress": "Tầng 6, số 18 đường Mẫu Số, phường Bến Thành, TP. Hồ Chí Minh",
+    "mailingAddress": "Tầng 6, số 18 đường Mẫu Số, phường Bến Thành, TP. Hồ Chí Minh",
+    "representative": "Nguyễn Minh An",
+    "representativeTitle": "Giám đốc",
+    "identityDocument": "079099000001",
+    "phone": "0900000101",
+    "email": "ops@roxlease.example",
+    "bankAccount": "000000010001",
+    "bankName": "Ngân hàng Mẫu Việt Nam"
+  },
+  "signingDate": "2026-07-15",
+  "signingPlace": "TP. Hồ Chí Minh",
+  "premises": {
+    "address": "63 đường Mã Hóa, phường Cầu Giấy, TP. Hà Nội",
+    "project": "Phương Nam House",
+    "building": "Tòa Nam",
+    "floor": "15",
+    "suite": "15G07",
+    "leasedAreaSqm": 84.25,
+    "usableAreaSqm": 80.0,
+    "corridorAreaSqm": 4.25,
+    "negotiatedAreaSqm": 82.0,
+    "purpose": "Văn phòng hỗ trợ kỹ thuật",
+    "drawingReference": "PL-07-2026-A",
+    "leaseType": "Thuê chính",
+    "parentContract": "Không áp dụng - thuê trực tiếp",
+    "amenities": [
+      "Thẻ ra vào",
+      "Phòng họp dùng chung",
+      "Chỗ để xe máy"
+    ]
+  },
+  "term": {
+    "handoverDate": "2026-08-22",
+    "startDate": "2026-09-01",
+    "endDate": "2028-09-28",
+    "rentFree": "Không áp dụng",
+    "rentCondition": "Bắt đầu tính tiền thuê từ ngày kết thúc thời gian miễn tiền thuê hoặc ngày bắt đầu thuê, tùy ngày nào đến sau."
+  },
+  "payment": {
+    "currency": "VND",
+    "rentUnit": "Đơn giá cố định theo m²/tháng; thanh toán hàng tháng",
+    "rentPerSqm": "375.000",
+    "servicePerSqm": "60.000",
+    "initialRent": "30.750.000 VND",
+    "vatIncluded": "Chưa bao gồm thuế GTGT",
+    "vatRate": "10%",
+    "deposit": "92.250.000 VND",
+    "depositDueDate": "20/07/2026",
+    "prepaidPeriods": 1,
+    "period": "hàng tháng",
+    "dueDay": "05 ngày đầu mỗi kỳ",
+    "method": "Chuyển khoản",
+    "beneficiary": "Công ty TNHH Cao Ốc Phương Nam",
+    "beneficiaryAccount": "000000020007",
+    "beneficiaryBank": "Ngân hàng Mẫu Việt Nam",
+    "rentAdjustment": "Mỗi 12 tháng, tăng tối đa 5% theo thỏa thuận bằng văn bản.",
+    "fxSource": "Không áp dụng; thanh toán bằng VND."
+  },
+  "recurringCosts": [
+    {
+      "name": "Phí quản lý và vệ sinh",
+      "amount": "60,000 VND/m²/tháng",
+      "vat": "10%",
+      "period": "Hàng tháng",
+      "payer": "Bên B"
+    },
+    {
+      "name": "Điện sử dụng chung",
+      "amount": "330,000 VND/tháng",
+      "vat": "8%",
+      "period": "Hàng tháng theo chỉ số",
+      "payer": "Bên B"
+    },
+    {
+      "name": "Phí gửi xe",
+      "amount": "310,000 VND/chỗ/tháng",
+      "vat": "10%",
+      "period": "Hàng tháng",
+      "payer": "Bên B"
+    }
+  ],
+  "actualUtilities": "Điện, nước theo chỉ số công tơ; internet và gửi xe theo đăng ký thực tế của Bên B.",
+  "handover": {
+    "dateTime": "22/08/2026 09:00",
+    "place": "Tòa Nam, Phương Nam House, 63 đường Mã Hóa, phường Cầu Giấy, TP. Hà Nội",
+    "deliveredBy": "Bùi Đức Huy",
+    "receivedBy": "Nguyễn Minh An",
+    "condition": "Mặt bằng đã hoàn thiện cơ bản, tường và sàn sạch, hệ thống điện hoạt động.",
+    "electricityMeter": "11142 kWh",
+    "waterMeter": "494 m³",
+    "keys": 3,
+    "accessCards": 4,
+    "equipment": [
+      "Điều hòa treo tường",
+      "Đèn LED",
+      "Đầu báo khói"
+    ],
+    "maintenance": "Bên A chịu trách nhiệm kết cấu và hệ thống chung; Bên B chịu bảo trì thiết bị do mình lắp đặt.",
+    "attachments": "Biên bản bàn giao HDVP-2026-007-BG và PL-07-2026-A.",
+    "issues": "Không ghi nhận tồn tại cần khắc phục tại thời điểm bàn giao."
+  },
+  "clauses": {
+    "disputeForum": "Tòa án nhân dân có thẩm quyền tại TP. Hồ Chí Minh; pháp luật Việt Nam.",
+    "effectiveDate": "2026-07-15",
+    "effectiveCondition": "hai bên ký hợp lệ",
+    "copies": 4,
+    "copiesEach": 2,
+    "documentPriority": "Văn bản sửa đổi ký sau cùng, hợp đồng, sau đó đến các phụ lục theo số thứ tự."
+  },
+  "leaseOption": {
+    "type": "Gia hạn",
+    "exercisedBy": "Bên B",
+    "condition": "Không còn công nợ và gửi thông báo bằng văn bản trước hạn.",
+    "window": "Trước ngày hết hạn ít nhất 90 ngày",
+    "area": "Không áp dụng",
+    "cost": "Theo đơn giá tại thời điểm thực hiện, hai bên xác nhận bằng phụ lục."
+  },
+  "renewalNotice": "90 ngày trước ngày hết hạn",
+  "terminationNotice": "60 ngày",
+  "curePeriod": "16 ngày làm việc",
+  "penalty": "Theo thiệt hại thực tế nhưng không vượt quá mức các bên thỏa thuận tại phụ lục.",
+  "depositReturn": "Sau khi bàn giao lại mặt bằng, quyết toán công nợ và khấu trừ nghĩa vụ còn thiếu.",
+  "depositReturnDays": 27,
+  "latePayment": "Lãi chậm trả 0.042%/ngày trên khoản quá hạn, sau 5 ngày ân hạn.",
+  "contacts": {
+    "partyA": {
+      "name": "Bùi Đức Huy",
+      "role": "Giám đốc",
+      "company": "Công ty TNHH Cao Ốc Phương Nam",
+      "phone": "0900000206",
+      "email": "huy@phuongnam.example",
+      "address": "18 đường Mẫu Số, phường Bến Thành, TP. Hồ Chí Minh"
+    },
+    "partyB": {
+      "name": "Nguyễn Minh An",
+      "role": "Giám đốc",
+      "company": "Công ty TNHH RoxLease Dữ Liệu Mẫu",
+      "phone": "0900000101",
+      "email": "ops@roxlease.example",
+      "address": "Tầng 6, số 18 đường Mẫu Số, phường Bến Thành, TP. Hồ Chí Minh"
+    }
+  },
+  "amendment": {
+    "number": "PLS-2026-007",
+    "requestedDate": "16/07/2026",
+    "effectiveDate": "01/09/2026",
+    "requestedBy": "Bên B",
+    "description": "Điều chỉnh danh sách đầu mối liên hệ và bổ sung điều hòa tại phòng thuê.",
+    "attachment": "Biên bản xác nhận thay đổi kèm hợp đồng."
+  },
+  "templateFillLedger": [
+    {
+      "templateParagraph": 3,
+      "originalLabel": "Số",
+      "valuesInsertedInOrder": [
+        "HDVP-2026-007"
+      ]
+    },
+    {
+      "templateParagraph": 5,
+      "originalLabel": "Hôm nay, ngày ........ tháng ........ năm ........, tại ........................................................, chúng ",
+      "valuesInsertedInOrder": [
+        "15",
+        "7",
+        "2026",
+        "TP. Hồ Chí Minh"
+      ]
+    },
+    {
+      "templateParagraph": 7,
+      "originalLabel": "Tên tổ chức/cá nhân",
+      "valuesInsertedInOrder": [
+        "Công ty TNHH Cao Ốc Phương Nam"
+      ]
+    },
+    {
+      "templateParagraph": 8,
+      "originalLabel": "Mã số thuế (nếu có)",
+      "valuesInsertedInOrder": [
+        "0319999107"
+      ]
+    },
+    {
+      "templateParagraph": 9,
+      "originalLabel": "Địa chỉ đăng ký",
+      "valuesInsertedInOrder": [
+        "18 đường Mẫu Số, phường Bến Thành, TP. Hồ Chí Minh"
+      ]
+    },
+    {
+      "templateParagraph": 10,
+      "originalLabel": "Địa chỉ liên hệ",
+      "valuesInsertedInOrder": [
+        "18 đường Mẫu Số, phường Bến Thành, TP. Hồ Chí Minh"
+      ]
+    },
+    {
+      "templateParagraph": 11,
+      "originalLabel": "Người đại diện",
+      "valuesInsertedInOrder": [
+        "Bùi Đức Huy"
+      ]
+    },
+    {
+      "templateParagraph": 12,
+      "originalLabel": "Chức vụ",
+      "valuesInsertedInOrder": [
+        "Giám đốc"
+      ]
+    },
+    {
+      "templateParagraph": 13,
+      "originalLabel": "Giấy tờ định danh",
+      "valuesInsertedInOrder": [
+        "079099000107"
+      ]
+    },
+    {
+      "templateParagraph": 14,
+      "originalLabel": "Điện thoại",
+      "valuesInsertedInOrder": [
+        "0900000206"
+      ]
+    },
+    {
+      "templateParagraph": 15,
+      "originalLabel": "Email",
+      "valuesInsertedInOrder": [
+        "huy@phuongnam.example"
+      ]
+    },
+    {
+      "templateParagraph": 16,
+      "originalLabel": "Số tài khoản",
+      "valuesInsertedInOrder": [
+        "000000020007"
+      ]
+    },
+    {
+      "templateParagraph": 17,
+      "originalLabel": "Ngân hàng",
+      "valuesInsertedInOrder": [
+        "Ngân hàng Mẫu Việt Nam"
+      ]
+    },
+    {
+      "templateParagraph": 19,
+      "originalLabel": "Tên tổ chức/cá nhân",
+      "valuesInsertedInOrder": [
+        "Công ty TNHH RoxLease Dữ Liệu Mẫu"
+      ]
+    },
+    {
+      "templateParagraph": 20,
+      "originalLabel": "Mã số thuế (nếu có)",
+      "valuesInsertedInOrder": [
+        "0319999001"
+      ]
+    },
+    {
+      "templateParagraph": 21,
+      "originalLabel": "Địa chỉ đăng ký",
+      "valuesInsertedInOrder": [
+        "Tầng 6, số 18 đường Mẫu Số, phường Bến Thành, TP. Hồ Chí Minh"
+      ]
+    },
+    {
+      "templateParagraph": 22,
+      "originalLabel": "Địa chỉ liên hệ",
+      "valuesInsertedInOrder": [
+        "Tầng 6, số 18 đường Mẫu Số, phường Bến Thành, TP. Hồ Chí Minh"
+      ]
+    },
+    {
+      "templateParagraph": 23,
+      "originalLabel": "Người đại diện",
+      "valuesInsertedInOrder": [
+        "Nguyễn Minh An"
+      ]
+    },
+    {
+      "templateParagraph": 24,
+      "originalLabel": "Chức vụ",
+      "valuesInsertedInOrder": [
+        "Giám đốc"
+      ]
+    },
+    {
+      "templateParagraph": 25,
+      "originalLabel": "Giấy tờ định danh",
+      "valuesInsertedInOrder": [
+        "079099000001"
+      ]
+    },
+    {
+      "templateParagraph": 26,
+      "originalLabel": "Điện thoại",
+      "valuesInsertedInOrder": [
+        "0900000101"
+      ]
+    },
+    {
+      "templateParagraph": 27,
+      "originalLabel": "Email",
+      "valuesInsertedInOrder": [
+        "ops@roxlease.example"
+      ]
+    },
+    {
+      "templateParagraph": 28,
+      "originalLabel": "Số tài khoản",
+      "valuesInsertedInOrder": [
+        "000000010001"
+      ]
+    },
+    {
+      "templateParagraph": 29,
+      "originalLabel": "Ngân hàng",
+      "valuesInsertedInOrder": [
+        "Ngân hàng Mẫu Việt Nam"
+      ]
+    },
+    {
+      "templateParagraph": 32,
+      "originalLabel": "1.1. Bên A cho Bên B thuê diện tích văn phòng tại địa chỉ ......................................................... Tên ",
+      "valuesInsertedInOrder": [
+        "63 đường Mã Hóa, phường Cầu Giấy, TP. Hà Nội",
+        "Phương Nam House",
+        "Tòa Nam",
+        "15",
+        "15G07"
+      ]
+    },
+    {
+      "templateParagraph": 33,
+      "originalLabel": "1.2. Diện tích thuê",
+      "valuesInsertedInOrder": [
+        "84.25",
+        "80.0",
+        "4.25",
+        "82.0",
+        "PL-07-2026-A"
+      ]
+    },
+    {
+      "templateParagraph": 34,
+      "originalLabel": "1.3. Mục đích sử dụng",
+      "valuesInsertedInOrder": [
+        "Văn phòng hỗ trợ kỹ thuật"
+      ]
+    },
+    {
+      "templateParagraph": 35,
+      "originalLabel": "1.4. Hình thức thuê chính/cho thuê lại",
+      "valuesInsertedInOrder": [
+        "Thuê chính",
+        "Không áp dụng - thuê trực tiếp"
+      ]
+    },
+    {
+      "templateParagraph": 37,
+      "originalLabel": "2.1. Ngày ký",
+      "valuesInsertedInOrder": [
+        "15",
+        "07",
+        "2026",
+        "22",
+        "08",
+        "2026",
+        "01",
+        "09",
+        "2026",
+        "28",
+        "09",
+        "2028"
+      ]
+    },
+    {
+      "templateParagraph": 38,
+      "originalLabel": "2.2. Thời gian miễn tiền thuê (nếu có)",
+      "valuesInsertedInOrder": [
+        "Không áp dụng",
+        "Bắt đầu tính tiền thuê từ ngày kết thúc thời gian miễn tiền thuê hoặc ngày bắt đầu thuê, tùy ngày nào đến sau."
+      ]
+    },
+    {
+      "templateParagraph": 41,
+      "originalLabel": "3.1. Đồng tiền thanh toán",
+      "valuesInsertedInOrder": [
+        "VND",
+        "Đơn giá cố định theo m²/tháng; thanh toán hàng tháng",
+        "375.000",
+        "60.000",
+        "30.750.000 VND"
+      ]
+    },
+    {
+      "templateParagraph": 42,
+      "originalLabel": "3.2. Giá nêu trên đã bao gồm/chưa bao gồm thuế GTGT",
+      "valuesInsertedInOrder": [
+        "Chưa bao gồm thuế GTGT",
+        "10%"
+      ]
+    },
+    {
+      "templateParagraph": 45,
+      "originalLabel": "4.1. Tiền đặt cọc",
+      "valuesInsertedInOrder": [
+        "92.250.000 VND",
+        "20",
+        "07",
+        "2026",
+        "1",
+        "hàng tháng",
+        "05 ngày đầu mỗi kỳ"
+      ]
+    },
+    {
+      "templateParagraph": 46,
+      "originalLabel": "4.2. Bên B thanh toán bằng phương thức ........................................................ vào tài khoản thụ hưởng ",
+      "valuesInsertedInOrder": [
+        "Chuyển khoản",
+        "000000020007 - chủ tài khoản: Công ty TNHH Cao Ốc Phương Nam",
+        "Ngân hàng Mẫu Việt Nam"
+      ]
+    },
+    {
+      "templateParagraph": 69,
+      "originalLabel": "10.2. Tranh chấp được ưu tiên giải quyết bằng thương lượng. Nếu không giải quyết được, cơ quan giải quyết tranh chấp và ",
+      "valuesInsertedInOrder": [
+        "Tòa án nhân dân có thẩm quyền tại TP. Hồ Chí Minh; pháp luật Việt Nam."
+      ]
+    },
+    {
+      "templateParagraph": 70,
+      "originalLabel": "10.3. Hợp đồng có hiệu lực từ ngày ........................................................ hoặc theo điều kiện ........",
+      "valuesInsertedInOrder": [
+        "15/07/2026",
+        "hai bên ký hợp lệ",
+        "4",
+        "2"
+      ]
+    },
+    {
+      "templateParagraph": 71,
+      "originalLabel": "10.4. Phụ lục, biên bản bàn giao và văn bản sửa đổi được ký hợp lệ là bộ phận của hợp đồng. Thứ tự ưu tiên khi nội dung ",
+      "valuesInsertedInOrder": [
+        "Văn bản sửa đổi ký sau cùng, hợp đồng, sau đó đến các phụ lục theo số thứ tự."
+      ]
+    },
+    {
+      "templateParagraph": 76,
+      "originalLabel": "Kèm theo Hợp đồng số ........................................................ ký ngày ..................................",
+      "valuesInsertedInOrder": [
+        "HDVP-2026-007",
+        "15/07/2026"
+      ]
+    },
+    {
+      "templateParagraph": 78,
+      "originalLabel": "Địa chỉ tài sản",
+      "valuesInsertedInOrder": [
+        "63 đường Mã Hóa, phường Cầu Giấy, TP. Hà Nội"
+      ]
+    },
+    {
+      "templateParagraph": 79,
+      "originalLabel": "Tên dự án/khu nhà",
+      "valuesInsertedInOrder": [
+        "Phương Nam House"
+      ]
+    },
+    {
+      "templateParagraph": 80,
+      "originalLabel": "Tòa nhà",
+      "valuesInsertedInOrder": [
+        "Tòa Nam"
+      ]
+    },
+    {
+      "templateParagraph": 81,
+      "originalLabel": "Tầng",
+      "valuesInsertedInOrder": [
+        "15"
+      ]
+    },
+    {
+      "templateParagraph": 82,
+      "originalLabel": "Phòng/suite",
+      "valuesInsertedInOrder": [
+        "15G07"
+      ]
+    },
+    {
+      "templateParagraph": 83,
+      "originalLabel": "Diện tích thuê (m²)",
+      "valuesInsertedInOrder": [
+        "84.25"
+      ]
+    },
+    {
+      "templateParagraph": 84,
+      "originalLabel": "Diện tích sử dụng (m²)",
+      "valuesInsertedInOrder": [
+        "80.0"
+      ]
+    },
+    {
+      "templateParagraph": 85,
+      "originalLabel": "Diện tích hành lang phân bổ (m²)",
+      "valuesInsertedInOrder": [
+        "4.25"
+      ]
+    },
+    {
+      "templateParagraph": 86,
+      "originalLabel": "Diện tích thương lượng/tính giá (m²)",
+      "valuesInsertedInOrder": [
+        "82.0"
+      ]
+    },
+    {
+      "templateParagraph": 87,
+      "originalLabel": "Ngày bắt đầu sử dụng",
+      "valuesInsertedInOrder": [
+        "01/09/2026"
+      ]
+    },
+    {
+      "templateParagraph": 88,
+      "originalLabel": "Ngày kết thúc sử dụng",
+      "valuesInsertedInOrder": [
+        "28/09/2028"
+      ]
+    },
+    {
+      "templateParagraph": 89,
+      "originalLabel": "Mục đích sử dụng",
+      "valuesInsertedInOrder": [
+        "Văn phòng hỗ trợ kỹ thuật"
+      ]
+    },
+    {
+      "templateParagraph": 90,
+      "originalLabel": "Số hiệu bản vẽ/biên bản kèm theo",
+      "valuesInsertedInOrder": [
+        "PL-07-2026-A"
+      ]
+    },
+    {
+      "templateParagraph": 93,
+      "originalLabel": "Tên tiện ích/dịch vụ",
+      "valuesInsertedInOrder": [
+        "Thẻ ra vào, Phòng họp dùng chung, Chỗ để xe máy"
+      ]
+    },
+    {
+      "templateParagraph": 94,
+      "originalLabel": "Mã hoặc hạng mục",
+      "valuesInsertedInOrder": [
+        "TI-OCR-07-01"
+      ]
+    },
+    {
+      "templateParagraph": 95,
+      "originalLabel": "Thời gian áp dụng",
+      "valuesInsertedInOrder": [
+        "01/09/2026 đến 28/09/2028"
+      ]
+    },
+    {
+      "templateParagraph": 96,
+      "originalLabel": "Điều kiện sử dụng/ghi chú",
+      "valuesInsertedInOrder": [
+        "Đăng ký trước với Ban quản lý; sử dụng trong giờ hoạt động."
+      ]
+    },
+    {
+      "templateParagraph": 97,
+      "originalLabel": "Các tiện ích khác (nếu có)",
+      "valuesInsertedInOrder": [
+        "Không có tiện ích khác ngoài danh mục nêu trên."
+      ]
+    },
+    {
+      "templateParagraph": 102,
+      "originalLabel": "Kèm theo Hợp đồng số ........................................................ ký ngày ..................................",
+      "valuesInsertedInOrder": [
+        "HDVP-2026-007",
+        "15/07/2026"
+      ]
+    },
+    {
+      "templateParagraph": 104,
+      "originalLabel": "Đồng tiền thanh toán",
+      "valuesInsertedInOrder": [
+        "VND"
+      ]
+    },
+    {
+      "templateParagraph": 105,
+      "originalLabel": "Loại giá thuê và đơn vị tính",
+      "valuesInsertedInOrder": [
+        "Đơn giá cố định theo m²/tháng; thanh toán hàng tháng"
+      ]
+    },
+    {
+      "templateParagraph": 106,
+      "originalLabel": "Đơn giá thuê/m²/kỳ",
+      "valuesInsertedInOrder": [
+        "375.000"
+      ]
+    },
+    {
+      "templateParagraph": 107,
+      "originalLabel": "Đơn giá dịch vụ/m²/kỳ",
+      "valuesInsertedInOrder": [
+        "60.000"
+      ]
+    },
+    {
+      "templateParagraph": 108,
+      "originalLabel": "Diện tích tính tiền thuê",
+      "valuesInsertedInOrder": [
+        "82.0"
+      ]
+    },
+    {
+      "templateParagraph": 109,
+      "originalLabel": "Giá thuê kỳ đầu",
+      "valuesInsertedInOrder": [
+        "30.750.000 VND"
+      ]
+    },
+    {
+      "templateParagraph": 110,
+      "originalLabel": "Thuế GTGT đã gồm/chưa gồm",
+      "valuesInsertedInOrder": [
+        "Chưa bao gồm thuế GTGT"
+      ]
+    },
+    {
+      "templateParagraph": 111,
+      "originalLabel": "Thuế suất áp dụng",
+      "valuesInsertedInOrder": [
+        "10%"
+      ]
+    },
+    {
+      "templateParagraph": 112,
+      "originalLabel": "Ngày bắt đầu tính tiền thuê",
+      "valuesInsertedInOrder": [
+        "01/09/2026"
+      ]
+    },
+    {
+      "templateParagraph": 113,
+      "originalLabel": "Thời điểm và cách điều chỉnh giá",
+      "valuesInsertedInOrder": [
+        "Mỗi 12 tháng, tăng tối đa 5% theo thỏa thuận bằng văn bản."
+      ]
+    },
+    {
+      "templateParagraph": 114,
+      "originalLabel": "Tỷ giá áp dụng/nguồn tỷ giá (nếu có)",
+      "valuesInsertedInOrder": [
+        "Không áp dụng; thanh toán bằng VND."
+      ]
+    },
+    {
+      "templateParagraph": 116,
+      "originalLabel": "Tên khoản thu",
+      "valuesInsertedInOrder": [
+        "Phí quản lý và vệ sinh"
+      ]
+    },
+    {
+      "templateParagraph": 117,
+      "originalLabel": "Đơn giá hoặc số tiền",
+      "valuesInsertedInOrder": [
+        "60,000 VND/m²/tháng"
+      ]
+    },
+    {
+      "templateParagraph": 118,
+      "originalLabel": "Thuế GTGT",
+      "valuesInsertedInOrder": [
+        "10%"
+      ]
+    },
+    {
+      "templateParagraph": 119,
+      "originalLabel": "Chu kỳ thanh toán",
+      "valuesInsertedInOrder": [
+        "Hàng tháng"
+      ]
+    },
+    {
+      "templateParagraph": 120,
+      "originalLabel": "Ngày bắt đầu",
+      "valuesInsertedInOrder": [
+        "01/09/2026"
+      ]
+    },
+    {
+      "templateParagraph": 121,
+      "originalLabel": "Ngày kết thúc",
+      "valuesInsertedInOrder": [
+        "28/09/2028"
+      ]
+    },
+    {
+      "templateParagraph": 122,
+      "originalLabel": "Bên chịu phí",
+      "valuesInsertedInOrder": [
+        "Bên B"
+      ]
+    },
+    {
+      "templateParagraph": 125,
+      "originalLabel": "Cách tính và bên chịu tiền điện, nước, internet, gửi xe, dịch vụ khác",
+      "valuesInsertedInOrder": [
+        "Điện, nước theo chỉ số công tơ; internet và gửi xe theo đăng ký thực tế của Bên B."
+      ]
+    },
+    {
+      "templateParagraph": 126,
+      "originalLabel": "Chứng từ hoặc đơn giá dùng để đối chiếu",
+      "valuesInsertedInOrder": [
+        "Chỉ số công tơ, hóa đơn điện nước và bảng giá dịch vụ do Ban quản lý công bố."
+      ]
+    },
+    {
+      "templateParagraph": 131,
+      "originalLabel": "Kèm theo Hợp đồng số ........................................................ ký ngày ..................................",
+      "valuesInsertedInOrder": [
+        "HDVP-2026-007",
+        "15/07/2026"
+      ]
+    },
+    {
+      "templateParagraph": 132,
+      "originalLabel": "Ngày, giờ bàn giao",
+      "valuesInsertedInOrder": [
+        "22/08/2026 09:00"
+      ]
+    },
+    {
+      "templateParagraph": 133,
+      "originalLabel": "Địa điểm bàn giao",
+      "valuesInsertedInOrder": [
+        "Tòa Nam, Phương Nam House, 63 đường Mã Hóa, phường Cầu Giấy, TP. Hà Nội"
+      ]
+    },
+    {
+      "templateParagraph": 134,
+      "originalLabel": "Người giao",
+      "valuesInsertedInOrder": [
+        "Bùi Đức Huy"
+      ]
+    },
+    {
+      "templateParagraph": 135,
+      "originalLabel": "Người nhận",
+      "valuesInsertedInOrder": [
+        "Nguyễn Minh An"
+      ]
+    },
+    {
+      "templateParagraph": 136,
+      "originalLabel": "Tình trạng chung của mặt bằng",
+      "valuesInsertedInOrder": [
+        "Mặt bằng đã hoàn thiện cơ bản, tường và sàn sạch, hệ thống điện hoạt động."
+      ]
+    },
+    {
+      "templateParagraph": 137,
+      "originalLabel": "Chỉ số công tơ điện",
+      "valuesInsertedInOrder": [
+        "11142 kWh"
+      ]
+    },
+    {
+      "templateParagraph": 138,
+      "originalLabel": "Chỉ số đồng hồ nước",
+      "valuesInsertedInOrder": [
+        "494 m³"
+      ]
+    },
+    {
+      "templateParagraph": 139,
+      "originalLabel": "Số lượng chìa khóa",
+      "valuesInsertedInOrder": [
+        "3"
+      ]
+    },
+    {
+      "templateParagraph": 140,
+      "originalLabel": "Số lượng thẻ ra vào",
+      "valuesInsertedInOrder": [
+        "4"
+      ]
+    },
+    {
+      "templateParagraph": 141,
+      "originalLabel": "Danh mục thiết bị/tài sản bàn giao",
+      "valuesInsertedInOrder": [
+        "Điều hòa treo tường, Đèn LED, Đầu báo khói"
+      ]
+    },
+    {
+      "templateParagraph": 142,
+      "originalLabel": "Số lượng và tình trạng từng hạng mục",
+      "valuesInsertedInOrder": [
+        "Mỗi hạng mục 01 bộ; thiết bị hoạt động tại thời điểm bàn giao."
+      ]
+    },
+    {
+      "templateParagraph": 143,
+      "originalLabel": "Bên chịu trách nhiệm bảo trì/sửa chữa",
+      "valuesInsertedInOrder": [
+        "Bên A chịu trách nhiệm kết cấu và hệ thống chung; Bên B chịu bảo trì thiết bị do mình lắp đặt."
+      ]
+    },
+    {
+      "templateParagraph": 144,
+      "originalLabel": "Ảnh hoặc tài liệu kèm theo",
+      "valuesInsertedInOrder": [
+        "Biên bản bàn giao HDVP-2026-007-BG và PL-07-2026-A."
+      ]
+    },
+    {
+      "templateParagraph": 145,
+      "originalLabel": "Các tồn tại cần khắc phục và thời hạn",
+      "valuesInsertedInOrder": [
+        "Không ghi nhận tồn tại cần khắc phục tại thời điểm bàn giao."
+      ]
+    },
+    {
+      "templateParagraph": 151,
+      "originalLabel": "Kèm theo Hợp đồng số ........................................................ ký ngày ..................................",
+      "valuesInsertedInOrder": [
+        "HDVP-2026-007",
+        "15/07/2026"
+      ]
+    },
+    {
+      "templateParagraph": 152,
+      "originalLabel": "Thời hạn báo gia hạn",
+      "valuesInsertedInOrder": [
+        "90 ngày trước ngày hết hạn"
+      ]
+    },
+    {
+      "templateParagraph": 153,
+      "originalLabel": "Điều kiện và cách điều chỉnh giá khi gia hạn",
+      "valuesInsertedInOrder": [
+        "Đàm phán giá mới bằng văn bản; nếu không thống nhất thì không tự động gia hạn."
+      ]
+    },
+    {
+      "templateParagraph": 154,
+      "originalLabel": "Điều kiện mở rộng hoặc thu hẹp diện tích",
+      "valuesInsertedInOrder": [
+        "Bên B gửi đề nghị trước 60 ngày; diện tích mở rộng tùy mặt bằng trống và phụ lục ký mới."
+      ]
+    },
+    {
+      "templateParagraph": 155,
+      "originalLabel": "Điều kiện cho thuê lại/chuyển giao quyền thuê",
+      "valuesInsertedInOrder": [
+        "Chỉ cho thuê lại hoặc chuyển giao khi Bên A đồng ý trước bằng văn bản."
+      ]
+    },
+    {
+      "templateParagraph": 156,
+      "originalLabel": "Điều kiện cải tạo, lắp đặt và bàn giao lại",
+      "valuesInsertedInOrder": [
+        "Có bản vẽ được duyệt; hoàn trả hiện trạng trừ khi Bên A chấp thuận giữ lại."
+      ]
+    },
+    {
+      "templateParagraph": 157,
+      "originalLabel": "Thời hạn báo chấm dứt",
+      "valuesInsertedInOrder": [
+        "60 ngày"
+      ]
+    },
+    {
+      "templateParagraph": 158,
+      "originalLabel": "Thời gian khắc phục vi phạm",
+      "valuesInsertedInOrder": [
+        "16 ngày làm việc"
+      ]
+    },
+    {
+      "templateParagraph": 159,
+      "originalLabel": "Mức phạt/bồi thường và cách tính",
+      "valuesInsertedInOrder": [
+        "Theo thiệt hại thực tế nhưng không vượt quá mức các bên thỏa thuận tại phụ lục."
+      ]
+    },
+    {
+      "templateParagraph": 160,
+      "originalLabel": "Điều kiện khấu trừ và hoàn trả tiền cọc",
+      "valuesInsertedInOrder": [
+        "Sau khi bàn giao lại mặt bằng, quyết toán công nợ và khấu trừ nghĩa vụ còn thiếu."
+      ]
+    },
+    {
+      "templateParagraph": 161,
+      "originalLabel": "Số ngày hoàn trả tiền cọc",
+      "valuesInsertedInOrder": [
+        "27"
+      ]
+    },
+    {
+      "templateParagraph": 162,
+      "originalLabel": "Điều kiện chậm thanh toán/lãi chậm trả",
+      "valuesInsertedInOrder": [
+        "Lãi chậm trả 0.042%/ngày trên khoản quá hạn, sau 5 ngày ân hạn."
+      ]
+    },
+    {
+      "templateParagraph": 164,
+      "originalLabel": "Loại quyền/điều khoản",
+      "valuesInsertedInOrder": [
+        "Gia hạn"
+      ]
+    },
+    {
+      "templateParagraph": 165,
+      "originalLabel": "Bên được thực hiện",
+      "valuesInsertedInOrder": [
+        "Bên B"
+      ]
+    },
+    {
+      "templateParagraph": 166,
+      "originalLabel": "Điều kiện và nội dung",
+      "valuesInsertedInOrder": [
+        "Không còn công nợ và gửi thông báo bằng văn bản trước hạn."
+      ]
+    },
+    {
+      "templateParagraph": 167,
+      "originalLabel": "Thời điểm/thời hạn thực hiện",
+      "valuesInsertedInOrder": [
+        "Trước ngày hết hạn ít nhất 90 ngày"
+      ]
+    },
+    {
+      "templateParagraph": 168,
+      "originalLabel": "Diện tích liên quan",
+      "valuesInsertedInOrder": [
+        "Không áp dụng"
+      ]
+    },
+    {
+      "templateParagraph": 169,
+      "originalLabel": "Chi phí hoặc cách tính",
+      "valuesInsertedInOrder": [
+        "Theo đơn giá tại thời điểm thực hiện, hai bên xác nhận bằng phụ lục."
+      ]
+    },
+    {
+      "templateParagraph": 170,
+      "originalLabel": "Tài liệu thông báo kèm theo",
+      "valuesInsertedInOrder": [
+        "Thông báo thực hiện quyền gửi bằng văn bản và có xác nhận nhận."
+      ]
+    },
+    {
+      "templateParagraph": 176,
+      "originalLabel": "Kèm theo Hợp đồng số ........................................................ ký ngày ..................................",
+      "valuesInsertedInOrder": [
+        "HDVP-2026-007",
+        "15/07/2026"
+      ]
+    },
+    {
+      "templateParagraph": 178,
+      "originalLabel": "Họ tên",
+      "valuesInsertedInOrder": [
+        "Bùi Đức Huy"
+      ]
+    },
+    {
+      "templateParagraph": 179,
+      "originalLabel": "Vai trò/chức vụ",
+      "valuesInsertedInOrder": [
+        "Giám đốc"
+      ]
+    },
+    {
+      "templateParagraph": 180,
+      "originalLabel": "Đơn vị",
+      "valuesInsertedInOrder": [
+        "Công ty TNHH Cao Ốc Phương Nam"
+      ]
+    },
+    {
+      "templateParagraph": 181,
+      "originalLabel": "Điện thoại",
+      "valuesInsertedInOrder": [
+        "0900000206"
+      ]
+    },
+    {
+      "templateParagraph": 182,
+      "originalLabel": "Email",
+      "valuesInsertedInOrder": [
+        "huy@phuongnam.example"
+      ]
+    },
+    {
+      "templateParagraph": 183,
+      "originalLabel": "Địa chỉ nhận thông báo",
+      "valuesInsertedInOrder": [
+        "18 đường Mẫu Số, phường Bến Thành, TP. Hồ Chí Minh"
+      ]
+    },
+    {
+      "templateParagraph": 185,
+      "originalLabel": "Họ tên",
+      "valuesInsertedInOrder": [
+        "Nguyễn Minh An"
+      ]
+    },
+    {
+      "templateParagraph": 186,
+      "originalLabel": "Vai trò/chức vụ",
+      "valuesInsertedInOrder": [
+        "Giám đốc"
+      ]
+    },
+    {
+      "templateParagraph": 187,
+      "originalLabel": "Đơn vị",
+      "valuesInsertedInOrder": [
+        "Công ty TNHH RoxLease Dữ Liệu Mẫu"
+      ]
+    },
+    {
+      "templateParagraph": 188,
+      "originalLabel": "Điện thoại",
+      "valuesInsertedInOrder": [
+        "0900000101"
+      ]
+    },
+    {
+      "templateParagraph": 189,
+      "originalLabel": "Email",
+      "valuesInsertedInOrder": [
+        "ops@roxlease.example"
+      ]
+    },
+    {
+      "templateParagraph": 190,
+      "originalLabel": "Địa chỉ nhận thông báo",
+      "valuesInsertedInOrder": [
+        "Tầng 6, số 18 đường Mẫu Số, phường Bến Thành, TP. Hồ Chí Minh"
+      ]
+    },
+    {
+      "templateParagraph": 192,
+      "originalLabel": "Số/ký hiệu văn bản",
+      "valuesInsertedInOrder": [
+        "PLS-2026-007"
+      ]
+    },
+    {
+      "templateParagraph": 193,
+      "originalLabel": "Ngày đề nghị",
+      "valuesInsertedInOrder": [
+        "16/07/2026"
+      ]
+    },
+    {
+      "templateParagraph": 194,
+      "originalLabel": "Ngày có hiệu lực",
+      "valuesInsertedInOrder": [
+        "01/09/2026"
+      ]
+    },
+    {
+      "templateParagraph": 195,
+      "originalLabel": "Bên đề nghị/thực hiện",
+      "valuesInsertedInOrder": [
+        "Bên B"
+      ]
+    },
+    {
+      "templateParagraph": 196,
+      "originalLabel": "Nội dung thay đổi",
+      "valuesInsertedInOrder": [
+        "Điều chỉnh danh sách đầu mối liên hệ và bổ sung điều hòa tại phòng thuê."
+      ]
+    },
+    {
+      "templateParagraph": 197,
+      "originalLabel": "Tài liệu kèm theo",
+      "valuesInsertedInOrder": [
+        "Biên bản xác nhận thay đổi kèm hợp đồng."
+      ]
+    },
+    {
+      "templateParagraph": 116,
+      "originalLabel": "Khoản thu định kỳ bổ sung Điện sử dụng chung",
+      "valuesInsertedInOrder": [
+        "Điện sử dụng chung"
+      ]
+    },
+    {
+      "templateParagraph": 117,
+      "originalLabel": "Khoản thu định kỳ bổ sung Điện sử dụng chung",
+      "valuesInsertedInOrder": [
+        "330,000 VND/tháng"
+      ]
+    },
+    {
+      "templateParagraph": 118,
+      "originalLabel": "Khoản thu định kỳ bổ sung Điện sử dụng chung",
+      "valuesInsertedInOrder": [
+        "8%"
+      ]
+    },
+    {
+      "templateParagraph": 119,
+      "originalLabel": "Khoản thu định kỳ bổ sung Điện sử dụng chung",
+      "valuesInsertedInOrder": [
+        "Hàng tháng theo chỉ số"
+      ]
+    },
+    {
+      "templateParagraph": 120,
+      "originalLabel": "Khoản thu định kỳ bổ sung Điện sử dụng chung",
+      "valuesInsertedInOrder": [
+        "01/09/2026"
+      ]
+    },
+    {
+      "templateParagraph": 121,
+      "originalLabel": "Khoản thu định kỳ bổ sung Điện sử dụng chung",
+      "valuesInsertedInOrder": [
+        "28/09/2028"
+      ]
+    },
+    {
+      "templateParagraph": 122,
+      "originalLabel": "Khoản thu định kỳ bổ sung Điện sử dụng chung",
+      "valuesInsertedInOrder": [
+        "Bên B"
+      ]
+    },
+    {
+      "templateParagraph": 116,
+      "originalLabel": "Khoản thu định kỳ bổ sung Phí gửi xe",
+      "valuesInsertedInOrder": [
+        "Phí gửi xe"
+      ]
+    },
+    {
+      "templateParagraph": 117,
+      "originalLabel": "Khoản thu định kỳ bổ sung Phí gửi xe",
+      "valuesInsertedInOrder": [
+        "310,000 VND/chỗ/tháng"
+      ]
+    },
+    {
+      "templateParagraph": 118,
+      "originalLabel": "Khoản thu định kỳ bổ sung Phí gửi xe",
+      "valuesInsertedInOrder": [
+        "10%"
+      ]
+    },
+    {
+      "templateParagraph": 119,
+      "originalLabel": "Khoản thu định kỳ bổ sung Phí gửi xe",
+      "valuesInsertedInOrder": [
+        "Hàng tháng"
+      ]
+    },
+    {
+      "templateParagraph": 120,
+      "originalLabel": "Khoản thu định kỳ bổ sung Phí gửi xe",
+      "valuesInsertedInOrder": [
+        "01/09/2026"
+      ]
+    },
+    {
+      "templateParagraph": 121,
+      "originalLabel": "Khoản thu định kỳ bổ sung Phí gửi xe",
+      "valuesInsertedInOrder": [
+        "28/09/2028"
+      ]
+    },
+    {
+      "templateParagraph": 122,
+      "originalLabel": "Khoản thu định kỳ bổ sung Phí gửi xe",
+      "valuesInsertedInOrder": [
+        "Bên B"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,609 @@
+{
+  "_meta": {
+    "purpose": "Mẫu JSON trống để rà soát mapping OCR và vai trò hợp đồng; không phải API payload đang triển khai",
+    "template": "Hợp đồng thuê văn phòng",
+    "schemaVersion": "draft-3",
+    "blankValue": "null = chưa điền/chưa trích xuất",
+    "dateFormat": "ISO 8601 YYYY-MM-DD khi có giá trị",
+    "dateTimeFormat": "ISO 8601 khi có giá trị",
+    "moneyFormat": "decimal string khi có giá trị, tránh sai số dấu phẩy động",
+    "sourceOfFields": "Java model properties trong src/main/java/com/roxlease",
+    "workflow": "OCR trích tạm Bên A/B để xác định ourRole; Lease nháp active=false chỉ liên kết một Party đối tác; reviewer kiểm tra và tự gửi Request; chỉ áp dụng sau duyệt",
+    "documentCapturePersistence": "partyA và partyB là dữ liệu trích xuất tạm để đối chiếu vai trò. Không lưu snapshot Party của công ty mình. Khi xác định được ourRole, chỉ map Party phía đối tác vào Lease.partyId; giữ tài liệu gốc qua docUrl để reviewer kiểm tra"
+  },
+  "documentCapture": {
+    "contractNumber": null,
+    "signingPlace": null,
+    "partyA": {
+      "legalName": null,
+      "taxCode": null,
+      "registeredAddress": null,
+      "mailingAddress": null,
+      "representative": null,
+      "representativeTitle": null,
+      "identityDocument": null,
+      "phone": null,
+      "email": null,
+      "bankAccount": null,
+      "bankName": null
+    },
+    "partyB": {
+      "legalName": null,
+      "taxCode": null,
+      "registeredAddress": null,
+      "mailingAddress": null,
+      "representative": null,
+      "representativeTitle": null,
+      "identityDocument": null,
+      "phone": null,
+      "email": null,
+      "bankAccount": null,
+      "bankName": null
+    },
+    "roleResolution": {
+      "ourRole": "UNRESOLVED",
+      "matchedContractSide": null,
+      "matchField": null,
+      "matchStatus": "UNRESOLVED",
+      "reviewRequired": true,
+      "counterpartyContractSide": null,
+      "mappingStatus": "UNRESOLVED"
+    },
+    "premises": [
+      {
+        "propertyAddress": null,
+        "siteName": null,
+        "buildingName": null,
+        "floorLabel": null,
+        "suiteLabel": null,
+        "usableAreaSqm": null,
+        "leasedAreaSqm": null,
+        "corridorAreaSqm": null,
+        "purpose": null,
+        "drawingReference": null
+      }
+    ],
+    "paymentTerms": {
+      "depositDueDate": null,
+      "depositRefundDays": null,
+      "paymentMethod": null,
+      "paymentDueDay": null,
+      "advancePeriods": null,
+      "beneficiary": null,
+      "beneficiaryAccount": null,
+      "beneficiaryBank": null,
+      "latePaymentTerms": null
+    },
+    "handover": {
+      "conditionSummary": null,
+      "electricityMeter": null,
+      "waterMeter": null,
+      "keysAndCards": null,
+      "handoverAttachment": null
+    },
+    "specialTerms": {
+      "renewalNoticeDays": null,
+      "terminationNoticeDays": null,
+      "remedyPeriodDays": null,
+      "subleasePermission": null,
+      "renovationPermission": null,
+      "penaltyTerms": null,
+      "disputeForum": null,
+      "documentPriority": null
+    }
+  },
+  "modelFields": {
+    "lease": {
+      "lsId": null,
+      "description": null,
+      "signedDate": null,
+      "handoverDate": null,
+      "startDate": null,
+      "endDate": null,
+      "lsType": null,
+      "rentType": null,
+      "spaceUse": null,
+      "currency": null,
+      "vatExcluded": null,
+      "isSign": null,
+      "partyId": null,
+      "isLandlord": null,
+      "landlordTenant": null,
+      "leaseSublease": null,
+      "parentLsId": null,
+      "siteId": null,
+      "buildingId": null,
+      "pic": null,
+      "amountDeposit": null,
+      "rentUnitCost": null,
+      "serviceUnitCost": null,
+      "baseExchangeRate": null,
+      "areaNegotiated": null,
+      "areaCorridor": null,
+      "amenityId": null,
+      "assumeRenewal": null,
+      "indexCost": null,
+      "docUrl": null,
+      "active": false,
+      "createdAt": null,
+      "updatedAt": null
+    },
+    "parties": [
+      {
+        "partyId": null,
+        "partyName": null,
+        "isLandlord": null,
+        "email": null,
+        "phone": null,
+        "createdAt": null,
+        "updatedAt": null
+      }
+    ],
+    "contacts": [
+      {
+        "contactId": null,
+        "lsId": null,
+        "contactName": null,
+        "contactRole": null,
+        "company": null,
+        "email": null,
+        "phone": null,
+        "createdAt": null,
+        "updatedAt": null
+      }
+    ],
+    "leaseSuites": [
+      {
+        "lsSuId": null,
+        "lsId": null,
+        "suId": null,
+        "active": null,
+        "docUrl": null,
+        "dateStart": null,
+        "dateEnd": null,
+        "createdAt": null,
+        "updatedAt": null
+      }
+    ],
+    "leaseAmenities": [
+      {
+        "lsAmId": null,
+        "amenityId": null,
+        "lsId": null,
+        "dateStart": null,
+        "dateEnd": null,
+        "createdAt": null,
+        "updatedAt": null
+      }
+    ],
+    "clauses": [
+      {
+        "id": null,
+        "clauseId": null,
+        "leaseId": null,
+        "clauseType": null,
+        "startDate": null,
+        "endDate": null,
+        "responsibleParty": null,
+        "exercisedBy": null,
+        "description": null,
+        "documentUrl": null,
+        "active": null,
+        "status": null,
+        "createdAt": null,
+        "updatedAt": null
+      }
+    ],
+    "amendments": [
+      {
+        "amendmentId": null,
+        "lsId": null,
+        "requestedDate": null,
+        "effectiveDate": null,
+        "exercisedBy": null,
+        "docUrl": null,
+        "description": null,
+        "active": null,
+        "createdAt": null,
+        "updatedAt": null
+      }
+    ],
+    "leaseOptions": [
+      {
+        "opId": null,
+        "lsId": null,
+        "suiteId": null,
+        "opDescription": null,
+        "opType": null,
+        "dateMatchLs": null,
+        "startDate": null,
+        "endDate": null,
+        "exercisedBy": null,
+        "areaInvolved": null,
+        "costEst": null,
+        "docUrl": null,
+        "active": null,
+        "createdAt": null,
+        "updatedAt": null
+      }
+    ],
+    "recurringCosts": [
+      {
+        "recurringCostId": null,
+        "lsId": null,
+        "costType": null,
+        "vatCountry": null,
+        "currVat": null,
+        "amountInBase": null,
+        "amountInVat": null,
+        "amountInTotal": null,
+        "overrideExchangeRate": null,
+        "exchangeRate": null,
+        "amountOutBase": null,
+        "amountOutVat": null,
+        "amountOutTotal": null,
+        "overrideVat": null,
+        "manualBase": null,
+        "scheduleStatus": null,
+        "dateMatchLs": null,
+        "period": null,
+        "interval": null,
+        "startDate": null,
+        "endDate": null,
+        "active": null,
+        "description": null,
+        "createdAt": null,
+        "updatedAt": null
+      }
+    ],
+    "recurringCostSchedules": [
+      {
+        "id": null,
+        "recurringCostId": null,
+        "leaseId": null,
+        "costType": null,
+        "vatCountry": null,
+        "currency": null,
+        "scheduleStatus": null,
+        "amountInBase": null,
+        "amountInVat": null,
+        "amountInTotal": null,
+        "amountOutBase": null,
+        "amountOutVat": null,
+        "amountOutTotal": null,
+        "periodSrc": null,
+        "periodEnd": null,
+        "dueDate": null,
+        "approvalDate": null,
+        "paymentDate": null,
+        "cancelReason": null,
+        "datePaid": null,
+        "paymentStatus": null,
+        "description": null
+      }
+    ],
+    "requests": [
+      {
+        "id": null,
+        "requestId": null,
+        "requestType": null,
+        "siteId": null,
+        "createdBy": null,
+        "createdDate": null,
+        "status": null,
+        "completedBy": null,
+        "completedDate": null,
+        "comment": null,
+        "document": null,
+        "targetId": null,
+        "action": null,
+        "requestData": null
+      }
+    ]
+  },
+  "modelFieldTypes": {
+    "lease": {
+      "lsId": "String",
+      "description": "String",
+      "signedDate": "LocalDate",
+      "handoverDate": "LocalDate",
+      "startDate": "LocalDate",
+      "endDate": "LocalDate",
+      "lsType": "LeaseType",
+      "rentType": "RentType",
+      "spaceUse": "SpaceUse",
+      "currency": "String",
+      "vatExcluded": "Boolean",
+      "isSign": "Boolean",
+      "partyId": "String",
+      "isLandlord": "Boolean",
+      "landlordTenant": "LandlordTenant",
+      "leaseSublease": "LeaseSublease",
+      "parentLsId": "String",
+      "siteId": "String",
+      "buildingId": "String",
+      "pic": "String",
+      "amountDeposit": "BigDecimal",
+      "rentUnitCost": "BigDecimal",
+      "serviceUnitCost": "BigDecimal",
+      "baseExchangeRate": "BigDecimal",
+      "areaNegotiated": "Double",
+      "areaCorridor": "Double",
+      "amenityId": "String",
+      "assumeRenewal": "Boolean",
+      "indexCost": "Boolean",
+      "docUrl": "String",
+      "active": "Boolean",
+      "createdAt": "LocalDateTime",
+      "updatedAt": "LocalDateTime"
+    },
+    "parties": {
+      "partyId": "String",
+      "partyName": "String",
+      "isLandlord": "Boolean",
+      "email": "String",
+      "phone": "String",
+      "createdAt": "LocalDateTime",
+      "updatedAt": "LocalDateTime"
+    },
+    "contacts": {
+      "contactId": "String",
+      "lsId": "String",
+      "contactName": "String",
+      "contactRole": "String",
+      "company": "String",
+      "email": "String",
+      "phone": "String",
+      "createdAt": "LocalDateTime",
+      "updatedAt": "LocalDateTime"
+    },
+    "leaseSuites": {
+      "lsSuId": "String",
+      "lsId": "String",
+      "suId": "String",
+      "active": "Boolean",
+      "docUrl": "String",
+      "dateStart": "LocalDate",
+      "dateEnd": "LocalDate",
+      "createdAt": "LocalDateTime",
+      "updatedAt": "LocalDateTime"
+    },
+    "leaseAmenities": {
+      "lsAmId": "String",
+      "amenityId": "String",
+      "lsId": "String",
+      "dateStart": "LocalDate",
+      "dateEnd": "LocalDate",
+      "createdAt": "LocalDateTime",
+      "updatedAt": "LocalDateTime"
+    },
+    "clauses": {
+      "id": "String",
+      "clauseId": "String",
+      "leaseId": "String",
+      "clauseType": "ClauseType",
+      "startDate": "LocalDate",
+      "endDate": "LocalDate",
+      "responsibleParty": "String",
+      "exercisedBy": "String",
+      "description": "String",
+      "documentUrl": "String",
+      "active": "Boolean",
+      "status": "String",
+      "createdAt": "LocalDateTime",
+      "updatedAt": "LocalDateTime"
+    },
+    "amendments": {
+      "amendmentId": "String",
+      "lsId": "String",
+      "requestedDate": "LocalDate",
+      "effectiveDate": "LocalDate",
+      "exercisedBy": "String",
+      "docUrl": "String",
+      "description": "String",
+      "active": "Boolean",
+      "createdAt": "LocalDateTime",
+      "updatedAt": "LocalDateTime"
+    },
+    "leaseOptions": {
+      "opId": "String",
+      "lsId": "String",
+      "suiteId": "String",
+      "opDescription": "String",
+      "opType": "OptionType",
+      "dateMatchLs": "Boolean",
+      "startDate": "LocalDate",
+      "endDate": "LocalDate",
+      "exercisedBy": "ExercisedBy",
+      "areaInvolved": "Double",
+      "costEst": "BigDecimal",
+      "docUrl": "String",
+      "active": "Boolean",
+      "createdAt": "LocalDateTime",
+      "updatedAt": "LocalDateTime"
+    },
+    "recurringCosts": {
+      "recurringCostId": "String",
+      "lsId": "String",
+      "costType": "String",
+      "vatCountry": "String",
+      "currVat": "BigDecimal",
+      "amountInBase": "BigDecimal",
+      "amountInVat": "BigDecimal",
+      "amountInTotal": "BigDecimal",
+      "overrideExchangeRate": "Boolean",
+      "exchangeRate": "BigDecimal",
+      "amountOutBase": "BigDecimal",
+      "amountOutVat": "BigDecimal",
+      "amountOutTotal": "BigDecimal",
+      "overrideVat": "Boolean",
+      "manualBase": "BigDecimal",
+      "scheduleStatus": "String",
+      "dateMatchLs": "Boolean",
+      "period": "Period",
+      "interval": "Integer",
+      "startDate": "LocalDate",
+      "endDate": "LocalDate",
+      "active": "Boolean",
+      "description": "String",
+      "createdAt": "LocalDateTime",
+      "updatedAt": "LocalDateTime"
+    },
+    "recurringCostSchedules": {
+      "id": "String",
+      "recurringCostId": "String",
+      "leaseId": "String",
+      "costType": "CostType",
+      "vatCountry": "String",
+      "currency": "String",
+      "scheduleStatus": "ScheduleStatus",
+      "amountInBase": "BigDecimal",
+      "amountInVat": "BigDecimal",
+      "amountInTotal": "BigDecimal",
+      "amountOutBase": "BigDecimal",
+      "amountOutVat": "BigDecimal",
+      "amountOutTotal": "BigDecimal",
+      "periodSrc": "LocalDate",
+      "periodEnd": "LocalDate",
+      "dueDate": "LocalDate",
+      "approvalDate": "LocalDateTime",
+      "paymentDate": "LocalDate",
+      "cancelReason": "String",
+      "datePaid": "LocalDateTime",
+      "paymentStatus": "PaymentStatus",
+      "description": "String"
+    },
+    "requests": {
+      "id": "String",
+      "requestId": "String",
+      "requestType": "RQType",
+      "siteId": "String",
+      "createdBy": "String",
+      "createdDate": "LocalDateTime",
+      "status": "RQStatus",
+      "completedBy": "String",
+      "completedDate": "LocalDateTime",
+      "comment": "String",
+      "document": "String",
+      "targetId": "String",
+      "action": "String",
+      "requestData": "java.util.Map<String, Object>"
+    }
+  },
+  "mappingNotes": [
+    "Tên trong modelFields là Java property, không phải tên @Field của MongoDB; backend thực hiện mapping.",
+    "Sau khi xác định ourRole, chỉ legalName của phía đối tác ánh xạ vào Party.partyName; các trường pháp lý của đối tác cần bổ sung vào Party theo targetModelChanges. Không lưu legalName hoặc thông tin Party của công ty mình.",
+    "Mảng có một object null chỉ để liệt kê đủ trường của mỗi model; dữ liệu thực có thể có 0 hoặc nhiều bản ghi.",
+    "documentCapture giữ các trường nhìn thấy trên hợp đồng; một số đã có trong model, một số cần mapping hoặc mở rộng model trước khi ghi DB.",
+    "parties là collection Party dùng chung; mỗi Lease chỉ liên kết một Party đối tác qua Lease.partyId. Chỉ map thông tin Bên B khi ourRole=LANDLORD hoặc Bên A khi ourRole=TENANT; không lưu thông tin công ty mình thành Party.",
+    "Contact, LeaseSuite, LeaseAmenity, Clause, Amendment, LeaseOption, RecurringCost liên kết Lease qua lsId hoặc leaseId tùy model; ID nội bộ không lấy từ OCR.",
+    "RecurringCostSchedule và Request là dữ liệu quy trình/hệ thống; không trích nguyên từ hợp đồng. Chúng được đưa vào để kiểm kê đầy đủ trường liên quan.",
+    "createdAt, updatedAt, createdDate, completedDate, active, các trạng thái, ID và URL tệp là trường hệ thống; không mặc định lấy từ OCR.",
+    "Một số enum và trường chi phí cần chọn/chuẩn hóa sau khi người kiểm tra rà soát. Không gửi JSON mẫu này trực tiếp tới API hiện tại.",
+    "documentCapture.partyA và partyB là dữ liệu OCR tạm dùng để đối chiếu định danh và xác định vai trò; đây không phải hai Party sẽ được lưu. Không ghi snapshot thông tin công ty mình vào Lease draft hoặc collection parties; khi đã xác định vai trò, chỉ tạo/liên kết Party đối tác qua Lease.partyId. Tài liệu gốc được giữ bằng docUrl để reviewer kiểm tra.",
+    "modelFields và modelFieldTypes phản ánh schema Java hiện tại. parties là collection dùng chung toàn hệ thống nên có thể có nhiều Party; quy tắc mỗi Lease chỉ liên kết một Party đối tác qua Lease.partyId. targetModelChanges mô tả schema mục tiêu, chưa phản ánh model Java đang chạy.",
+    "roleResolution.ourRole được suy ra từ định danh ổn định của doanh nghiệp/cá nhân đã cấu hình ngoài JSON; không so khớp mơ hồ bằng tên, địa chỉ hoặc ngân hàng. Không khớp, thiếu định danh hoặc khớp cả hai bên thì giữ UNRESOLVED và yêu cầu reviewer xác nhận.",
+    "Giá trị định danh công ty không được lưu trong JSON, tài liệu repo hoặc commit; cấu hình tại môi trường server/secret manager. Chỉ lưu kết quả vai trò và bên khớp, không lặp lại định danh nội bộ trong roleResolution.",
+    "Vai trò mục tiêu lưu tại Lease. Bỏ isLandlord khỏi Party và thay cờ isLandlord trên Lease bằng ourRole; cần migration/đồng bộ UI/API trước khi coi đây là schema đang chạy.",
+    "LeaseSuite.suId tham chiếu Suite.suiteId; Lease.amenityId và LeaseAmenity.amenityId tham chiếu Amenity.amenityId. Các ID tham chiếu là ID danh mục, không phải giá trị OCR tự sinh.",
+    "Request và RecurringCostSchedule là dữ liệu quy trình/hệ thống, không trích trực tiếp từ hợp đồng.",
+    "Lease.landlordTenant hiện là enum LANDLORD/TENANT nhưng chưa có UI nhập rõ; schema mục tiêu thay hai trường vai trò cũ Lease.isLandlord/Lease.landlordTenant bằng một trường Lease.ourRole để tránh hai nguồn sự thật.",
+    "Lease.partyId theo quyết định nghiệp vụ trỏ tới đúng một Party đối tác cho mỗi Lease; không tạo Party cho công ty mình. Sau khi xác định ourRole, đối tác là phía đối diện: mình LANDLORD thì Party lấy từ Bên B; mình TENANT thì Party lấy từ Bên A. Nếu vai trò UNRESOLVED, chưa tạo/liên kết Party đối tác cho Lease và reviewer phải kiểm tra tài liệu gốc.",
+    "OCR trích partyA/partyB tạm thời trong documentCapture để đối chiếu định danh. Chúng không phải Party records và không được lưu thành snapshot của hai bên trong Lease draft. Khi xác định được vai trò, chỉ map Party đối tác vào parties và Lease.partyId; thông tin công ty mình không được lưu thành Party."
+  ],
+  "targetModelChanges": {
+    "parties": {
+      "collection": "parties",
+      "removeFields": [
+        "isLandlord"
+      ],
+      "addFields": {
+        "taxCode": null,
+        "registeredAddress": null,
+        "mailingAddress": null,
+        "representative": null,
+        "representativeTitle": null,
+        "identityDocument": null,
+        "bankAccount": null,
+        "bankName": null
+      },
+      "partyRecordRule": "Create/link Party only for counterparty; do not create a Party record for our own organization"
+    },
+    "lease": {
+      "collection": "leases",
+      "removeFields": [
+        "isLandlord",
+        "landlordTenant"
+      ],
+      "addFields": {
+        "ourRole": "UNRESOLVED"
+      },
+      "fieldSemantics": {
+        "partyId": "Single counterparty Party ID for this Lease; map from the contract side opposite ourRole. Do not create a Party for our own organization."
+      }
+    },
+    "ourRoleValues": [
+      "LANDLORD",
+      "TENANT",
+      "UNRESOLVED"
+    ]
+  },
+  "targetModelFieldTypes": {
+    "parties": {
+      "taxCode": "String",
+      "registeredAddress": "String",
+      "mailingAddress": "String",
+      "representative": "String",
+      "representativeTitle": "String",
+      "identityDocument": "String",
+      "bankAccount": "String",
+      "bankName": "String"
+    },
+    "lease": {
+      "ourRole": "OurRole enum (LANDLORD, TENANT, UNRESOLVED)"
+    }
+  },
+  "relatedReferenceModels": {
+    "suites": {
+      "fields": {
+        "suiteId": null,
+        "cadObjectId": null,
+        "flId": null,
+        "suiteCode": null,
+        "suiteName": null,
+        "geometry": null,
+        "area": null,
+        "version": null
+      },
+      "fieldTypes": {
+        "suiteId": "String",
+        "cadObjectId": "String",
+        "flId": "String",
+        "suiteCode": "String",
+        "suiteName": "String",
+        "geometry": "Map<String, Object>",
+        "area": "Double",
+        "version": "Integer"
+      },
+      "note": "Model Suite dùng làm danh mục tham chiếu; OCR nhãn phòng phải được reviewer xác nhận và phân giải sang suiteId."
+    },
+    "amenities": {
+      "fields": {
+        "amenityId": null,
+        "amenityName": null,
+        "blId": null,
+        "amenityType": null
+      },
+      "fieldTypes": {
+        "amenityId": "String",
+        "amenityName": "String",
+        "blId": "String",
+        "amenityType": "AmenityType"
+      },
+      "note": "Model Amenity dùng làm danh mục tham chiếu; OCR tên tiện ích không được coi là amenityId."
+    }
+  },
+  "openModelDecisions": [
+    "Giá trị cấu hình định danh công ty chưa được cung cấp/cài trên server. Khi triển khai, đặt identity type/value bằng biến môi trường hoặc secret manager của môi trường chạy; không commit giá trị vào repo."
+  ]
+}
